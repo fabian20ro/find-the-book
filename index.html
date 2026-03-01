@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Point your camera at book spines to identify and catalog them instantly.">
+    <title>Find The Book</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+    <!-- Live camera feed -->
+    <video id="camera" autoplay playsinline muted></video>
+
+    <!-- Hidden canvas for frame capture -->
+    <canvas id="capture"></canvas>
+
+    <!-- Loading overlay (shown during Tesseract.js init) -->
+    <div id="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Initializing OCR engine...</p>
+            <p class="loading-hint">First load downloads ~4MB of data</p>
+        </div>
+    </div>
+
+    <!-- Status bar at top -->
+    <div id="status-overlay" class="status-overlay" hidden>
+        <div class="status-row">
+            <span id="scan-count">Scans: 0</span>
+            <span id="scan-status" class="scan-active">Scanning</span>
+        </div>
+        <div id="last-text" class="last-text"></div>
+    </div>
+
+    <!-- Book list at bottom -->
+    <div id="book-overlay" class="book-overlay" hidden>
+        <div class="controls">
+            <span id="book-count">0 books found</span>
+            <div class="control-buttons">
+                <button id="btn-pause" title="Pause scanning">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                        <rect x="6" y="4" width="4" height="16"/>
+                        <rect x="14" y="4" width="4" height="16"/>
+                    </svg>
+                </button>
+                <button id="btn-export" title="Export CSV">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                    </svg>
+                </button>
+                <button id="btn-clear" title="Clear all">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="book-list" class="book-list"></div>
+    </div>
+
+    <!-- Error overlay -->
+    <div id="error-overlay" hidden>
+        <div class="error-content">
+            <p id="error-message"></p>
+            <button id="btn-retry">Retry</button>
+        </div>
+    </div>
+
+    <!-- Tesseract.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <!-- App modules -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
