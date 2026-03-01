@@ -81,6 +81,10 @@ export class BookSearcher {
         };
     }
 
+    preloadBookId(bookId: string): void {
+        this.foundBookIds.add(bookId);
+    }
+
     removeBookId(bookId: string): void {
         this.foundBookIds.delete(bookId);
     }
