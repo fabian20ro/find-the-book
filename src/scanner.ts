@@ -171,15 +171,26 @@ function onVisibilityChange(
     }
 }
 
+const MIN_INDIVIDUAL_QUERY_LENGTH = 8;
+
 export async function searchTextBlocks(textBlocks: string[], bookSearcher: BookSearcher): Promise<Book[]> {
     if (textBlocks.length === 0) return [];
 
     // Single UI update instead of one per block (eliminates "terminal scrolling")
     update({ lastDetectedText: textBlocks[0] });
 
+    // Build queries: combined query first (most effective), then individual longer lines
+    const combinedQuery = textBlocks.join(' ');
+    const queries = [combinedQuery];
+    for (const text of textBlocks) {
+        if (text.length >= MIN_INDIVIDUAL_QUERY_LENGTH) {
+            queries.push(text);
+        }
+    }
+
     // Fire all searches in parallel
     const results = await Promise.allSettled(
-        textBlocks.map((text) => bookSearcher.search(text)),
+        queries.map((text) => bookSearcher.search(text)),
     );
 
     const allNewBooks: Book[] = [];

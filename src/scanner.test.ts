@@ -175,6 +175,7 @@ describe('scanner', () => {
 
             expect(camera.captureFrame).toHaveBeenCalledTimes(1);
             expect(ocr.recognize).toHaveBeenCalledTimes(1);
+            // Combined query is always sent
             expect(books.search).toHaveBeenCalledWith('Some text');
         });
 
@@ -295,14 +296,24 @@ describe('scanner', () => {
     });
 
     describe('searchTextBlocks', () => {
-        it('searches all text blocks in parallel', async () => {
+        it('sends combined query plus individual long lines', async () => {
             const books = createMockBookSearcher();
-            await searchTextBlocks(['line one', 'line two', 'line three'], books as any);
+            await searchTextBlocks(['line one is long', 'line two is long', 'short'], books as any);
 
+            // Combined query + 2 individual lines >= 8 chars ("short" is < 8 chars)
             expect(books.search).toHaveBeenCalledTimes(3);
-            expect(books.search).toHaveBeenCalledWith('line one');
-            expect(books.search).toHaveBeenCalledWith('line two');
-            expect(books.search).toHaveBeenCalledWith('line three');
+            expect(books.search).toHaveBeenCalledWith('line one is long line two is long short');
+            expect(books.search).toHaveBeenCalledWith('line one is long');
+            expect(books.search).toHaveBeenCalledWith('line two is long');
+        });
+
+        it('does not send short lines as individual queries', async () => {
+            const books = createMockBookSearcher();
+            await searchTextBlocks(['abc', 'def', 'ghi'], books as any);
+
+            // Only the combined query (no individual lines >= 8 chars)
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('abc def ghi');
         });
 
         it('updates lastDetectedText only once with first block', async () => {
@@ -318,15 +329,15 @@ describe('scanner', () => {
             expect(result).toEqual([]);
         });
 
-        it('aggregates books from all blocks', async () => {
+        it('aggregates books from combined and individual queries', async () => {
             const book1 = makeBook('b1', 'Book One');
             const book2 = makeBook('b2', 'Book Two');
             const books = createMockBookSearcher();
             books.search
-                .mockResolvedValueOnce([book1])
-                .mockResolvedValueOnce([book2]);
+                .mockResolvedValueOnce([book1])  // combined query
+                .mockResolvedValueOnce([book2]); // individual line
 
-            const result = await searchTextBlocks(['text1', 'text2'], books as any);
+            const result = await searchTextBlocks(['a long text line', 'another long line'], books as any);
             expect(result).toHaveLength(2);
             expect(result[0].title).toBe('Book One');
             expect(result[1].title).toBe('Book Two');
@@ -339,7 +350,7 @@ describe('scanner', () => {
                 .mockResolvedValueOnce([book1])
                 .mockRejectedValueOnce(new Error('API error'));
 
-            const result = await searchTextBlocks(['text1', 'text2'], books as any);
+            const result = await searchTextBlocks(['a long text line', 'another line here'], books as any);
             expect(result).toHaveLength(1);
             expect(result[0].title).toBe('Book One');
         });
