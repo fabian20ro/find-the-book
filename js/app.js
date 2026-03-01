@@ -16,6 +16,7 @@ let cameraManager;
 let textRecognizer;
 let bookSearcher;
 let scanInterval;
+let listenersAttached = false;
 
 // DOM elements
 const videoEl = document.getElementById('camera');
@@ -41,6 +42,9 @@ const ICON_PLAY = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white">
 
 async function init() {
     try {
+        if (scanInterval) clearInterval(scanInterval);
+        if (cameraManager) cameraManager.stop();
+
         cameraManager = new CameraManager(videoEl, canvasEl);
         textRecognizer = new TextRecognizer();
         bookSearcher = new BookSearcher();
@@ -142,6 +146,9 @@ function escapeHtml(str) {
 }
 
 function setupListeners() {
+    if (listenersAttached) return;
+    listenersAttached = true;
+
     // Pause/Resume
     btnPause.addEventListener('click', () => {
         state.isScanning = !state.isScanning;
@@ -172,13 +179,14 @@ function setupListeners() {
         }
     });
 
-    // Retry button
-    btnRetry.addEventListener('click', () => {
-        errorOverlay.hidden = true;
-        loadingOverlay.hidden = false;
-        init();
-    });
 }
+
+// Retry button — registered at module level so it works even if init() fails
+btnRetry.addEventListener('click', () => {
+    errorOverlay.hidden = true;
+    loadingOverlay.hidden = false;
+    init();
+});
 
 function showError(message) {
     loadingOverlay.hidden = true;
