@@ -59,7 +59,7 @@ describe('scanner', () => {
         state.update({
             books: [],
             isScanning: false,
-            autoScan: true,
+            autoScan: false,
             scanCount: 0,
             lastDetectedText: '',
             error: null,
@@ -87,12 +87,13 @@ describe('scanner', () => {
         });
 
         it('schedules scan when autoScan is true', async () => {
+            state.update({ autoScan: true });
             const camera = createMockCamera();
             const ocr = createMockOcr(['Some text']);
             const books = createMockBookSearcher();
 
             startScanning(camera as any, ocr as any, books as any);
-            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
 
             expect(camera.captureFrame).toHaveBeenCalled();
             expect(ocr.recognize).toHaveBeenCalled();
@@ -112,24 +113,26 @@ describe('scanner', () => {
         });
 
         it('increments scanCount on successful scan', async () => {
+            state.update({ autoScan: true });
             const camera = createMockCamera();
             const ocr = createMockOcr(['Hello']);
             const books = createMockBookSearcher();
 
             startScanning(camera as any, ocr as any, books as any);
-            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
 
             expect(state.getState().scanCount).toBe(1);
         });
 
         it('adds found books and shows toast', async () => {
+            state.update({ autoScan: true });
             const book = makeBook('v1', 'Found Book');
             const camera = createMockCamera();
             const ocr = createMockOcr(['book title']);
             const books = createMockBookSearcher([book]);
 
             startScanning(camera as any, ocr as any, books as any);
-            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
 
             expect(state.getState().books).toHaveLength(1);
             expect(state.toast).toHaveBeenCalledWith('Found: Found Book');
@@ -145,6 +148,7 @@ describe('scanner', () => {
         });
 
         it('stops scheduled scans', async () => {
+            state.update({ autoScan: true });
             const camera = createMockCamera();
             const ocr = createMockOcr();
 
@@ -233,7 +237,7 @@ describe('scanner', () => {
             state.update({ autoScan: true });
             resumeAutoScan(camera as any, ocr as any, books as any);
 
-            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
             expect(camera.captureFrame).toHaveBeenCalled();
         });
 
@@ -247,6 +251,7 @@ describe('scanner', () => {
 
     describe('pauseAutoScan', () => {
         it('stops the auto-scan loop', async () => {
+            state.update({ autoScan: true });
             const camera = createMockCamera();
             const ocr = createMockOcr();
             const books = createMockBookSearcher();
@@ -261,6 +266,7 @@ describe('scanner', () => {
 
     describe('visibility change', () => {
         it('pauses scanning when tab is hidden', async () => {
+            state.update({ autoScan: true });
             const camera = createMockCamera();
             const ocr = createMockOcr(['text']);
             const books = createMockBookSearcher();
@@ -278,7 +284,7 @@ describe('scanner', () => {
             Object.defineProperty(document, 'hidden', { value: false, configurable: true });
             document.dispatchEvent(new Event('visibilitychange'));
 
-            await vi.advanceTimersByTimeAsync(1000);
+            await vi.advanceTimersByTimeAsync(2000);
             expect(camera.captureFrame).toHaveBeenCalled();
         });
     });
