@@ -25,6 +25,7 @@ describe('state', () => {
         update({
             books: [],
             candidateBooks: [],
+            candidateFilter: '',
             isScanning: false,
             autoScan: false,
             scanCount: 0,
@@ -33,6 +34,8 @@ describe('state', () => {
             view: 'home',
             isProcessingImage: false,
             ocrReady: false,
+            ocrLanguage: 'ron',
+            isChangingLanguage: false,
         });
     });
 
@@ -45,6 +48,9 @@ describe('state', () => {
             expect(state.view).toBe('home');
             expect(state.isProcessingImage).toBe(false);
             expect(state.ocrReady).toBe(false);
+            expect(state.ocrLanguage).toBe('ron');
+            expect(state.isChangingLanguage).toBe(false);
+            expect(state.candidateFilter).toBe('');
         });
     });
 
@@ -80,6 +86,21 @@ describe('state', () => {
         it('updates ocrReady field', () => {
             update({ ocrReady: true });
             expect(getState().ocrReady).toBe(true);
+        });
+
+        it('updates ocrLanguage field', () => {
+            update({ ocrLanguage: 'eng' });
+            expect(getState().ocrLanguage).toBe('eng');
+        });
+
+        it('updates isChangingLanguage field', () => {
+            update({ isChangingLanguage: true });
+            expect(getState().isChangingLanguage).toBe(true);
+        });
+
+        it('updates candidateFilter field', () => {
+            update({ candidateFilter: 'search term' });
+            expect(getState().candidateFilter).toBe('search term');
         });
     });
 
@@ -212,6 +233,12 @@ describe('state', () => {
             addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
             clearCandidates();
             expect(getState().candidateBooks).toEqual([]);
+        });
+
+        it('resets candidateFilter', () => {
+            update({ candidateFilter: 'some filter' });
+            clearCandidates();
+            expect(getState().candidateFilter).toBe('');
         });
 
         it('emits change event', () => {
