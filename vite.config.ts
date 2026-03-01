@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig, type Plugin } from 'vite';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -18,4 +19,8 @@ function swVersionPlugin(): Plugin {
 export default defineConfig({
   base: '/find-the-book/',
   plugins: [swVersionPlugin()],
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts'],
+  },
 });

@@ -3,17 +3,18 @@ import { CameraManager } from './camera';
 import { TextRecognizer } from './ocr';
 import { BookSearcher } from './books';
 import { exportToCsv } from './export';
-import { getState, update, clearBooks, removeBook, on, toast, type Book } from './state';
-import { startScanning, stopScanning } from './scanner';
-import { initUI, getVideoElement, getCanvasElement, hideLoading, showLoading, showError } from './ui';
+import { getState, update, addBook, clearBooks, removeBook, on, toast, type Book } from './state';
+import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan } from './scanner';
+import { initUI, getVideoElement, getCanvasElement, showError, hideError } from './ui';
 
 // Core components
 const bookSearcher = new BookSearcher();
-let cameraManager: CameraManager;
+let cameraManager: CameraManager | null = null;
 let textRecognizer: TextRecognizer;
 
 // localStorage persistence
 const STORAGE_KEY = 'ftb-books';
+const AUTOSCAN_KEY = 'ftb-autoscan';
 
 function saveBooks(): void {
     try {
@@ -38,45 +39,189 @@ function loadBooks(): void {
     }
 }
 
-async function init(): Promise<void> {
+function loadAutoScanPref(): void {
     try {
-        textRecognizer = new TextRecognizer();
+        const stored = localStorage.getItem(AUTOSCAN_KEY);
+        if (stored !== null) {
+            update({ autoScan: stored === 'true' });
+        }
+    } catch {
+        // Ignore — default is true
+    }
+}
+
+function saveAutoScanPref(): void {
+    try {
+        localStorage.setItem(AUTOSCAN_KEY, String(getState().autoScan));
+    } catch {
+        // Ignore
+    }
+}
+
+async function init(): Promise<void> {
+    // Restore saved data
+    loadBooks();
+    loadAutoScanPref();
+
+    // Show home view immediately
+    update({ view: 'home' });
+
+    // Preload OCR engine in background
+    textRecognizer = new TextRecognizer();
+    textRecognizer.init().then(() => {
+        update({ ocrReady: true });
+    }).catch((err) => {
+        console.error('OCR preload failed:', err);
+        toast('Scanner engine failed to load. Scanning may not work.');
+    });
+}
+
+async function startCameraView(): Promise<void> {
+    try {
+        hideError();
+
+        if (!getState().ocrReady) {
+            toast('Preparing scanner, please wait...');
+            // Wait for OCR to finish loading
+            await new Promise<void>((resolve) => {
+                const check = () => {
+                    if (getState().ocrReady) { resolve(); return; }
+                    const unsub = on('change', () => {
+                        if (getState().ocrReady) { unsub(); resolve(); }
+                    });
+                };
+                check();
+            });
+        }
 
         const videoEl = getVideoElement();
         const canvasEl = getCanvasElement();
         cameraManager = new CameraManager(videoEl, canvasEl);
 
-        // Restore previously found books
-        loadBooks();
-
-        // Initialize OCR engine
-        await textRecognizer.init();
-
-        // Start camera (with disconnect handler)
         await cameraManager.start(() => {
             toast('Camera disconnected');
             stopScanning();
         });
 
-        // Hide loading, show UI
-        hideLoading();
+        update({ view: 'scan' });
 
-        // Start scan loop
         startScanning(cameraManager, textRecognizer, bookSearcher);
     } catch (err) {
-        showError((err as Error).message || 'Failed to initialize. Please ensure camera access is allowed.');
+        showError((err as Error).message || 'Failed to start camera. Please ensure camera access is allowed.');
     }
+}
+
+function stopCameraView(): void {
+    stopScanning();
+    if (cameraManager) {
+        cameraManager.stop();
+        cameraManager = null;
+    }
+    update({ view: 'home' });
+}
+
+function handleAutoScanToggle(): void {
+    const newVal = !getState().autoScan;
+    update({ autoScan: newVal });
+    saveAutoScanPref();
+
+    if (!cameraManager) return;
+
+    if (newVal) {
+        // Turning auto-scan ON — resume the loop
+        resumeAutoScan(cameraManager, textRecognizer, bookSearcher);
+    } else {
+        // Turning auto-scan OFF — stop the loop but keep camera active
+        pauseAutoScan();
+    }
+}
+
+async function handleManualScan(): Promise<void> {
+    if (!cameraManager) return;
+    await scanOnce(cameraManager, textRecognizer, bookSearcher);
+}
+
+const MAX_IMAGE_DIM = 1920;
+
+async function handleImageUpload(file: File): Promise<void> {
+    update({ isProcessingImage: true });
+
+    try {
+        if (!getState().ocrReady) {
+            toast('Scanner is still loading, please wait...');
+            await new Promise<void>((resolve) => {
+                const unsub = on('change', () => {
+                    if (getState().ocrReady) { unsub(); resolve(); }
+                });
+            });
+        }
+
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.src = url;
+
+        await new Promise<void>((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = () => reject(new Error('Failed to load image'));
+        });
+
+        // Cap dimensions for performance
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > MAX_IMAGE_DIM || h > MAX_IMAGE_DIM) {
+            const scale = MAX_IMAGE_DIM / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not create canvas context');
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+
+        const textBlocks = await textRecognizer.recognize(canvas);
+
+        let foundAny = false;
+        for (const text of textBlocks) {
+            update({ lastDetectedText: text });
+            const newBooks = await bookSearcher.search(text);
+            for (const book of newBooks) {
+                const added = addBookAndSave(book);
+                if (added) foundAny = true;
+            }
+        }
+
+        if (textBlocks.length === 0) {
+            toast('No text detected in this image');
+        } else if (!foundAny) {
+            toast('No new books found in this image');
+        }
+    } catch (err) {
+        console.error('Image upload error:', err);
+        toast('Failed to process image');
+    } finally {
+        update({ isProcessingImage: false });
+    }
+}
+
+function addBookAndSave(book: Book): boolean {
+    const added = addBook(book);
+    if (added) {
+        toast(`Found: ${book.title}`);
+    }
+    return added;
 }
 
 // Initialize UI with event handlers
 initUI({
-    onPauseToggle: () => {
-        if (getState().isScanning) {
-            stopScanning();
-        } else {
-            startScanning(cameraManager, textRecognizer, bookSearcher);
-        }
-    },
+    onStartCamera: () => startCameraView(),
+    onStopCamera: () => stopCameraView(),
+    onAutoScanToggle: () => handleAutoScanToggle(),
+    onManualScan: () => handleManualScan(),
+    onImageUpload: (file: File) => handleImageUpload(file),
     onExport: () => {
         if (getState().books.length === 0) {
             toast('No books to export');
@@ -93,8 +238,7 @@ initUI({
         saveBooks();
     },
     onRetry: () => {
-        showLoading();
-        init();
+        startCameraView();
     },
     onRemoveBook: (index: number) => {
         const removed = removeBook(index);

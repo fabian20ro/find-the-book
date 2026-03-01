@@ -10,54 +10,97 @@
     <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
-    <!-- Live camera feed -->
-    <video id="camera" autoplay playsinline muted></video>
-
-    <!-- Hidden canvas for frame capture -->
-    <canvas id="capture"></canvas>
-
-    <!-- Loading overlay (shown during Tesseract.js init) -->
-    <div id="loading-overlay">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <p>Initializing OCR engine...</p>
-            <p class="loading-hint">First load downloads ~4MB of data</p>
-        </div>
-    </div>
-
-    <!-- Status bar at top -->
-    <div id="status-overlay" class="status-overlay" hidden>
-        <div class="status-row">
-            <span id="scan-count">Scans: 0</span>
-            <span id="scan-status" class="scan-active" role="status" aria-live="polite">Scanning</span>
-        </div>
-        <div id="last-text" class="last-text"></div>
-    </div>
-
-    <!-- Book list at bottom -->
-    <div id="book-overlay" class="book-overlay" hidden>
-        <div class="controls">
-            <span id="book-count" role="status" aria-live="polite">0 books found</span>
-            <div class="control-buttons">
-                <button id="btn-pause" title="Pause scanning" aria-label="Pause scanning">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                        <rect x="6" y="4" width="4" height="16"/>
-                        <rect x="14" y="4" width="4" height="16"/>
-                    </svg>
-                </button>
-                <button id="btn-export" title="Export CSV" aria-label="Export books as CSV">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                    </svg>
-                </button>
-                <button id="btn-clear" title="Clear all" aria-label="Clear all books">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                    </svg>
-                </button>
+    <!-- ===== HOME VIEW ===== -->
+    <div id="home-view" class="home-view">
+        <header class="home-header">
+            <h1 class="home-title">Find The Book</h1>
+            <p class="home-subtitle">Scan book spines to identify and catalog them</p>
+            <div id="ocr-status" class="ocr-status" aria-live="polite">
+                <div class="spinner spinner-sm"></div>
+                <span>Preparing scanner...</span>
             </div>
+        </header>
+
+        <div class="home-actions">
+            <button id="btn-start-camera" class="btn-action btn-primary" aria-label="Start camera scanning">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                </svg>
+                Scan with Camera
+            </button>
+            <button id="btn-upload-image" class="btn-action btn-secondary" aria-label="Upload an image to scan">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                </svg>
+                Upload Image
+            </button>
+            <input type="file" id="photo-input" accept="image/*" hidden aria-hidden="true">
         </div>
-        <div id="book-list" class="book-list"></div>
+
+        <div id="home-processing" class="home-processing" hidden>
+            <div class="spinner"></div>
+            <span>Scanning image for books...</span>
+        </div>
+
+        <div class="home-book-section">
+            <div class="home-book-header">
+                <span id="home-book-count" role="status" aria-live="polite">0 books found</span>
+                <div class="control-buttons">
+                    <button id="btn-home-export" title="Export CSV" aria-label="Export books as CSV" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                            <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+                        </svg>
+                    </button>
+                    <button id="btn-home-clear" title="Clear all" aria-label="Clear all books" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div id="home-book-list" class="book-list"></div>
+        </div>
+    </div>
+
+    <!-- ===== SCAN VIEW (camera) ===== -->
+    <div id="scan-view" class="scan-view" hidden>
+        <!-- Live camera feed -->
+        <video id="camera" autoplay playsinline muted></video>
+
+        <!-- Hidden canvas for frame capture -->
+        <canvas id="capture"></canvas>
+
+        <!-- Status bar at top -->
+        <div id="status-overlay" class="status-overlay">
+            <div class="status-row">
+                <button id="btn-back" class="btn-back" title="Back to home" aria-label="Back to home">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                        <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                    </svg>
+                </button>
+                <span id="scan-count">Scans: 0</span>
+                <span id="scan-status" class="scan-paused" role="status" aria-live="polite">Paused</span>
+            </div>
+            <div id="last-text" class="last-text"></div>
+        </div>
+
+        <!-- Scan controls at bottom -->
+        <div id="scan-controls" class="scan-controls">
+            <div class="scan-controls-row">
+                <div class="auto-scan-toggle">
+                    <label for="auto-scan-switch">Auto-scan</label>
+                    <button id="auto-scan-switch" role="switch" aria-checked="true" aria-label="Toggle auto-scan" class="toggle-switch">
+                        <span class="toggle-knob"></span>
+                    </button>
+                </div>
+                <span id="scan-book-count" role="status" aria-live="polite">0 books found</span>
+            </div>
+            <button id="btn-scan-now" class="btn-scan-now" aria-label="Capture and scan" hidden>
+                <div class="scan-now-ring">
+                    <div class="scan-now-inner"></div>
+                </div>
+            </button>
+        </div>
     </div>
 
     <!-- Error overlay -->
