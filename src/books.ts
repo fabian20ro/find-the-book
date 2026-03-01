@@ -1,10 +1,40 @@
-export class BookSearcher {
-    constructor() {
-        this.queryCache = new Set();
-        this.foundBookIds = new Set();
-    }
+export interface Book {
+    id: string;
+    title: string;
+    authors: string[];
+    publisher: string | null;
+    publishedDate: string | null;
+    description: string | null;
+    isbn: string | null;
+    pageCount: number | null;
+    thumbnailUrl: string | null;
+    infoLink: string | null;
+}
 
-    async search(query) {
+interface GoogleBooksVolume {
+    id: string;
+    volumeInfo?: {
+        title?: string;
+        authors?: string[];
+        publisher?: string;
+        publishedDate?: string;
+        description?: string;
+        pageCount?: number;
+        industryIdentifiers?: Array<{ type: string; identifier: string }>;
+        imageLinks?: { thumbnail?: string };
+        infoLink?: string;
+    };
+}
+
+interface GoogleBooksResponse {
+    items?: GoogleBooksVolume[];
+}
+
+export class BookSearcher {
+    private queryCache = new Set<string>();
+    private foundBookIds = new Set<string>();
+
+    async search(query: string): Promise<Book[]> {
         const normalized = query.toLowerCase().trim();
         if (normalized.length < 4 || this.queryCache.has(normalized)) {
             return [];
@@ -15,7 +45,7 @@ export class BookSearcher {
             const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=3`;
             const response = await fetch(url);
             if (!response.ok) return [];
-            const data = await response.json();
+            const data: GoogleBooksResponse = await response.json();
 
             return (data.items || [])
                 .map((item) => this.parseBook(item))
@@ -30,7 +60,7 @@ export class BookSearcher {
         }
     }
 
-    parseBook(item) {
+    private parseBook(item: GoogleBooksVolume): Book {
         const info = item.volumeInfo || {};
         const identifiers = info.industryIdentifiers || [];
         const isbn13 = identifiers.find((id) => id.type === 'ISBN_13');
@@ -51,11 +81,11 @@ export class BookSearcher {
         };
     }
 
-    removeBookId(bookId) {
+    removeBookId(bookId: string): void {
         this.foundBookIds.delete(bookId);
     }
 
-    clear() {
+    clear(): void {
         this.queryCache.clear();
         this.foundBookIds.clear();
     }

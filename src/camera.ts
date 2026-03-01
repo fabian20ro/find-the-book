@@ -1,13 +1,17 @@
 export class CameraManager {
-    constructor(videoElement, canvasElement) {
+    private video: HTMLVideoElement;
+    private canvas: HTMLCanvasElement;
+    private ctx: CanvasRenderingContext2D;
+    private stream: MediaStream | null = null;
+
+    constructor(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement) {
         this.video = videoElement;
         this.canvas = canvasElement;
-        this.ctx = canvasElement.getContext('2d');
-        this.stream = null;
+        this.ctx = canvasElement.getContext('2d')!;
     }
 
-    async start() {
-        const constraints = {
+    async start(): Promise<void> {
+        const constraints: MediaStreamConstraints = {
             video: {
                 facingMode: 'environment',
                 width: { ideal: 1920 },
@@ -20,7 +24,7 @@ export class CameraManager {
         this.video.srcObject = this.stream;
 
         // Wait for video to be ready
-        await new Promise((resolve) => {
+        await new Promise<void>((resolve) => {
             this.video.onloadedmetadata = () => {
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
@@ -29,13 +33,13 @@ export class CameraManager {
         });
     }
 
-    captureFrame() {
+    captureFrame(): HTMLCanvasElement | null {
         if (!this.video.videoWidth) return null;
         this.ctx.drawImage(this.video, 0, 0);
         return this.canvas;
     }
 
-    stop() {
+    stop(): void {
         if (this.stream) {
             this.stream.getTracks().forEach((track) => track.stop());
             this.stream = null;
