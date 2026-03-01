@@ -494,6 +494,10 @@ body {
     z-index: 100;
 }
 
+#error-overlay[hidden] {
+    display: none;
+}
+
 .error-content {
     text-align: center;
     padding: 24px;
