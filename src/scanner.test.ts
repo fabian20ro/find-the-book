@@ -175,7 +175,9 @@ describe('scanner', () => {
 
             expect(camera.captureFrame).toHaveBeenCalledTimes(1);
             expect(ocr.recognize).toHaveBeenCalledTimes(1);
+            // Single line: combined query equals the line, no duplicate individual query
             expect(books.search).toHaveBeenCalledWith('Some text');
+            expect(books.search).toHaveBeenCalledTimes(1);
         });
 
         it('increments scanCount', async () => {
@@ -295,14 +297,40 @@ describe('scanner', () => {
     });
 
     describe('searchTextBlocks', () => {
-        it('searches all text blocks in parallel', async () => {
+        it('sends combined query from all lines', async () => {
             const books = createMockBookSearcher();
             await searchTextBlocks(['line one', 'line two', 'line three'], books as any);
 
-            expect(books.search).toHaveBeenCalledTimes(3);
+            expect(books.search).toHaveBeenCalledWith('line one line two line three');
+        });
+
+        it('also searches individual lines >= 8 chars', async () => {
+            const books = createMockBookSearcher();
+            await searchTextBlocks(['line one', 'line two', 'line three'], books as any);
+
+            // combined + 3 individual long lines = 4 total
+            expect(books.search).toHaveBeenCalledTimes(4);
             expect(books.search).toHaveBeenCalledWith('line one');
             expect(books.search).toHaveBeenCalledWith('line two');
             expect(books.search).toHaveBeenCalledWith('line three');
+        });
+
+        it('does not send individual lines shorter than 8 chars', async () => {
+            const books = createMockBookSearcher();
+            // 'hi' (2), 'short' (5), 'text1' (5) — all < 8 chars individually
+            await searchTextBlocks(['hi', 'short', 'text1'], books as any);
+
+            // Only the combined query is sent
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('hi short text1');
+        });
+
+        it('does not duplicate query when single line equals combined', async () => {
+            const books = createMockBookSearcher();
+            await searchTextBlocks(['Some text'], books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('Some text');
         });
 
         it('updates lastDetectedText only once with first block', async () => {
@@ -318,15 +346,17 @@ describe('scanner', () => {
             expect(result).toEqual([]);
         });
 
-        it('aggregates books from all blocks', async () => {
+        it('aggregates books from combined and individual queries', async () => {
             const book1 = makeBook('b1', 'Book One');
             const book2 = makeBook('b2', 'Book Two');
             const books = createMockBookSearcher();
+            // 'longtext1' (9 chars) qualifies as individual; 'short' (5 chars) does not
+            // → combined='longtext1 short' + individual='longtext1' = 2 queries
             books.search
                 .mockResolvedValueOnce([book1])
                 .mockResolvedValueOnce([book2]);
 
-            const result = await searchTextBlocks(['text1', 'text2'], books as any);
+            const result = await searchTextBlocks(['longtext1', 'short'], books as any);
             expect(result).toHaveLength(2);
             expect(result[0].title).toBe('Book One');
             expect(result[1].title).toBe('Book Two');
@@ -335,11 +365,12 @@ describe('scanner', () => {
         it('handles search failures gracefully', async () => {
             const book1 = makeBook('b1', 'Book One');
             const books = createMockBookSearcher();
+            // 'longtext1' (9 chars) qualifies as individual → 2 queries
             books.search
                 .mockResolvedValueOnce([book1])
                 .mockRejectedValueOnce(new Error('API error'));
 
-            const result = await searchTextBlocks(['text1', 'text2'], books as any);
+            const result = await searchTextBlocks(['longtext1', 'short'], books as any);
             expect(result).toHaveLength(1);
             expect(result[0].title).toBe('Book One');
         });

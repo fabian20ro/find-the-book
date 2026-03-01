@@ -174,12 +174,19 @@ function onVisibilityChange(
 export async function searchTextBlocks(textBlocks: string[], bookSearcher: BookSearcher): Promise<Book[]> {
     if (textBlocks.length === 0) return [];
 
-    // Single UI update instead of one per block (eliminates "terminal scrolling")
     update({ lastDetectedText: textBlocks[0] });
 
-    // Fire all searches in parallel
+    // Primary query: all lines joined — gives Google Books the full context
+    const combined = textBlocks.join(' ');
+
+    // Secondary queries: individual lines long enough to be meaningful (>= 8 chars),
+    // deduped and excluding lines that are identical to the combined query (single-line case)
+    const longIndividuals = [...new Set(textBlocks.filter((t) => t.length >= 8 && t !== combined))];
+
+    const queries = [combined, ...longIndividuals];
+
     const results = await Promise.allSettled(
-        textBlocks.map((text) => bookSearcher.search(text)),
+        queries.map((text) => bookSearcher.search(text)),
     );
 
     const allNewBooks: Book[] = [];

@@ -57,7 +57,6 @@ function setupDOM() {
                 </div>
             </div>
             <div id="home-book-list" class="book-list"></div>
-            <div id="language-selector" class="language-selector" aria-label="OCR Language"></div>
         </div>
         <div id="scan-view" class="scan-view" hidden>
             <video id="camera" autoplay playsinline muted></video>
@@ -71,6 +70,7 @@ function setupDOM() {
                 <div id="last-text" class="last-text"></div>
             </div>
             <div id="scan-controls" class="scan-controls">
+                <div id="language-selector" class="language-selector" aria-label="OCR Language"></div>
                 <div class="scan-controls-row">
                     <div class="auto-scan-toggle">
                         <label for="auto-scan-switch">Auto-scan</label>
