@@ -5,7 +5,7 @@ import { BookSearcher } from './books';
 import { exportToCsv } from './export';
 import { getState, update, addBook, addCandidates, removeCandidateById, clearCandidates, clearBooks, removeBook, on, toast, type Book } from './state';
 import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
-import { initUI, getVideoElement, getCanvasElement, showError, hideError } from './ui';
+import { initUI, getVideoElement, getCanvasElement, showError, hideError, getAllLanguages } from './ui';
 
 // Core components
 const bookSearcher = new BookSearcher(toast);
@@ -15,6 +15,8 @@ let textRecognizer: TextRecognizer;
 // localStorage persistence
 const STORAGE_KEY = 'ftb-books';
 const AUTOSCAN_KEY = 'ftb-autoscan';
+const LANG_KEY = 'ftb-language';
+const LANG_USAGE_KEY = 'ftb-lang-usage';
 
 function saveBooks(): void {
     try {
@@ -58,17 +60,61 @@ function saveAutoScanPref(): void {
     }
 }
 
+function loadLanguagePref(): void {
+    try {
+        const stored = localStorage.getItem(LANG_KEY);
+        if (stored) {
+            // Validate stored code is a known language
+            const all = getAllLanguages();
+            if (all.some((l) => l.code === stored)) {
+                update({ ocrLanguage: stored });
+            }
+        }
+    } catch {
+        // Ignore — default is 'ron'
+    }
+}
+
+function saveLanguagePref(): void {
+    try {
+        localStorage.setItem(LANG_KEY, getState().ocrLanguage);
+    } catch {
+        // Ignore
+    }
+}
+
+function incrementLanguageUsage(code: string): void {
+    try {
+        const usage = getLanguageUsage();
+        usage[code] = (usage[code] || 0) + 1;
+        localStorage.setItem(LANG_USAGE_KEY, JSON.stringify(usage));
+    } catch {
+        // Ignore
+    }
+}
+
+export function getLanguageUsage(): Record<string, number> {
+    try {
+        const stored = localStorage.getItem(LANG_USAGE_KEY);
+        return stored ? JSON.parse(stored) : {};
+    } catch {
+        return {};
+    }
+}
+
 async function init(): Promise<void> {
     // Restore saved data
     loadBooks();
     loadAutoScanPref();
+    loadLanguagePref();
 
     // Show home view immediately
     update({ view: 'home' });
 
-    // Preload OCR engine in background
+    // Preload OCR engine in background with selected language
+    const lang = getState().ocrLanguage;
     textRecognizer = new TextRecognizer();
-    textRecognizer.init().then(() => {
+    textRecognizer.init(lang).then(() => {
         update({ ocrReady: true });
     }).catch((err) => {
         console.error('OCR preload failed:', err);
@@ -139,6 +185,23 @@ function handleAutoScanToggle(): void {
 async function handleManualScan(): Promise<void> {
     if (!cameraManager) return;
     await scanOnce(cameraManager, textRecognizer, bookSearcher);
+}
+
+async function handleLanguageChange(langCode: string): Promise<void> {
+    if (langCode === getState().ocrLanguage) return;
+
+    update({ isChangingLanguage: true, ocrLanguage: langCode });
+    saveLanguagePref();
+    incrementLanguageUsage(langCode);
+
+    try {
+        await textRecognizer.setLanguage(langCode);
+    } catch (err) {
+        console.error('Language change failed:', err);
+        toast('Failed to load language data. Check your connection.');
+    } finally {
+        update({ isChangingLanguage: false });
+    }
 }
 
 const MAX_IMAGE_DIM = 1920;
@@ -251,6 +314,8 @@ initUI({
     onDismissCandidates: () => {
         clearCandidates();
     },
+    onLanguageChange: (langCode: string) => handleLanguageChange(langCode),
+    getLanguageUsage,
 });
 
 // Persist books on every state change

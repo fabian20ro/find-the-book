@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan } from './scanner';
+import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
 import * as state from './state';
 
 // Mock state module
@@ -60,6 +60,7 @@ describe('scanner', () => {
         state.update({
             books: [],
             candidateBooks: [],
+            candidateFilter: '',
             isScanning: false,
             autoScan: false,
             scanCount: 0,
@@ -68,6 +69,8 @@ describe('scanner', () => {
             view: 'home',
             isProcessingImage: false,
             ocrReady: false,
+            ocrLanguage: 'ron',
+            isChangingLanguage: false,
         });
     });
 
@@ -288,6 +291,57 @@ describe('scanner', () => {
 
             await vi.advanceTimersByTimeAsync(2000);
             expect(camera.captureFrame).toHaveBeenCalled();
+        });
+    });
+
+    describe('searchTextBlocks', () => {
+        it('searches all text blocks in parallel', async () => {
+            const books = createMockBookSearcher();
+            await searchTextBlocks(['line one', 'line two', 'line three'], books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(3);
+            expect(books.search).toHaveBeenCalledWith('line one');
+            expect(books.search).toHaveBeenCalledWith('line two');
+            expect(books.search).toHaveBeenCalledWith('line three');
+        });
+
+        it('updates lastDetectedText only once with first block', async () => {
+            const books = createMockBookSearcher();
+            await searchTextBlocks(['first', 'second', 'third'], books as any);
+
+            expect(state.getState().lastDetectedText).toBe('first');
+        });
+
+        it('returns empty array for no text blocks', async () => {
+            const books = createMockBookSearcher();
+            const result = await searchTextBlocks([], books as any);
+            expect(result).toEqual([]);
+        });
+
+        it('aggregates books from all blocks', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const book2 = makeBook('b2', 'Book Two');
+            const books = createMockBookSearcher();
+            books.search
+                .mockResolvedValueOnce([book1])
+                .mockResolvedValueOnce([book2]);
+
+            const result = await searchTextBlocks(['text1', 'text2'], books as any);
+            expect(result).toHaveLength(2);
+            expect(result[0].title).toBe('Book One');
+            expect(result[1].title).toBe('Book Two');
+        });
+
+        it('handles search failures gracefully', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            books.search
+                .mockResolvedValueOnce([book1])
+                .mockRejectedValueOnce(new Error('API error'));
+
+            const result = await searchTextBlocks(['text1', 'text2'], books as any);
+            expect(result).toHaveLength(1);
+            expect(result[0].title).toBe('Book One');
         });
     });
 

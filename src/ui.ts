@@ -1,5 +1,5 @@
 import { $, $as } from './dom';
-import { getState, on, type Book } from './state';
+import { getState, update, on, type Book } from './state';
 
 const MAX_DISPLAY_TEXT_LENGTH = 60;
 const TOAST_DISPLAY_MS = 2000;
@@ -8,6 +8,58 @@ const CONFIDENCE_HIGH_THRESHOLD = 70;
 const CONFIDENCE_MID_THRESHOLD = 40;
 
 const NO_COVER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E";
+
+// --- Language data ---
+
+export interface OcrLanguage {
+    code: string;
+    name: string;
+    flag: string;
+}
+
+const ALL_LANGUAGES: OcrLanguage[] = [
+    { code: 'ron', name: 'Romanian', flag: '\u{1F1F7}\u{1F1F4}' },
+    { code: 'eng', name: 'English', flag: '\u{1F1EC}\u{1F1E7}' },
+    { code: 'fra', name: 'French', flag: '\u{1F1EB}\u{1F1F7}' },
+    { code: 'deu', name: 'German', flag: '\u{1F1E9}\u{1F1EA}' },
+    { code: 'ita', name: 'Italian', flag: '\u{1F1EE}\u{1F1F9}' },
+    { code: 'spa', name: 'Spanish', flag: '\u{1F1EA}\u{1F1F8}' },
+    { code: 'por', name: 'Portuguese', flag: '\u{1F1F5}\u{1F1F9}' },
+    { code: 'nld', name: 'Dutch', flag: '\u{1F1F3}\u{1F1F1}' },
+    { code: 'pol', name: 'Polish', flag: '\u{1F1F5}\u{1F1F1}' },
+    { code: 'hun', name: 'Hungarian', flag: '\u{1F1ED}\u{1F1FA}' },
+    { code: 'ces', name: 'Czech', flag: '\u{1F1E8}\u{1F1FF}' },
+    { code: 'tur', name: 'Turkish', flag: '\u{1F1F9}\u{1F1F7}' },
+    { code: 'swe', name: 'Swedish', flag: '\u{1F1F8}\u{1F1EA}' },
+    { code: 'rus', name: 'Russian', flag: '\u{1F1F7}\u{1F1FA}' },
+    { code: 'jpn', name: 'Japanese', flag: '\u{1F1EF}\u{1F1F5}' },
+    { code: 'zho', name: 'Chinese', flag: '\u{1F1E8}\u{1F1F3}' },
+];
+
+const DEFAULT_VISIBLE_CODES = ['ron', 'eng', 'fra', 'deu', 'ita', 'spa'];
+const VISIBLE_COUNT = 6;
+
+export function getVisibleLanguages(usage: Record<string, number>): OcrLanguage[] {
+    const hasUsage = Object.keys(usage).length > 0;
+    if (!hasUsage) {
+        return ALL_LANGUAGES.filter((l) => DEFAULT_VISIBLE_CODES.includes(l.code));
+    }
+    const sorted = [...ALL_LANGUAGES].sort((a, b) => {
+        const ua = usage[a.code] || 0;
+        const ub = usage[b.code] || 0;
+        if (ub !== ua) return ub - ua;
+        const aIdx = DEFAULT_VISIBLE_CODES.indexOf(a.code);
+        const bIdx = DEFAULT_VISIBLE_CODES.indexOf(b.code);
+        if (aIdx >= 0 && bIdx < 0) return -1;
+        if (bIdx >= 0 && aIdx < 0) return 1;
+        return a.name.localeCompare(b.name);
+    });
+    return sorted.slice(0, VISIBLE_COUNT);
+}
+
+export function getAllLanguages(): readonly OcrLanguage[] {
+    return ALL_LANGUAGES;
+}
 
 // DOM element references (queried once in initUI)
 
@@ -40,11 +92,19 @@ let scanBookCount: HTMLElement;
 let bookPopup: HTMLElement;
 let bookPopupList: HTMLElement;
 let btnPopupDismiss: HTMLElement;
+let candidateSearch: HTMLInputElement;
+
+// Language selector
+let languageSelector: HTMLElement;
+let languageExpanded = false;
 
 // Shared
 let errorOverlay: HTMLElement;
 let errorMessage: HTMLElement;
 let btnRetry: HTMLElement;
+
+// Language usage getter (set by app.ts via initUI)
+let getLanguageUsage: () => Record<string, number> = () => ({});
 
 export interface UIHandlers {
     onStartCamera: () => void;
@@ -58,6 +118,8 @@ export interface UIHandlers {
     onRemoveBook: (index: number) => void;
     onAddCandidate: (bookId: string) => void;
     onDismissCandidates: () => void;
+    onLanguageChange: (langCode: string) => void;
+    getLanguageUsage: () => Record<string, number>;
 }
 
 export function initUI(handlers: UIHandlers): void {
@@ -90,6 +152,11 @@ export function initUI(handlers: UIHandlers): void {
     bookPopup = $('#book-popup');
     bookPopupList = $('#book-popup-list');
     btnPopupDismiss = $('#btn-popup-dismiss');
+    candidateSearch = $as('#candidate-search', HTMLInputElement);
+
+    // Language selector
+    languageSelector = $('#language-selector');
+    getLanguageUsage = handlers.getLanguageUsage;
 
     // Shared
     errorOverlay = $('#error-overlay');
@@ -151,6 +218,26 @@ export function initUI(handlers: UIHandlers): void {
         }
     });
 
+    // Candidate search filter
+    candidateSearch.addEventListener('input', () => {
+        update({ candidateFilter: candidateSearch.value });
+    });
+
+    // Language selector (event delegation)
+    languageSelector.addEventListener('click', (e: Event) => {
+        const btn = (e.target as HTMLElement).closest('.lang-btn') as HTMLElement | null;
+        if (!btn) return;
+        const code = btn.dataset.lang;
+        if (code === 'more') {
+            languageExpanded = !languageExpanded;
+            renderLanguageSelector();
+            return;
+        }
+        if (code) {
+            handlers.onLanguageChange(code);
+        }
+    });
+
     // Subscribe to state events
     on('change', renderUI);
     on('toast', showToast);
@@ -189,8 +276,8 @@ function renderUI(): void {
 
     // Image processing state
     homeProcessing.hidden = !state.isProcessingImage;
-    (btnUploadImage as HTMLButtonElement).disabled = state.isProcessingImage;
-    (btnStartCamera as HTMLButtonElement).disabled = state.isProcessingImage;
+    (btnUploadImage as HTMLButtonElement).disabled = state.isProcessingImage || state.isChangingLanguage;
+    (btnStartCamera as HTMLButtonElement).disabled = state.isProcessingImage || state.isChangingLanguage;
 
     // Home view book list and controls
     renderHomeBookList();
@@ -198,6 +285,9 @@ function renderUI(): void {
     homeBookCount.textContent = `${count} book${count !== 1 ? 's' : ''} found`;
     (btnHomeExport as HTMLButtonElement).disabled = count === 0;
     (btnHomeClear as HTMLButtonElement).disabled = count === 0;
+
+    // Language selector (home view only)
+    renderLanguageSelector();
 
     // Scan view status
     scanCountEl.textContent = `Scans: ${state.scanCount}`;
@@ -228,8 +318,72 @@ function renderUI(): void {
     if (candidates.length > 0) {
         const popupTitle = bookPopup.querySelector('.book-popup-title') as HTMLElement;
         popupTitle.textContent = `${candidates.length} Book${candidates.length !== 1 ? 's' : ''} Found`;
-        renderCandidateList(candidates);
+
+        // Apply search filter
+        const filter = state.candidateFilter.toLowerCase().trim();
+        const filtered = filter
+            ? candidates.filter((book) => {
+                const title = book.title.toLowerCase();
+                const authors = book.authors.join(' ').toLowerCase();
+                const isbn = (book.isbn || '').toLowerCase();
+                return title.includes(filter) || authors.includes(filter) || isbn.includes(filter);
+            })
+            : candidates;
+
+        // Sort by confidence descending
+        const sorted = [...filtered].sort((a, b) => b.confidence - a.confidence);
+        renderCandidateList(sorted);
+
+        // Sync input without cursor jump
+        if (candidateSearch.value !== state.candidateFilter) {
+            candidateSearch.value = state.candidateFilter;
+        }
+    } else {
+        candidateSearch.value = '';
     }
+}
+
+function renderLanguageSelector(): void {
+    const state = getState();
+    const usage = getLanguageUsage();
+    const visible = getVisibleLanguages(usage);
+    const remaining = ALL_LANGUAGES.filter((l) => !visible.some((v) => v.code === l.code));
+    const disabled = state.isChangingLanguage;
+
+    let html = '<div class="lang-grid">';
+
+    for (const lang of visible) {
+        const isActive = lang.code === state.ocrLanguage;
+        html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" data-lang="${lang.code}" title="${lang.name}"${disabled ? ' disabled' : ''}>
+            <span class="lang-flag">${lang.flag}</span>
+            <span class="lang-label">${lang.name}</span>
+        </button>`;
+    }
+
+    html += `<button class="lang-btn lang-more${languageExpanded ? ' lang-active' : ''}" data-lang="more" title="More languages">
+        <span class="lang-flag">\u{22EF}</span>
+        <span class="lang-label">More</span>
+    </button>`;
+
+    html += '</div>';
+
+    if (languageExpanded && remaining.length > 0) {
+        html += '<div class="lang-grid lang-grid-expanded">';
+        for (const lang of remaining) {
+            const isActive = lang.code === state.ocrLanguage;
+            html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" data-lang="${lang.code}" title="${lang.name}"${disabled ? ' disabled' : ''}>
+                <span class="lang-flag">${lang.flag}</span>
+                <span class="lang-label">${lang.name}</span>
+            </button>`;
+        }
+        html += '</div>';
+    }
+
+    if (state.isChangingLanguage) {
+        html += '<div class="lang-loading"><div class="spinner spinner-sm"></div> Loading language...</div>';
+    }
+
+    languageSelector.innerHTML = html;
 }
 
 function renderBookImage(book: Book): string {

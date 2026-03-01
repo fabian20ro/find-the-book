@@ -172,11 +172,21 @@ function onVisibilityChange(
 }
 
 export async function searchTextBlocks(textBlocks: string[], bookSearcher: BookSearcher): Promise<Book[]> {
+    if (textBlocks.length === 0) return [];
+
+    // Single UI update instead of one per block (eliminates "terminal scrolling")
+    update({ lastDetectedText: textBlocks[0] });
+
+    // Fire all searches in parallel
+    const results = await Promise.allSettled(
+        textBlocks.map((text) => bookSearcher.search(text)),
+    );
+
     const allNewBooks: Book[] = [];
-    for (const text of textBlocks) {
-        update({ lastDetectedText: text });
-        const newBooks = await bookSearcher.search(text);
-        allNewBooks.push(...newBooks);
+    for (const result of results) {
+        if (result.status === 'fulfilled') {
+            allNewBooks.push(...result.value);
+        }
     }
     return allNewBooks;
 }

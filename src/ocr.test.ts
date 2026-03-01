@@ -23,9 +23,15 @@ afterEach(() => {
 
 describe('TextRecognizer', () => {
     describe('init', () => {
-        it('initializes Tesseract worker', async () => {
+        it('initializes Tesseract worker with default language', async () => {
             const recognizer = new TextRecognizer();
             await recognizer.init();
+            expect(Tesseract.createWorker).toHaveBeenCalledWith('ron');
+        });
+
+        it('initializes Tesseract worker with specified language', async () => {
+            const recognizer = new TextRecognizer();
+            await recognizer.init('eng');
             expect(Tesseract.createWorker).toHaveBeenCalledWith('eng');
         });
 
@@ -154,6 +160,57 @@ describe('TextRecognizer', () => {
 
             // Clean up dangling promise
             resolveOcr!({ data: { lines: [] } });
+        });
+    });
+
+    describe('setLanguage', () => {
+        it('switches to a new language', async () => {
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            expect(recognizer.getLanguage()).toBe('ron');
+
+            await recognizer.setLanguage('eng');
+            expect(mockTerminate).toHaveBeenCalled();
+            expect(Tesseract.createWorker).toHaveBeenCalledWith('eng');
+            expect(recognizer.getLanguage()).toBe('eng');
+        });
+
+        it('skips if already using the same language', async () => {
+            const recognizer = new TextRecognizer();
+            await recognizer.init('fra');
+            const callCount = (Tesseract.createWorker as any).mock.calls.length;
+
+            await recognizer.setLanguage('fra');
+            expect((Tesseract.createWorker as any).mock.calls.length).toBe(callCount);
+            expect(mockTerminate).not.toHaveBeenCalled();
+        });
+
+        it('resets isProcessing flag', async () => {
+            let resolveOcr: (v: any) => void;
+            mockRecognize.mockReturnValueOnce(new Promise((r) => { resolveOcr = r; }));
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            const canvas = document.createElement('canvas');
+            recognizer.recognize(canvas); // puts into processing state
+
+            // Switching language should reset processing flag
+            await recognizer.setLanguage('eng');
+
+            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After switch' }] } });
+            const result = await recognizer.recognize(canvas);
+            expect(result).toEqual(['After switch']);
+
+            // Clean up
+            resolveOcr!({ data: { lines: [] } });
+        });
+    });
+
+    describe('getLanguage', () => {
+        it('returns the current language', async () => {
+            const recognizer = new TextRecognizer();
+            await recognizer.init('deu');
+            expect(recognizer.getLanguage()).toBe('deu');
         });
     });
 

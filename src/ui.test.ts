@@ -33,6 +33,8 @@ function createHandlers(): UIHandlers {
         onRemoveBook: vi.fn(),
         onAddCandidate: vi.fn(),
         onDismissCandidates: vi.fn(),
+        onLanguageChange: vi.fn(),
+        getLanguageUsage: () => ({}),
     };
 }
 
@@ -55,6 +57,7 @@ function setupDOM() {
                 </div>
             </div>
             <div id="home-book-list" class="book-list"></div>
+            <div id="language-selector" class="language-selector" aria-label="OCR Language"></div>
         </div>
         <div id="scan-view" class="scan-view" hidden>
             <video id="camera" autoplay playsinline muted></video>
@@ -85,6 +88,7 @@ function setupDOM() {
             <div class="book-popup-sheet">
                 <div class="book-popup-header">
                     <span class="book-popup-title">Books Found</span>
+                    <input type="text" id="candidate-search" class="candidate-search" placeholder="Search..." autocomplete="off" aria-label="Filter found books">
                     <button id="btn-popup-dismiss" class="btn-popup-dismiss" aria-label="Dismiss">X</button>
                 </div>
                 <div id="book-popup-list" class="book-popup-list"></div>
@@ -107,6 +111,7 @@ describe('ui', () => {
         update({
             books: [],
             candidateBooks: [],
+            candidateFilter: '',
             isScanning: false,
             autoScan: false,
             scanCount: 0,
@@ -115,6 +120,8 @@ describe('ui', () => {
             view: 'home',
             isProcessingImage: false,
             ocrReady: false,
+            ocrLanguage: 'ron',
+            isChangingLanguage: false,
         });
 
         setupDOM();
@@ -180,7 +187,6 @@ describe('ui', () => {
         });
 
         it('calls onExport when export button clicked', () => {
-            // Button starts disabled; add a book to enable it
             addBook(makeBook());
             document.getElementById('btn-home-export')!.click();
             expect(handlers.onExport).toHaveBeenCalled();
@@ -416,6 +422,19 @@ describe('ui', () => {
             expect(document.getElementById('book-popup')!.hidden).toBe(true);
         });
 
+        it('renders candidates sorted by confidence descending', () => {
+            addCandidates([
+                makeBook({ id: 'c1', confidence: 30 }),
+                makeBook({ id: 'c2', confidence: 90 }),
+                makeBook({ id: 'c3', confidence: 60 }),
+            ]);
+            const badges = document.querySelectorAll('.confidence-badge');
+            expect(badges).toHaveLength(3);
+            expect(badges[0].textContent).toBe('90% match');
+            expect(badges[1].textContent).toBe('60% match');
+            expect(badges[2].textContent).toBe('30% match');
+        });
+
         it('renders confidence badge with correct class', () => {
             addCandidates([
                 makeBook({ id: 'c1', confidence: 80 }),
@@ -424,10 +443,101 @@ describe('ui', () => {
             ]);
             const badges = document.querySelectorAll('.confidence-badge');
             expect(badges).toHaveLength(3);
+            // Sorted by confidence: 80, 50, 20
             expect(badges[0].classList.contains('confidence-high')).toBe(true);
             expect(badges[0].textContent).toBe('80% match');
             expect(badges[1].classList.contains('confidence-mid')).toBe(true);
             expect(badges[2].classList.contains('confidence-low')).toBe(true);
+        });
+    });
+
+    describe('candidate search filter', () => {
+        it('filters candidates by title', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Harry Potter' }),
+                makeBook({ id: 'c2', title: 'Lord of the Rings' }),
+            ]);
+            update({ candidateFilter: 'harry' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(1);
+        });
+
+        it('filters candidates by author', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Book A', authors: ['Tolkien'] }),
+                makeBook({ id: 'c2', title: 'Book B', authors: ['Rowling'] }),
+            ]);
+            update({ candidateFilter: 'tolkien' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(1);
+        });
+
+        it('filters candidates by ISBN', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Book A', isbn: '9781234567890' }),
+                makeBook({ id: 'c2', title: 'Book B', isbn: '9780987654321' }),
+            ]);
+            update({ candidateFilter: '1234' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(1);
+        });
+
+        it('shows all candidates when filter is empty', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Book A' }),
+                makeBook({ id: 'c2', title: 'Book B' }),
+            ]);
+            update({ candidateFilter: '' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(2);
+        });
+
+        it('resets filter when candidates are cleared', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            update({ candidateFilter: 'test' });
+            clearCandidates();
+            expect(getState().candidateFilter).toBe('');
+        });
+    });
+
+    describe('language selector', () => {
+        it('renders language buttons', () => {
+            update({ view: 'home', ocrLanguage: 'ron' });
+            const buttons = document.querySelectorAll('.lang-btn');
+            expect(buttons.length).toBeGreaterThanOrEqual(7); // 6 + More
+        });
+
+        it('highlights active language', () => {
+            update({ view: 'home', ocrLanguage: 'ron' });
+            const active = document.querySelector('.lang-btn.lang-active');
+            expect(active).not.toBeNull();
+            expect(active!.getAttribute('data-lang')).toBe('ron');
+        });
+
+        it('calls onLanguageChange when language button clicked', () => {
+            update({ view: 'home', ocrLanguage: 'ron' });
+            const engBtn = document.querySelector('[data-lang="eng"]') as HTMLElement;
+            expect(engBtn).not.toBeNull();
+            engBtn.click();
+            expect(handlers.onLanguageChange).toHaveBeenCalledWith('eng');
+        });
+
+        it('disables buttons during language change', () => {
+            update({ view: 'home', isChangingLanguage: true });
+            const buttons = document.querySelectorAll('.lang-btn:not(.lang-more)');
+            buttons.forEach((btn) => {
+                expect((btn as HTMLButtonElement).disabled).toBe(true);
+            });
+        });
+
+        it('shows loading indicator during language change', () => {
+            update({ view: 'home', isChangingLanguage: true });
+            const loading = document.querySelector('.lang-loading');
+            expect(loading).not.toBeNull();
         });
     });
 });

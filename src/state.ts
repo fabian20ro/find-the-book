@@ -7,6 +7,7 @@ export type ViewMode = 'home' | 'scan';
 export interface AppState {
     books: Book[];
     candidateBooks: Book[];
+    candidateFilter: string;
     isScanning: boolean;
     autoScan: boolean;
     scanCount: number;
@@ -15,6 +16,8 @@ export interface AppState {
     view: ViewMode;
     isProcessingImage: boolean;
     ocrReady: boolean;
+    ocrLanguage: string;
+    isChangingLanguage: boolean;
 }
 
 // --- Lightweight event emitter ---
@@ -39,6 +42,7 @@ export function emit(event: EventType, data?: any): void {
 const state: AppState = {
     books: [],
     candidateBooks: [],
+    candidateFilter: '',
     isScanning: false,
     autoScan: false,
     scanCount: 0,
@@ -47,6 +51,8 @@ const state: AppState = {
     view: 'home',
     isProcessingImage: false,
     ocrReady: false,
+    ocrLanguage: 'ron',
+    isChangingLanguage: false,
 };
 
 export function getState(): Readonly<AppState> {
@@ -99,6 +105,7 @@ export function removeCandidateById(bookId: string): void {
 
 export function clearCandidates(): void {
     state.candidateBooks = [];
+    state.candidateFilter = '';
     emit('change');
 }
 

@@ -1,14 +1,31 @@
 export class TextRecognizer {
     private worker: TesseractWorker | null = null;
     private isProcessing = false;
+    private currentLang = 'ron';
 
-    async init(): Promise<void> {
+    async init(lang: string = 'ron'): Promise<void> {
         if (typeof Tesseract === 'undefined') {
             throw new Error(
                 'Tesseract.js failed to load from CDN. Check your internet connection and try refreshing.',
             );
         }
-        this.worker = await Tesseract.createWorker('eng');
+        this.currentLang = lang;
+        this.worker = await Tesseract.createWorker(lang);
+    }
+
+    async setLanguage(lang: string): Promise<void> {
+        if (lang === this.currentLang && this.worker) return;
+        if (this.worker) {
+            await this.worker.terminate();
+            this.worker = null;
+        }
+        this.isProcessing = false;
+        this.currentLang = lang;
+        this.worker = await Tesseract.createWorker(lang);
+    }
+
+    getLanguage(): string {
+        return this.currentLang;
     }
 
     async recognize(canvas: HTMLCanvasElement): Promise<string[]> {
