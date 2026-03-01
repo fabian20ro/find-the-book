@@ -2,11 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BookSearcher, computeConfidence } from './books';
 import type { Book } from './books';
 
-// Mock toast to prevent import side effects
-vi.mock('./state', () => ({
-    toast: vi.fn(),
-}));
-
 function mockFetchResponse(data: object, status = 200) {
     return vi.fn().mockResolvedValue({
         ok: status >= 200 && status < 300,

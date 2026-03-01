@@ -1,6 +1,6 @@
 import type { CameraManager } from './camera';
 import type { TextRecognizer } from './ocr';
-import type { BookSearcher } from './books';
+import type { Book, BookSearcher } from './books';
 import { addCandidates, update, toast, getState } from './state';
 
 const SCAN_INTERVAL_MS = 2000;
@@ -65,12 +65,7 @@ export async function scanOnce(
 
         update({ scanCount: getState().scanCount + 1 });
 
-        const allNewBooks: import('./books').Book[] = [];
-        for (const text of textBlocks) {
-            update({ lastDetectedText: text });
-            const newBooks = await bookSearcher.search(text);
-            allNewBooks.push(...newBooks);
-        }
+        const allNewBooks = await searchTextBlocks(textBlocks, bookSearcher);
 
         if (textBlocks.length === 0) {
             toast('No text detected');
@@ -80,12 +75,7 @@ export async function scanOnce(
             addCandidates(allNewBooks);
         }
     } catch (err) {
-        console.error('Scan once error:', err);
-        const message = err instanceof Error ? err.message : 'Scan error';
-        if (message === 'OCR timed out') {
-            toast('OCR timed out. Try again.');
-            ocr.resetProcessing();
-        }
+        handleScanError(err, 'Scan once error:', ocr);
     }
 }
 
@@ -149,22 +139,12 @@ async function scanFrame(
 
         update({ scanCount: getState().scanCount + 1 });
 
-        const allNewBooks: import('./books').Book[] = [];
-        for (const text of textBlocks) {
-            update({ lastDetectedText: text });
-            const newBooks = await bookSearcher.search(text);
-            allNewBooks.push(...newBooks);
-        }
+        const allNewBooks = await searchTextBlocks(textBlocks, bookSearcher);
         if (allNewBooks.length > 0) {
             addCandidates(allNewBooks);
         }
     } catch (err) {
-        console.error('Scan frame error:', err);
-        const message = err instanceof Error ? err.message : 'Scan error';
-        if (message === 'OCR timed out') {
-            toast('OCR is taking too long. Retrying...');
-            ocr.resetProcessing();
-        }
+        handleScanError(err, 'Scan frame error:', ocr);
     }
 
     // Always schedule next scan, even after errors
@@ -188,6 +168,24 @@ function onVisibilityChange(
         if (getState().autoScan) {
             scheduleNext(camera, ocr, bookSearcher);
         }
+    }
+}
+
+export async function searchTextBlocks(textBlocks: string[], bookSearcher: BookSearcher): Promise<Book[]> {
+    const allNewBooks: Book[] = [];
+    for (const text of textBlocks) {
+        update({ lastDetectedText: text });
+        const newBooks = await bookSearcher.search(text);
+        allNewBooks.push(...newBooks);
+    }
+    return allNewBooks;
+}
+
+function handleScanError(err: unknown, label: string, ocr: TextRecognizer): void {
+    console.error(label, err);
+    if (err instanceof Error && err.message === 'OCR timed out') {
+        toast('OCR timed out — retrying on next scan.');
+        ocr.resetProcessing();
     }
 }
 

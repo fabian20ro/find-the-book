@@ -1,5 +1,13 @@
 import { $, $as } from './dom';
-import { getState, on } from './state';
+import { getState, on, type Book } from './state';
+
+const MAX_DISPLAY_TEXT_LENGTH = 60;
+const TOAST_DISPLAY_MS = 2000;
+const TOAST_CLEANUP_FALLBACK_MS = 500;
+const CONFIDENCE_HIGH_THRESHOLD = 70;
+const CONFIDENCE_MID_THRESHOLD = 40;
+
+const NO_COVER_SVG = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E";
 
 // DOM element references (queried once in initUI)
 
@@ -177,11 +185,7 @@ function renderUI(): void {
     scanView.hidden = isHome;
 
     // OCR status indicator
-    if (state.ocrReady) {
-        ocrStatus.hidden = true;
-    } else {
-        ocrStatus.hidden = false;
-    }
+    ocrStatus.hidden = state.ocrReady;
 
     // Image processing state
     homeProcessing.hidden = !state.isProcessingImage;
@@ -203,8 +207,8 @@ function renderUI(): void {
     scanStatusEl.className = state.isScanning ? 'scan-active' : 'scan-paused';
 
     // Last detected text
-    const displayText = state.lastDetectedText.length > 60
-        ? state.lastDetectedText.substring(0, 60) + '...'
+    const displayText = state.lastDetectedText.length > MAX_DISPLAY_TEXT_LENGTH
+        ? state.lastDetectedText.substring(0, MAX_DISPLAY_TEXT_LENGTH) + '...'
         : state.lastDetectedText;
     lastTextEl.textContent = displayText;
 
@@ -228,6 +232,25 @@ function renderUI(): void {
     }
 }
 
+function renderBookImage(book: Book): string {
+    return book.thumbnailUrl
+        ? `<img src="${escapeHtml(book.thumbnailUrl)}" alt="Cover" loading="lazy">`
+        : `<img src="${NO_COVER_SVG}" alt="No cover">`;
+}
+
+function renderBookMeta(book: Book): string {
+    const authors = book.authors.join(', ');
+    return `<div class="book-title">${escapeHtml(book.title)}</div>
+        ${authors ? `<div class="book-authors">${escapeHtml(authors)}</div>` : ''}
+        ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}`;
+}
+
+function confidenceClass(confidence: number): string {
+    if (confidence >= CONFIDENCE_HIGH_THRESHOLD) return 'confidence-high';
+    if (confidence >= CONFIDENCE_MID_THRESHOLD) return 'confidence-mid';
+    return 'confidence-low';
+}
+
 function renderHomeBookList(): void {
     const books = getState().books;
 
@@ -237,22 +260,16 @@ function renderHomeBookList(): void {
     }
 
     homeBookList.innerHTML = books.map((book, index) => {
-        const authors = book.authors.join(', ');
-        const imgSrc = book.thumbnailUrl || '';
-        const imgTag = imgSrc
-            ? `<img src="${escapeHtml(imgSrc)}" alt="Cover" loading="lazy">`
-            : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E" alt="No cover">`;
-
         const infoLink = book.infoLink ? escapeHtml(book.infoLink) : '';
         const titleHtml = infoLink
             ? `<a href="${infoLink}" target="_blank" rel="noopener noreferrer" class="book-link">${escapeHtml(book.title)}</a>`
             : escapeHtml(book.title);
 
         return `<div class="book-card">
-            ${imgTag}
+            ${renderBookImage(book)}
             <div class="book-info">
                 <div class="book-title">${titleHtml}</div>
-                ${authors ? `<div class="book-authors">${escapeHtml(authors)}</div>` : ''}
+                ${book.authors.length ? `<div class="book-authors">${escapeHtml(book.authors.join(', '))}</div>` : ''}
                 ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}
             </div>
             <button class="btn-remove" data-index="${index}" title="Remove" aria-label="Remove ${escapeHtml(book.title)}">&times;</button>
@@ -260,28 +277,15 @@ function renderHomeBookList(): void {
     }).join('');
 }
 
-function renderCandidateList(candidates: import('./books').Book[]): void {
-    bookPopupList.innerHTML = candidates.map((book) => {
-        const authors = book.authors.join(', ');
-        const imgSrc = book.thumbnailUrl || '';
-        const imgTag = imgSrc
-            ? `<img src="${escapeHtml(imgSrc)}" alt="Cover" loading="lazy">`
-            : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E" alt="No cover">`;
-
-        const conf = book.confidence;
-        const confClass = conf >= 70 ? 'confidence-high' : conf >= 40 ? 'confidence-mid' : 'confidence-low';
-
-        return `<div class="candidate-card">
-            ${imgTag}
+function renderCandidateList(candidates: Book[]): void {
+    bookPopupList.innerHTML = candidates.map((book) => `<div class="candidate-card">
+            ${renderBookImage(book)}
             <div class="candidate-info">
-                <div class="book-title">${escapeHtml(book.title)}</div>
-                ${authors ? `<div class="book-authors">${escapeHtml(authors)}</div>` : ''}
-                ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}
-                <div class="confidence-badge ${confClass}">${conf}% match</div>
+                ${renderBookMeta(book)}
+                <div class="confidence-badge ${confidenceClass(book.confidence)}">${book.confidence}% match</div>
             </div>
             <button class="btn-add-book" data-book-id="${escapeHtml(book.id)}" aria-label="Add ${escapeHtml(book.title)}">Add</button>
-        </div>`;
-    }).join('');
+        </div>`).join('');
 }
 
 function escapeHtml(str: string): string {
@@ -300,7 +304,6 @@ function showToast(message: string): void {
         toastEl.classList.remove('toast-visible');
         const cleanup = () => { toastEl.remove(); };
         toastEl.addEventListener('transitionend', cleanup, { once: true });
-        // Fallback: if transitionend never fires (e.g. prefers-reduced-motion), remove after 500ms
-        setTimeout(cleanup, 500);
-    }, 2000);
+        setTimeout(cleanup, TOAST_CLEANUP_FALLBACK_MS);
+    }, TOAST_DISPLAY_MS);
 }

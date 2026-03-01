@@ -4,11 +4,11 @@ import { TextRecognizer } from './ocr';
 import { BookSearcher } from './books';
 import { exportToCsv } from './export';
 import { getState, update, addBook, addCandidates, removeCandidateById, clearCandidates, clearBooks, removeBook, on, toast, type Book } from './state';
-import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan } from './scanner';
+import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
 import { initUI, getVideoElement, getCanvasElement, showError, hideError } from './ui';
 
 // Core components
-const bookSearcher = new BookSearcher();
+const bookSearcher = new BookSearcher(toast);
 let cameraManager: CameraManager | null = null;
 let textRecognizer: TextRecognizer;
 
@@ -183,13 +183,7 @@ async function handleImageUpload(file: File): Promise<void> {
         URL.revokeObjectURL(url);
 
         const textBlocks = await textRecognizer.recognize(canvas);
-
-        const allNewBooks: Book[] = [];
-        for (const text of textBlocks) {
-            update({ lastDetectedText: text });
-            const newBooks = await bookSearcher.search(text);
-            allNewBooks.push(...newBooks);
-        }
+        const allNewBooks = await searchTextBlocks(textBlocks, bookSearcher);
 
         if (textBlocks.length === 0) {
             toast('No text detected in this image');

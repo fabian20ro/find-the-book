@@ -1,5 +1,3 @@
-import { toast } from './state';
-
 export interface Book {
     id: string;
     title: string;
@@ -77,6 +75,11 @@ const MAX_CACHE_SIZE = 200;
 export class BookSearcher {
     private queryCache = new Set<string>();
     private foundBookIds = new Set<string>();
+    private notify: (message: string) => void;
+
+    constructor(notify: (message: string) => void = () => {}) {
+        this.notify = notify;
+    }
 
     async search(query: string): Promise<Book[]> {
         const normalized = query.toLowerCase().trim();
@@ -96,7 +99,7 @@ export class BookSearcher {
             const response = await fetch(url);
 
             if (response.status === 429) {
-                toast('Google Books API rate limit reached. Pausing briefly...');
+                this.notify('Google Books API rate limit reached. Pausing briefly...');
                 await new Promise((r) => setTimeout(r, 5000));
                 // Remove from cache so it can be retried next time
                 this.queryCache.delete(normalized);
