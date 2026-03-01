@@ -268,12 +268,16 @@ function renderCandidateList(candidates: import('./books').Book[]): void {
             ? `<img src="${escapeHtml(imgSrc)}" alt="Cover" loading="lazy">`
             : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E" alt="No cover">`;
 
+        const conf = book.confidence;
+        const confClass = conf >= 70 ? 'confidence-high' : conf >= 40 ? 'confidence-mid' : 'confidence-low';
+
         return `<div class="candidate-card">
             ${imgTag}
             <div class="candidate-info">
                 <div class="book-title">${escapeHtml(book.title)}</div>
                 ${authors ? `<div class="book-authors">${escapeHtml(authors)}</div>` : ''}
                 ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}
+                <div class="confidence-badge ${confClass}">${conf}% match</div>
             </div>
             <button class="btn-add-book" data-book-id="${escapeHtml(book.id)}" aria-label="Add ${escapeHtml(book.title)}">Add</button>
         </div>`;

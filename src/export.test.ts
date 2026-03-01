@@ -14,6 +14,7 @@ function makeBook(overrides: Partial<Book> = {}): Book {
         pageCount: 300,
         thumbnailUrl: null,
         infoLink: null,
+        confidence: 75,
         ...overrides,
     };
 }

@@ -15,6 +15,7 @@ function makeBook(overrides: Partial<Book> = {}): Book {
         pageCount: 200,
         thumbnailUrl: 'https://example.com/thumb.jpg',
         infoLink: 'https://example.com/info',
+        confidence: 75,
         ...overrides,
     };
 }
@@ -413,6 +414,20 @@ describe('ui', () => {
             expect(document.getElementById('book-popup')!.hidden).toBe(false);
             clearCandidates();
             expect(document.getElementById('book-popup')!.hidden).toBe(true);
+        });
+
+        it('renders confidence badge with correct class', () => {
+            addCandidates([
+                makeBook({ id: 'c1', confidence: 80 }),
+                makeBook({ id: 'c2', confidence: 50 }),
+                makeBook({ id: 'c3', confidence: 20 }),
+            ]);
+            const badges = document.querySelectorAll('.confidence-badge');
+            expect(badges).toHaveLength(3);
+            expect(badges[0].classList.contains('confidence-high')).toBe(true);
+            expect(badges[0].textContent).toBe('80% match');
+            expect(badges[1].classList.contains('confidence-mid')).toBe(true);
+            expect(badges[2].classList.contains('confidence-low')).toBe(true);
         });
     });
 });

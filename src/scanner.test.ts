@@ -49,6 +49,7 @@ function makeBook(id: string, title: string): state.Book {
         pageCount: null,
         thumbnailUrl: null,
         infoLink: null,
+        confidence: 0,
     };
 }
 

@@ -11,6 +11,7 @@ export interface Book {
     pageCount: number | null;
     thumbnailUrl: string | null;
     infoLink: string | null;
+    confidence: number;
 }
 
 interface GoogleBooksVolume {
@@ -25,11 +26,50 @@ interface GoogleBooksVolume {
         industryIdentifiers?: Array<{ type: string; identifier: string }>;
         imageLinks?: { thumbnail?: string };
         infoLink?: string;
+        averageRating?: number;
+        ratingsCount?: number;
     };
 }
 
 interface GoogleBooksResponse {
     items?: GoogleBooksVolume[];
+}
+
+/**
+ * Compute a 0–100 confidence score based on metadata completeness and ratings.
+ *
+ * Scoring breakdown:
+ *   Metadata (up to 75): title 10, authors 15, ISBN 15, thumbnail 10,
+ *     description 10, publisher 5, publishedDate 5, pageCount 5
+ *   Ratings (up to 25): averageRating contributes up to 15,
+ *     ratingsCount contributes up to 10
+ */
+export function computeConfidence(
+    book: Omit<Book, 'confidence'>,
+    averageRating?: number,
+    ratingsCount?: number,
+): number {
+    let score = 0;
+
+    // Metadata completeness (up to 75)
+    if (book.title && book.title !== 'Unknown Title') score += 10;
+    if (book.authors.length > 0) score += 15;
+    if (book.isbn) score += 15;
+    if (book.thumbnailUrl) score += 10;
+    if (book.description) score += 10;
+    if (book.publisher) score += 5;
+    if (book.publishedDate) score += 5;
+    if (book.pageCount) score += 5;
+
+    // Ratings (up to 25)
+    if (averageRating != null && averageRating > 0) {
+        score += Math.round((averageRating / 5) * 15);
+    }
+    if (ratingsCount != null && ratingsCount > 0) {
+        score += Math.round(Math.min(ratingsCount, 100) / 100 * 10);
+    }
+
+    return Math.min(score, 100);
 }
 
 const MAX_CACHE_SIZE = 200;
@@ -86,7 +126,7 @@ export class BookSearcher {
         const isbn = isbn13 ? isbn13.identifier : (identifiers[0]?.identifier || null);
         const thumbnail = info.imageLinks?.thumbnail?.replace('http://', 'https://') || null;
 
-        return {
+        const book: Omit<Book, 'confidence'> = {
             id: item.id,
             title: info.title || 'Unknown Title',
             authors: info.authors || [],
@@ -97,6 +137,11 @@ export class BookSearcher {
             pageCount: info.pageCount || null,
             thumbnailUrl: thumbnail,
             infoLink: info.infoLink || null,
+        };
+
+        return {
+            ...book,
+            confidence: computeConfidence(book, info.averageRating, info.ratingsCount),
         };
     }
 
