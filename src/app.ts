@@ -3,7 +3,7 @@ import { CameraManager } from './camera';
 import { TextRecognizer } from './ocr';
 import { BookSearcher } from './books';
 import { exportToCsv } from './export';
-import { getState, update, addBook, clearBooks, removeBook, on, toast, type Book } from './state';
+import { getState, update, addBook, addCandidates, removeCandidateById, clearCandidates, clearBooks, removeBook, on, toast, type Book } from './state';
 import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan } from './scanner';
 import { initUI, getVideoElement, getCanvasElement, showError, hideError } from './ui';
 
@@ -184,20 +184,19 @@ async function handleImageUpload(file: File): Promise<void> {
 
         const textBlocks = await textRecognizer.recognize(canvas);
 
-        let foundAny = false;
+        const allNewBooks: Book[] = [];
         for (const text of textBlocks) {
             update({ lastDetectedText: text });
             const newBooks = await bookSearcher.search(text);
-            for (const book of newBooks) {
-                const added = addBookAndSave(book);
-                if (added) foundAny = true;
-            }
+            allNewBooks.push(...newBooks);
         }
 
         if (textBlocks.length === 0) {
             toast('No text detected in this image');
-        } else if (!foundAny) {
+        } else if (allNewBooks.length === 0) {
             toast('No new books found in this image');
+        } else {
+            addCandidates(allNewBooks);
         }
     } catch (err) {
         console.error('Image upload error:', err);
@@ -246,6 +245,17 @@ initUI({
             bookSearcher.removeBookId(removed.id);
             saveBooks();
         }
+    },
+    onAddCandidate: (bookId: string) => {
+        const candidates = getState().candidateBooks;
+        const book = candidates.find((b) => b.id === bookId);
+        if (book) {
+            addBookAndSave(book);
+            removeCandidateById(bookId);
+        }
+    },
+    onDismissCandidates: () => {
+        clearCandidates();
     },
 });
 

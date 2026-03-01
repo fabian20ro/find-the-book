@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, update, addBook, removeBook, clearBooks, toast, on, emit } from './state';
+import { getState, update, addBook, removeBook, clearBooks, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {
@@ -23,6 +23,7 @@ describe('state', () => {
         // Reset state to defaults
         update({
             books: [],
+            candidateBooks: [],
             isScanning: false,
             autoScan: false,
             scanCount: 0,
@@ -150,6 +151,72 @@ describe('state', () => {
             const listener = vi.fn();
             on('change', listener);
             clearBooks();
+            expect(listener).toHaveBeenCalled();
+        });
+    });
+
+    describe('addCandidates', () => {
+        it('adds candidate books', () => {
+            addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
+            expect(getState().candidateBooks).toHaveLength(2);
+        });
+
+        it('deduplicates against existing candidates', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
+            expect(getState().candidateBooks).toHaveLength(2);
+        });
+
+        it('deduplicates against already-added books', () => {
+            addBook(makeBook({ id: 'b1' }));
+            addCandidates([makeBook({ id: 'b1' })]);
+            expect(getState().candidateBooks).toHaveLength(0);
+        });
+
+        it('emits change event when candidates added', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            addCandidates([makeBook({ id: 'c1' })]);
+            expect(listener).toHaveBeenCalled();
+        });
+
+        it('does not emit change when all duplicates', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            const listener = vi.fn();
+            on('change', listener);
+            addCandidates([makeBook({ id: 'c1' })]);
+            expect(listener).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('removeCandidateById', () => {
+        it('removes candidate by id', () => {
+            addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
+            removeCandidateById('c1');
+            expect(getState().candidateBooks).toHaveLength(1);
+            expect(getState().candidateBooks[0].id).toBe('c2');
+        });
+
+        it('emits change event', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            const listener = vi.fn();
+            on('change', listener);
+            removeCandidateById('c1');
+            expect(listener).toHaveBeenCalled();
+        });
+    });
+
+    describe('clearCandidates', () => {
+        it('removes all candidates', () => {
+            addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
+            clearCandidates();
+            expect(getState().candidateBooks).toEqual([]);
+        });
+
+        it('emits change event', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            clearCandidates();
             expect(listener).toHaveBeenCalled();
         });
     });

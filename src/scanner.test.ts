@@ -58,6 +58,7 @@ describe('scanner', () => {
         // Reset state
         state.update({
             books: [],
+            candidateBooks: [],
             isScanning: false,
             autoScan: false,
             scanCount: 0,
@@ -124,7 +125,7 @@ describe('scanner', () => {
             expect(state.getState().scanCount).toBe(1);
         });
 
-        it('adds found books and shows toast', async () => {
+        it('adds found books as candidates', async () => {
             state.update({ autoScan: true });
             const book = makeBook('v1', 'Found Book');
             const camera = createMockCamera();
@@ -134,8 +135,8 @@ describe('scanner', () => {
             startScanning(camera as any, ocr as any, books as any);
             await vi.advanceTimersByTimeAsync(2000);
 
-            expect(state.getState().books).toHaveLength(1);
-            expect(state.toast).toHaveBeenCalledWith('Found: Found Book');
+            expect(state.getState().candidateBooks).toHaveLength(1);
+            expect(state.getState().candidateBooks[0].title).toBe('Found Book');
         });
     });
 

@@ -28,6 +28,11 @@ let autoScanSwitch: HTMLElement;
 let btnScanNow: HTMLElement;
 let scanBookCount: HTMLElement;
 
+// Book popup
+let bookPopup: HTMLElement;
+let bookPopupList: HTMLElement;
+let btnPopupDismiss: HTMLElement;
+
 // Shared
 let errorOverlay: HTMLElement;
 let errorMessage: HTMLElement;
@@ -43,6 +48,8 @@ export interface UIHandlers {
     onClear: () => void;
     onRetry: () => void;
     onRemoveBook: (index: number) => void;
+    onAddCandidate: (bookId: string) => void;
+    onDismissCandidates: () => void;
 }
 
 export function initUI(handlers: UIHandlers): void {
@@ -70,6 +77,11 @@ export function initUI(handlers: UIHandlers): void {
     autoScanSwitch = $('#auto-scan-switch');
     btnScanNow = $('#btn-scan-now');
     scanBookCount = $('#scan-book-count');
+
+    // Book popup
+    bookPopup = $('#book-popup');
+    bookPopupList = $('#book-popup-list');
+    btnPopupDismiss = $('#btn-popup-dismiss');
 
     // Shared
     errorOverlay = $('#error-overlay');
@@ -113,6 +125,21 @@ export function initUI(handlers: UIHandlers): void {
         const index = parseInt(btn.dataset.index!, 10);
         if (index >= 0 && index < getState().books.length) {
             handlers.onRemoveBook(index);
+        }
+    });
+
+    // Book popup: dismiss
+    btnPopupDismiss.addEventListener('click', handlers.onDismissCandidates);
+    (bookPopup.querySelector('.book-popup-backdrop') as HTMLElement)
+        .addEventListener('click', handlers.onDismissCandidates);
+
+    // Book popup: add candidate (event delegation)
+    bookPopupList.addEventListener('click', (e: Event) => {
+        const btn = (e.target as HTMLElement).closest('.btn-add-book') as HTMLElement | null;
+        if (!btn) return;
+        const bookId = btn.dataset.bookId;
+        if (bookId) {
+            handlers.onAddCandidate(bookId);
         }
     });
 
@@ -190,6 +217,15 @@ function renderUI(): void {
 
     // Show/hide manual scan button
     btnScanNow.hidden = state.autoScan;
+
+    // Book selection popup
+    const candidates = state.candidateBooks;
+    bookPopup.hidden = candidates.length === 0;
+    if (candidates.length > 0) {
+        const popupTitle = bookPopup.querySelector('.book-popup-title') as HTMLElement;
+        popupTitle.textContent = `${candidates.length} Book${candidates.length !== 1 ? 's' : ''} Found`;
+        renderCandidateList(candidates);
+    }
 }
 
 function renderHomeBookList(): void {
@@ -220,6 +256,26 @@ function renderHomeBookList(): void {
                 ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}
             </div>
             <button class="btn-remove" data-index="${index}" title="Remove" aria-label="Remove ${escapeHtml(book.title)}">&times;</button>
+        </div>`;
+    }).join('');
+}
+
+function renderCandidateList(candidates: import('./books').Book[]): void {
+    bookPopupList.innerHTML = candidates.map((book) => {
+        const authors = book.authors.join(', ');
+        const imgSrc = book.thumbnailUrl || '';
+        const imgTag = imgSrc
+            ? `<img src="${escapeHtml(imgSrc)}" alt="Cover" loading="lazy">`
+            : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='64'%3E%3Crect fill='%23333' width='48' height='64'/%3E%3Ctext x='24' y='36' text-anchor='middle' fill='%23666' font-size='10'%3ENo cover%3C/text%3E%3C/svg%3E" alt="No cover">`;
+
+        return `<div class="candidate-card">
+            ${imgTag}
+            <div class="candidate-info">
+                <div class="book-title">${escapeHtml(book.title)}</div>
+                ${authors ? `<div class="book-authors">${escapeHtml(authors)}</div>` : ''}
+                ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}
+            </div>
+            <button class="btn-add-book" data-book-id="${escapeHtml(book.id)}" aria-label="Add ${escapeHtml(book.title)}">Add</button>
         </div>`;
     }).join('');
 }

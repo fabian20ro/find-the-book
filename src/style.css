@@ -480,6 +480,130 @@ body {
     color: #ff5252;
 }
 
+/* ===== BOOK SELECTION POPUP ===== */
+
+.book-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 90;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.book-popup[hidden] {
+    display: none;
+}
+
+.book-popup-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.book-popup-sheet {
+    position: relative;
+    width: 100%;
+    max-height: 70vh;
+    background: #1a1a1a;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.book-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.book-popup-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.btn-popup-dismiss {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-popup-dismiss:active {
+    color: #fff;
+}
+
+.book-popup-list {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 16px;
+    flex: 1;
+    min-height: 0;
+}
+
+.candidate-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.candidate-card img {
+    width: 48px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.candidate-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-add-book {
+    background: #4caf50;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.btn-add-book:active {
+    background: #388e3c;
+}
+
 /* Error overlay */
 #error-overlay {
     position: fixed;
@@ -591,7 +715,8 @@ body {
 
     .scan-now-ring,
     .scan-now-inner,
-    .btn-action {
+    .btn-action,
+    .btn-add-book {
         transition: none;
     }
 }

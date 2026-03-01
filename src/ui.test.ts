@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { update, addBook, getState } from './state';
+import { update, addBook, addCandidates, clearCandidates, getState } from './state';
 import { initUI, showError, hideError, type UIHandlers } from './ui';
 import type { Book } from './books';
 
@@ -30,6 +30,8 @@ function createHandlers(): UIHandlers {
         onClear: vi.fn(),
         onRetry: vi.fn(),
         onRemoveBook: vi.fn(),
+        onAddCandidate: vi.fn(),
+        onDismissCandidates: vi.fn(),
     };
 }
 
@@ -77,6 +79,16 @@ function setupDOM() {
                 <button id="btn-scan-now" class="btn-scan-now" hidden>Scan</button>
             </div>
         </div>
+        <div id="book-popup" class="book-popup" hidden role="dialog" aria-label="Books found">
+            <div class="book-popup-backdrop"></div>
+            <div class="book-popup-sheet">
+                <div class="book-popup-header">
+                    <span class="book-popup-title">Books Found</span>
+                    <button id="btn-popup-dismiss" class="btn-popup-dismiss" aria-label="Dismiss">X</button>
+                </div>
+                <div id="book-popup-list" class="book-popup-list"></div>
+            </div>
+        </div>
         <div id="error-overlay" hidden role="alert">
             <div class="error-content">
                 <p id="error-message"></p>
@@ -93,6 +105,7 @@ describe('ui', () => {
         // Reset state to defaults
         update({
             books: [],
+            candidateBooks: [],
             isScanning: false,
             autoScan: false,
             scanCount: 0,
@@ -343,6 +356,63 @@ describe('ui', () => {
             showError('Error');
             hideError();
             expect(document.getElementById('error-overlay')!.hidden).toBe(true);
+        });
+    });
+
+    describe('book selection popup', () => {
+        it('is hidden when no candidates', () => {
+            expect(document.getElementById('book-popup')!.hidden).toBe(true);
+        });
+
+        it('shows when candidates exist', () => {
+            addCandidates([makeBook({ id: 'c1', title: 'Candidate Book' })]);
+            expect(document.getElementById('book-popup')!.hidden).toBe(false);
+        });
+
+        it('renders candidate cards', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Book One' }),
+                makeBook({ id: 'c2', title: 'Book Two' }),
+            ]);
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(2);
+        });
+
+        it('updates title with count', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            const title = document.querySelector('.book-popup-title')!;
+            expect(title.textContent).toBe('1 Book Found');
+
+            addCandidates([makeBook({ id: 'c2' })]);
+            expect(title.textContent).toBe('2 Books Found');
+        });
+
+        it('calls onAddCandidate when add button clicked', () => {
+            addCandidates([makeBook({ id: 'c1', title: 'Test' })]);
+            const addBtn = document.querySelector('.btn-add-book') as HTMLElement;
+            expect(addBtn).not.toBeNull();
+            addBtn.click();
+            expect(handlers.onAddCandidate).toHaveBeenCalledWith('c1');
+        });
+
+        it('calls onDismissCandidates when dismiss button clicked', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            document.getElementById('btn-popup-dismiss')!.click();
+            expect(handlers.onDismissCandidates).toHaveBeenCalled();
+        });
+
+        it('calls onDismissCandidates when backdrop clicked', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            const backdrop = document.querySelector('.book-popup-backdrop') as HTMLElement;
+            backdrop.click();
+            expect(handlers.onDismissCandidates).toHaveBeenCalled();
+        });
+
+        it('hides popup after all candidates cleared', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            expect(document.getElementById('book-popup')!.hidden).toBe(false);
+            clearCandidates();
+            expect(document.getElementById('book-popup')!.hidden).toBe(true);
         });
     });
 });

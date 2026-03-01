@@ -1,7 +1,7 @@
 import type { CameraManager } from './camera';
 import type { TextRecognizer } from './ocr';
 import type { BookSearcher } from './books';
-import { addBook, update, toast, getState } from './state';
+import { addCandidates, update, toast, getState } from './state';
 
 const SCAN_INTERVAL_MS = 2000;
 const OCR_TIMEOUT_MS = 10_000;
@@ -65,23 +65,19 @@ export async function scanOnce(
 
         update({ scanCount: getState().scanCount + 1 });
 
-        let foundAny = false;
+        const allNewBooks: import('./books').Book[] = [];
         for (const text of textBlocks) {
             update({ lastDetectedText: text });
             const newBooks = await bookSearcher.search(text);
-            for (const book of newBooks) {
-                const added = addBook(book);
-                if (added) {
-                    toast(`Found: ${book.title}`);
-                    foundAny = true;
-                }
-            }
+            allNewBooks.push(...newBooks);
         }
 
         if (textBlocks.length === 0) {
             toast('No text detected');
-        } else if (!foundAny) {
+        } else if (allNewBooks.length === 0) {
             toast('No new books found');
+        } else {
+            addCandidates(allNewBooks);
         }
     } catch (err) {
         console.error('Scan once error:', err);
@@ -153,13 +149,14 @@ async function scanFrame(
 
         update({ scanCount: getState().scanCount + 1 });
 
+        const allNewBooks: import('./books').Book[] = [];
         for (const text of textBlocks) {
             update({ lastDetectedText: text });
             const newBooks = await bookSearcher.search(text);
-            for (const book of newBooks) {
-                const added = addBook(book);
-                if (added) toast(`Found: ${book.title}`);
-            }
+            allNewBooks.push(...newBooks);
+        }
+        if (allNewBooks.length > 0) {
+            addCandidates(allNewBooks);
         }
     } catch (err) {
         console.error('Scan frame error:', err);
