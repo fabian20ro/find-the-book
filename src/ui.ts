@@ -286,7 +286,7 @@ function renderUI(): void {
     (btnHomeExport as HTMLButtonElement).disabled = count === 0;
     (btnHomeClear as HTMLButtonElement).disabled = count === 0;
 
-    // Language selector (home view only)
+    // Language selector
     renderLanguageSelector();
 
     // Scan view status

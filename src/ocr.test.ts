@@ -132,6 +132,22 @@ describe('TextRecognizer', () => {
             const results = await recognizer.recognize(document.createElement('canvas'));
             expect(results).toEqual([]);
         });
+
+        it('falls back to original canvas when getContext returns null', async () => {
+            const canvas = document.createElement('canvas');
+            vi.spyOn(canvas, 'getContext').mockReturnValue(null);
+
+            mockRecognize.mockResolvedValue({
+                data: { lines: [{ text: 'Hello' }] },
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            const results = await recognizer.recognize(canvas);
+            // Preprocessing is skipped; original canvas passed to Tesseract — still works
+            expect(results).toEqual(['Hello']);
+            expect(mockRecognize).toHaveBeenCalledWith(canvas);
+        });
     });
 
     describe('resetProcessing', () => {
