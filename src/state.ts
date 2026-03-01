@@ -2,12 +2,18 @@ import type { Book } from './books';
 
 export type { Book };
 
+export type ViewMode = 'home' | 'scan';
+
 export interface AppState {
     books: Book[];
     isScanning: boolean;
+    autoScan: boolean;
     scanCount: number;
     lastDetectedText: string;
     error: string | null;
+    view: ViewMode;
+    isProcessingImage: boolean;
+    ocrReady: boolean;
 }
 
 // --- Lightweight event emitter ---
@@ -31,10 +37,14 @@ export function emit(event: EventType, data?: any): void {
 
 const state: AppState = {
     books: [],
-    isScanning: true,
+    isScanning: false,
+    autoScan: true,
     scanCount: 0,
     lastDetectedText: '',
     error: null,
+    view: 'home',
+    isProcessingImage: false,
+    ocrReady: false,
 };
 
 export function getState(): Readonly<AppState> {

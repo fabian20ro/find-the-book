@@ -1,30 +1,44 @@
 import { $, $as } from './dom';
 import { getState, on } from './state';
 
-// Pause/Resume button SVGs
-const ICON_PAUSE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-const ICON_PLAY = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
-
 // DOM element references (queried once in initUI)
+
+// Home view elements
+let homeView: HTMLElement;
+let ocrStatus: HTMLElement;
+let btnStartCamera: HTMLElement;
+let btnUploadImage: HTMLElement;
+let photoInput: HTMLInputElement;
+let homeProcessing: HTMLElement;
+let homeBookCount: HTMLElement;
+let homeBookList: HTMLElement;
+let btnHomeExport: HTMLElement;
+let btnHomeClear: HTMLElement;
+
+// Scan view elements
+let scanView: HTMLElement;
 let videoEl: HTMLVideoElement;
 let canvasEl: HTMLCanvasElement;
-let loadingOverlay: HTMLElement;
-let errorOverlay: HTMLElement;
-let errorMessage: HTMLElement;
 let statusOverlay: HTMLElement;
-let bookOverlay: HTMLElement;
 let scanCountEl: HTMLElement;
 let scanStatusEl: HTMLElement;
 let lastTextEl: HTMLElement;
-let bookCountEl: HTMLElement;
-let bookListEl: HTMLElement;
-let btnPause: HTMLElement;
-let btnExport: HTMLElement;
-let btnClear: HTMLElement;
+let btnBack: HTMLElement;
+let autoScanSwitch: HTMLElement;
+let btnScanNow: HTMLElement;
+let scanBookCount: HTMLElement;
+
+// Shared
+let errorOverlay: HTMLElement;
+let errorMessage: HTMLElement;
 let btnRetry: HTMLElement;
 
 export interface UIHandlers {
-    onPauseToggle: () => void;
+    onStartCamera: () => void;
+    onStopCamera: () => void;
+    onAutoScanToggle: () => void;
+    onManualScan: () => void;
+    onImageUpload: (file: File) => void;
     onExport: () => void;
     onClear: () => void;
     onRetry: () => void;
@@ -32,32 +46,68 @@ export interface UIHandlers {
 }
 
 export function initUI(handlers: UIHandlers): void {
-    // Query all DOM elements through safe helpers
+    // Home view
+    homeView = $('#home-view');
+    ocrStatus = $('#ocr-status');
+    btnStartCamera = $('#btn-start-camera');
+    btnUploadImage = $('#btn-upload-image');
+    photoInput = $as('#photo-input', HTMLInputElement);
+    homeProcessing = $('#home-processing');
+    homeBookCount = $('#home-book-count');
+    homeBookList = $('#home-book-list');
+    btnHomeExport = $('#btn-home-export');
+    btnHomeClear = $('#btn-home-clear');
+
+    // Scan view
+    scanView = $('#scan-view');
     videoEl = $as('#camera', HTMLVideoElement);
     canvasEl = $as('#capture', HTMLCanvasElement);
-    loadingOverlay = $('#loading-overlay');
-    errorOverlay = $('#error-overlay');
-    errorMessage = $('#error-message');
     statusOverlay = $('#status-overlay');
-    bookOverlay = $('#book-overlay');
     scanCountEl = $('#scan-count');
     scanStatusEl = $('#scan-status');
     lastTextEl = $('#last-text');
-    bookCountEl = $('#book-count');
-    bookListEl = $('#book-list');
-    btnPause = $('#btn-pause');
-    btnExport = $('#btn-export');
-    btnClear = $('#btn-clear');
+    btnBack = $('#btn-back');
+    autoScanSwitch = $('#auto-scan-switch');
+    btnScanNow = $('#btn-scan-now');
+    scanBookCount = $('#scan-book-count');
+
+    // Shared
+    errorOverlay = $('#error-overlay');
+    errorMessage = $('#error-message');
     btnRetry = $('#btn-retry');
 
-    // Bind button handlers
-    btnPause.addEventListener('click', handlers.onPauseToggle);
-    btnExport.addEventListener('click', handlers.onExport);
-    btnClear.addEventListener('click', handlers.onClear);
+    // Bind handlers
+    btnStartCamera.addEventListener('click', handlers.onStartCamera);
+    btnBack.addEventListener('click', handlers.onStopCamera);
     btnRetry.addEventListener('click', handlers.onRetry);
+    btnHomeExport.addEventListener('click', handlers.onExport);
+    btnHomeClear.addEventListener('click', handlers.onClear);
 
-    // Remove individual book (event delegation)
-    bookListEl.addEventListener('click', (e: Event) => {
+    // Auto-scan toggle
+    autoScanSwitch.addEventListener('click', handlers.onAutoScanToggle);
+    autoScanSwitch.addEventListener('keydown', (e: Event) => {
+        const key = (e as KeyboardEvent).key;
+        if (key === ' ' || key === 'Enter') {
+            e.preventDefault();
+            handlers.onAutoScanToggle();
+        }
+    });
+
+    // Manual scan button
+    btnScanNow.addEventListener('click', handlers.onManualScan);
+
+    // Image upload
+    btnUploadImage.addEventListener('click', () => photoInput.click());
+    photoInput.addEventListener('change', () => {
+        const file = photoInput.files?.[0];
+        if (file) {
+            handlers.onImageUpload(file);
+            photoInput.value = '';
+        }
+    });
+
+    // Remove individual book (event delegation on home book list)
+    homeBookList.addEventListener('click', (e: Event) => {
         const btn = (e.target as HTMLElement).closest('.btn-remove') as HTMLElement | null;
         if (!btn) return;
         const index = parseInt(btn.dataset.index!, 10);
@@ -82,63 +132,75 @@ export function getCanvasElement(): HTMLCanvasElement {
     return canvasEl;
 }
 
-export function showLoading(): void {
-    loadingOverlay.hidden = false;
-    errorOverlay.hidden = true;
-}
-
-export function hideLoading(): void {
-    loadingOverlay.hidden = true;
-    statusOverlay.hidden = false;
-    bookOverlay.hidden = false;
-}
-
 export function showError(message: string): void {
-    loadingOverlay.hidden = true;
     errorMessage.textContent = message;
     errorOverlay.hidden = false;
+}
+
+export function hideError(): void {
+    errorOverlay.hidden = true;
 }
 
 function renderUI(): void {
     const state = getState();
 
-    // Status bar
+    // View switching
+    const isHome = state.view === 'home';
+    homeView.hidden = !isHome;
+    scanView.hidden = isHome;
+
+    // OCR status indicator
+    if (state.ocrReady) {
+        ocrStatus.hidden = true;
+    } else {
+        ocrStatus.hidden = false;
+    }
+
+    // Image processing state
+    homeProcessing.hidden = !state.isProcessingImage;
+    (btnUploadImage as HTMLButtonElement).disabled = state.isProcessingImage;
+    (btnStartCamera as HTMLButtonElement).disabled = state.isProcessingImage;
+
+    // Home view book list and controls
+    renderHomeBookList();
+    const count = state.books.length;
+    homeBookCount.textContent = `${count} book${count !== 1 ? 's' : ''} found`;
+    (btnHomeExport as HTMLButtonElement).disabled = count === 0;
+    (btnHomeClear as HTMLButtonElement).disabled = count === 0;
+
+    // Scan view status
     scanCountEl.textContent = `Scans: ${state.scanCount}`;
-    scanStatusEl.textContent = state.isScanning ? 'Scanning' : 'Paused';
+    scanStatusEl.textContent = state.isScanning
+        ? (state.autoScan ? 'Auto-scanning' : 'Manual')
+        : 'Paused';
     scanStatusEl.className = state.isScanning ? 'scan-active' : 'scan-paused';
 
-    // Last detected text (truncated)
+    // Last detected text
     const displayText = state.lastDetectedText.length > 60
         ? state.lastDetectedText.substring(0, 60) + '...'
         : state.lastDetectedText;
     lastTextEl.textContent = displayText;
 
-    // Book count
-    const count = state.books.length;
-    bookCountEl.textContent = `${count} book${count !== 1 ? 's' : ''} found`;
+    // Scan view book count
+    scanBookCount.textContent = `${count} book${count !== 1 ? 's' : ''} found`;
 
-    // Pause button icon + ARIA
-    btnPause.innerHTML = state.isScanning ? ICON_PAUSE : ICON_PLAY;
-    btnPause.title = state.isScanning ? 'Pause scanning' : 'Resume scanning';
-    btnPause.setAttribute('aria-label', state.isScanning ? 'Pause scanning' : 'Resume scanning');
+    // Auto-scan toggle
+    autoScanSwitch.setAttribute('aria-checked', String(state.autoScan));
+    autoScanSwitch.classList.toggle('toggle-on', state.autoScan);
 
-    // Disable export/clear when no books
-    (btnExport as HTMLButtonElement).disabled = state.books.length === 0;
-    (btnClear as HTMLButtonElement).disabled = state.books.length === 0;
-
-    // Book list
-    renderBookList();
+    // Show/hide manual scan button
+    btnScanNow.hidden = state.autoScan;
 }
 
-function renderBookList(): void {
+function renderHomeBookList(): void {
     const books = getState().books;
 
     if (books.length === 0) {
-        bookListEl.innerHTML = '<div class="empty-state">Point camera at book spines to start scanning</div>';
+        homeBookList.innerHTML = '<div class="empty-state">No books found yet. Scan book spines with your camera or upload a photo to get started.</div>';
         return;
     }
 
-    bookListEl.innerHTML = books.map((book, index) => {
+    homeBookList.innerHTML = books.map((book, index) => {
         const authors = book.authors.join(', ');
         const imgSrc = book.thumbnailUrl || '';
         const imgTag = imgSrc

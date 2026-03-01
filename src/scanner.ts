@@ -17,7 +17,11 @@ export function startScanning(
 ): void {
     update({ isScanning: true });
     isPaused = false;
-    scheduleNext(camera, ocr, bookSearcher);
+
+    // Only auto-schedule if autoScan is enabled
+    if (getState().autoScan) {
+        scheduleNext(camera, ocr, bookSearcher);
+    }
 
     // Pause scanning when tab is hidden
     visibilityHandler = () => onVisibilityChange(camera, ocr, bookSearcher);
@@ -37,12 +41,89 @@ export function stopScanning(): void {
     update({ isScanning: false });
 }
 
+/**
+ * Single-shot scan: capture one frame, OCR it, search for books, done.
+ * Used when auto-scan is disabled and user taps "Scan Now".
+ */
+export async function scanOnce(
+    camera: CameraManager,
+    ocr: TextRecognizer,
+    bookSearcher: BookSearcher,
+): Promise<void> {
+    try {
+        const canvas = camera.captureFrame();
+        if (!canvas) {
+            toast('Could not capture frame');
+            return;
+        }
+
+        const textBlocks = await withTimeout(
+            ocr.recognize(canvas),
+            OCR_TIMEOUT_MS,
+            'OCR timed out',
+        );
+
+        update({ scanCount: getState().scanCount + 1 });
+
+        let foundAny = false;
+        for (const text of textBlocks) {
+            update({ lastDetectedText: text });
+            const newBooks = await bookSearcher.search(text);
+            for (const book of newBooks) {
+                const added = addBook(book);
+                if (added) {
+                    toast(`Found: ${book.title}`);
+                    foundAny = true;
+                }
+            }
+        }
+
+        if (textBlocks.length === 0) {
+            toast('No text detected');
+        } else if (!foundAny) {
+            toast('No new books found');
+        }
+    } catch (err) {
+        console.error('Scan once error:', err);
+        const message = err instanceof Error ? err.message : 'Scan error';
+        if (message === 'OCR timed out') {
+            toast('OCR timed out. Try again.');
+            ocr.resetProcessing();
+        }
+    }
+}
+
+/**
+ * Called when autoScan is toggled on while scanning is active.
+ * Resumes the auto-scan loop.
+ */
+export function resumeAutoScan(
+    camera: CameraManager,
+    ocr: TextRecognizer,
+    bookSearcher: BookSearcher,
+): void {
+    if (getState().isScanning && getState().autoScan && !scanTimer) {
+        scheduleNext(camera, ocr, bookSearcher);
+    }
+}
+
+/**
+ * Called when autoScan is toggled off. Stops the scheduled loop
+ * but keeps isScanning true so the camera stays active.
+ */
+export function pauseAutoScan(): void {
+    if (scanTimer) {
+        clearTimeout(scanTimer);
+        scanTimer = null;
+    }
+}
+
 function scheduleNext(
     camera: CameraManager,
     ocr: TextRecognizer,
     bookSearcher: BookSearcher,
 ): void {
-    if (!getState().isScanning) return;
+    if (!getState().isScanning || !getState().autoScan) return;
     scanTimer = setTimeout(() => scanFrame(camera, ocr, bookSearcher), SCAN_INTERVAL_MS);
 }
 
@@ -51,7 +132,7 @@ async function scanFrame(
     ocr: TextRecognizer,
     bookSearcher: BookSearcher,
 ): Promise<void> {
-    if (!getState().isScanning || isPaused) {
+    if (!getState().isScanning || isPaused || !getState().autoScan) {
         scheduleNext(camera, ocr, bookSearcher);
         return;
     }
@@ -107,7 +188,9 @@ function onVisibilityChange(
         }
     } else {
         isPaused = false;
-        scheduleNext(camera, ocr, bookSearcher);
+        if (getState().autoScan) {
+            scheduleNext(camera, ocr, bookSearcher);
+        }
     }
 }
 
