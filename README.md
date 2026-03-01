@@ -1,3 +1,7 @@
+[![Deploy to GitHub Pages](https://github.com/fabian20ro/find-the-book/actions/workflows/deploy.yml/badge.svg)](https://github.com/fabian20ro/find-the-book/actions/workflows/deploy.yml)
+
+**Live site:** [https://fabian20ro.github.io/find-the-book/](https://fabian20ro.github.io/find-the-book/)
+
 # Find The Book
 
 A Progressive Web App for fast book scanning. Point your camera at a bookshelf and the app
