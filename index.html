@@ -29,7 +29,7 @@
     <div id="status-overlay" class="status-overlay" hidden>
         <div class="status-row">
             <span id="scan-count">Scans: 0</span>
-            <span id="scan-status" class="scan-active">Scanning</span>
+            <span id="scan-status" class="scan-active" role="status" aria-live="polite">Scanning</span>
         </div>
         <div id="last-text" class="last-text"></div>
     </div>
@@ -37,20 +37,20 @@
     <!-- Book list at bottom -->
     <div id="book-overlay" class="book-overlay" hidden>
         <div class="controls">
-            <span id="book-count">0 books found</span>
+            <span id="book-count" role="status" aria-live="polite">0 books found</span>
             <div class="control-buttons">
-                <button id="btn-pause" title="Pause scanning">
+                <button id="btn-pause" title="Pause scanning" aria-label="Pause scanning">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                         <rect x="6" y="4" width="4" height="16"/>
                         <rect x="14" y="4" width="4" height="16"/>
                     </svg>
                 </button>
-                <button id="btn-export" title="Export CSV">
+                <button id="btn-export" title="Export CSV" aria-label="Export books as CSV">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                         <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
                     </svg>
                 </button>
-                <button id="btn-clear" title="Clear all">
+                <button id="btn-clear" title="Clear all" aria-label="Clear all books">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
                         <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
                     </svg>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Error overlay -->
-    <div id="error-overlay" hidden>
+    <div id="error-overlay" hidden role="alert">
         <div class="error-content">
             <p id="error-message"></p>
             <button id="btn-retry">Retry</button>

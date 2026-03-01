@@ -143,23 +143,30 @@ body {
 
 .control-buttons {
     display: flex;
-    gap: 8px;
+    gap: 12px;
 }
 
 .control-buttons button {
     background: rgba(255, 255, 255, 0.15);
     border: none;
     border-radius: 8px;
-    padding: 8px;
+    padding: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background 0.2s;
+    min-width: 44px;
+    min-height: 44px;
 }
 
 .control-buttons button:active {
     background: rgba(255, 255, 255, 0.3);
+}
+
+.control-buttons button:disabled {
+    opacity: 0.3;
+    pointer-events: none;
 }
 
 /* Book list */
@@ -222,10 +229,15 @@ body {
     border: none;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
-    padding: 4px;
+    padding: 8px;
     font-size: 18px;
     line-height: 1;
     flex-shrink: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-remove:active {
@@ -272,4 +284,57 @@ body {
     padding: 24px;
     color: rgba(255, 255, 255, 0.4);
     font-size: 14px;
+}
+
+/* Focus styles */
+:focus-visible {
+    outline: 2px solid #4fc3f7;
+    outline-offset: 2px;
+}
+
+/* Book title link */
+.book-link {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: rgba(255, 255, 255, 0.3);
+    text-underline-offset: 2px;
+}
+
+.book-link:active {
+    text-decoration-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Toast notification */
+.toast {
+    position: fixed;
+    bottom: 60vh;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(50, 50, 50, 0.95);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+}
+
+.toast-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .spinner {
+        animation: none;
+        border-top-color: rgba(255, 255, 255, 0.8);
+        border-right-color: rgba(255, 255, 255, 0.5);
+    }
+
+    .toast {
+        transition: none;
+    }
 }
