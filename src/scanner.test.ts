@@ -289,4 +289,72 @@ describe('scanner', () => {
             expect(camera.captureFrame).toHaveBeenCalled();
         });
     });
+
+    describe('candidate popup pausing', () => {
+        it('skips scanning while candidateBooks are present', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            // Add a candidate to simulate popup being visible
+            state.addCandidates([makeBook('c1', 'Candidate Book')]);
+
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(camera.captureFrame).not.toHaveBeenCalled();
+        });
+
+        it('resumes scanning after candidates are cleared', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            state.addCandidates([makeBook('c1', 'Candidate Book')]);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).not.toHaveBeenCalled();
+
+            // Clear candidates (simulates dismiss)
+            state.clearCandidates();
+
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalled();
+        });
+
+        it('resumes scanning after last candidate is individually added', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            state.addCandidates([makeBook('c1', 'Book One')]);
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).not.toHaveBeenCalled();
+
+            // Remove the one candidate (simulates user clicking "Add")
+            state.removeCandidateById('c1');
+
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalled();
+        });
+
+        it('does not block scanOnce while candidates are present', async () => {
+            state.addCandidates([makeBook('c1', 'Candidate Book')]);
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(camera.captureFrame).toHaveBeenCalledTimes(1);
+            expect(ocr.recognize).toHaveBeenCalledTimes(1);
+        });
+    });
 });

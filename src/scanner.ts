@@ -128,7 +128,7 @@ async function scanFrame(
     ocr: TextRecognizer,
     bookSearcher: BookSearcher,
 ): Promise<void> {
-    if (!getState().isScanning || isPaused || !getState().autoScan) {
+    if (!getState().isScanning || isPaused || !getState().autoScan || getState().candidateBooks.length > 0) {
         scheduleNext(camera, ocr, bookSearcher);
         return;
     }
