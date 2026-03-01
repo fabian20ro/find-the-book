@@ -24,7 +24,7 @@ describe('state', () => {
         update({
             books: [],
             isScanning: false,
-            autoScan: true,
+            autoScan: false,
             scanCount: 0,
             lastDetectedText: '',
             error: null,
@@ -39,7 +39,7 @@ describe('state', () => {
             const state = getState();
             expect(state.books).toEqual([]);
             expect(state.isScanning).toBe(false);
-            expect(state.autoScan).toBe(true);
+            expect(state.autoScan).toBe(false);
             expect(state.view).toBe('home');
             expect(state.isProcessingImage).toBe(false);
             expect(state.ocrReady).toBe(false);

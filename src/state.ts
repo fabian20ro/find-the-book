@@ -38,7 +38,7 @@ export function emit(event: EventType, data?: any): void {
 const state: AppState = {
     books: [],
     isScanning: false,
-    autoScan: true,
+    autoScan: false,
     scanCount: 0,
     lastDetectedText: '',
     error: null,

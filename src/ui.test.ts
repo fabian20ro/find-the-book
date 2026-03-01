@@ -68,7 +68,7 @@ function setupDOM() {
                 <div class="scan-controls-row">
                     <div class="auto-scan-toggle">
                         <label for="auto-scan-switch">Auto-scan</label>
-                        <button id="auto-scan-switch" role="switch" aria-checked="true" class="toggle-switch toggle-on">
+                        <button id="auto-scan-switch" role="switch" aria-checked="false" class="toggle-switch">
                             <span class="toggle-knob"></span>
                         </button>
                     </div>
@@ -94,7 +94,7 @@ describe('ui', () => {
         update({
             books: [],
             isScanning: false,
-            autoScan: true,
+            autoScan: false,
             scanCount: 0,
             lastDetectedText: '',
             error: null,

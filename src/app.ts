@@ -46,7 +46,7 @@ function loadAutoScanPref(): void {
             update({ autoScan: stored === 'true' });
         }
     } catch {
-        // Ignore — default is true
+        // Ignore — default is false
     }
 }
 

@@ -3,7 +3,7 @@ import type { TextRecognizer } from './ocr';
 import type { BookSearcher } from './books';
 import { addBook, update, toast, getState } from './state';
 
-const SCAN_INTERVAL_MS = 1000;
+const SCAN_INTERVAL_MS = 2000;
 const OCR_TIMEOUT_MS = 10_000;
 
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
