@@ -1,19 +1,17 @@
 export class TextRecognizer {
-    constructor() {
-        this.worker = null;
-        this.isProcessing = false;
-    }
+    private worker: TesseractWorker | null = null;
+    private isProcessing = false;
 
-    async init() {
+    async init(): Promise<void> {
         this.worker = await Tesseract.createWorker('eng');
     }
 
-    async recognize(canvas) {
+    async recognize(canvas: HTMLCanvasElement): Promise<string[]> {
         if (this.isProcessing || !canvas) return [];
         this.isProcessing = true;
 
         try {
-            const result = await this.worker.recognize(canvas);
+            const result = await this.worker!.recognize(canvas);
             const lines = result.data.lines || [];
 
             return lines
@@ -27,7 +25,7 @@ export class TextRecognizer {
         }
     }
 
-    async destroy() {
+    async destroy(): Promise<void> {
         if (this.worker) {
             await this.worker.terminate();
             this.worker = null;

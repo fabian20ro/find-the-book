@@ -1,4 +1,6 @@
-function escapeCsv(field) {
+import type { Book } from './books';
+
+function escapeCsv(field: string | number | null): string {
     if (field == null) return '';
     const str = String(field);
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -7,7 +9,7 @@ function escapeCsv(field) {
     return str;
 }
 
-export function exportToCsv(books) {
+export function exportToCsv(books: Book[]): void {
     if (books.length === 0) return;
 
     const header = 'Title,Authors,ISBN,Publisher,Published Date,Page Count';

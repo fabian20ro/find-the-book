@@ -1,13 +1,7 @@
-const CACHE_NAME = 'findthebook-v1';
+const CACHE_NAME = 'findthebook-v2';
 const ASSETS = [
     './',
     './index.html',
-    './css/style.css',
-    './js/app.js',
-    './js/camera.js',
-    './js/ocr.js',
-    './js/books.js',
-    './js/export.js',
     './manifest.json',
 ];
 

@@ -1,10 +1,18 @@
-import { CameraManager } from './camera.js';
-import { TextRecognizer } from './ocr.js';
-import { BookSearcher } from './books.js';
-import { exportToCsv } from './export.js';
+import './style.css';
+import { CameraManager } from './camera';
+import { TextRecognizer } from './ocr';
+import { BookSearcher, type Book } from './books';
+import { exportToCsv } from './export';
 
 // App state
-const state = {
+interface AppState {
+    books: Book[];
+    isScanning: boolean;
+    scanCount: number;
+    lastDetectedText: string;
+}
+
+const state: AppState = {
     books: [],
     isScanning: true,
     scanCount: 0,
@@ -12,35 +20,35 @@ const state = {
 };
 
 // Core components
-let cameraManager;
-let textRecognizer;
-let bookSearcher;
-let scanInterval;
+let cameraManager: CameraManager;
+let textRecognizer: TextRecognizer;
+let bookSearcher: BookSearcher;
+let scanInterval: ReturnType<typeof setInterval>;
 let listenersAttached = false;
 
 // DOM elements
-const videoEl = document.getElementById('camera');
-const canvasEl = document.getElementById('capture');
-const loadingOverlay = document.getElementById('loading-overlay');
-const errorOverlay = document.getElementById('error-overlay');
-const errorMessage = document.getElementById('error-message');
-const statusOverlay = document.getElementById('status-overlay');
-const bookOverlay = document.getElementById('book-overlay');
-const scanCountEl = document.getElementById('scan-count');
-const scanStatusEl = document.getElementById('scan-status');
-const lastTextEl = document.getElementById('last-text');
-const bookCountEl = document.getElementById('book-count');
-const bookListEl = document.getElementById('book-list');
-const btnPause = document.getElementById('btn-pause');
-const btnExport = document.getElementById('btn-export');
-const btnClear = document.getElementById('btn-clear');
-const btnRetry = document.getElementById('btn-retry');
+const videoEl = document.getElementById('camera') as HTMLVideoElement;
+const canvasEl = document.getElementById('capture') as HTMLCanvasElement;
+const loadingOverlay = document.getElementById('loading-overlay')!;
+const errorOverlay = document.getElementById('error-overlay')!;
+const errorMessage = document.getElementById('error-message')!;
+const statusOverlay = document.getElementById('status-overlay')!;
+const bookOverlay = document.getElementById('book-overlay')!;
+const scanCountEl = document.getElementById('scan-count')!;
+const scanStatusEl = document.getElementById('scan-status')!;
+const lastTextEl = document.getElementById('last-text')!;
+const bookCountEl = document.getElementById('book-count')!;
+const bookListEl = document.getElementById('book-list')!;
+const btnPause = document.getElementById('btn-pause')!;
+const btnExport = document.getElementById('btn-export')!;
+const btnClear = document.getElementById('btn-clear')!;
+const btnRetry = document.getElementById('btn-retry')!;
 
 // Pause/Resume button SVGs
 const ICON_PAUSE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
 const ICON_PLAY = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
 
-async function init() {
+async function init(): Promise<void> {
     try {
         if (scanInterval) clearInterval(scanInterval);
         if (cameraManager) cameraManager.stop();
@@ -56,9 +64,9 @@ async function init() {
         await cameraManager.start();
 
         // Hide loading, show UI
-        loadingOverlay.hidden = true;
-        statusOverlay.hidden = false;
-        bookOverlay.hidden = false;
+        (loadingOverlay as HTMLElement).hidden = true;
+        (statusOverlay as HTMLElement).hidden = false;
+        (bookOverlay as HTMLElement).hidden = false;
 
         // Start scan loop (~1 frame per second)
         scanInterval = setInterval(scanFrame, 1000);
@@ -66,11 +74,11 @@ async function init() {
         // Set up event listeners
         setupListeners();
     } catch (err) {
-        showError(err.message || 'Failed to initialize. Please ensure camera access is allowed.');
+        showError((err as Error).message || 'Failed to initialize. Please ensure camera access is allowed.');
     }
 }
 
-async function scanFrame() {
+async function scanFrame(): Promise<void> {
     if (!state.isScanning) return;
 
     const canvas = cameraManager.captureFrame();
@@ -90,7 +98,7 @@ async function scanFrame() {
     renderUI();
 }
 
-function renderUI() {
+function renderUI(): void {
     // Status bar
     scanCountEl.textContent = `Scans: ${state.scanCount}`;
     scanStatusEl.textContent = state.isScanning ? 'Scanning' : 'Paused';
@@ -114,7 +122,7 @@ function renderUI() {
     renderBookList();
 }
 
-function renderBookList() {
+function renderBookList(): void {
     if (state.books.length === 0) {
         bookListEl.innerHTML = '<div class="empty-state">Point camera at book spines to start scanning</div>';
         return;
@@ -139,13 +147,13 @@ function renderBookList() {
     }).join('');
 }
 
-function escapeHtml(str) {
+function escapeHtml(str: string): string {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
 }
 
-function setupListeners() {
+function setupListeners(): void {
     if (listenersAttached) return;
     listenersAttached = true;
 
@@ -168,30 +176,29 @@ function setupListeners() {
     });
 
     // Remove individual book (event delegation)
-    bookListEl.addEventListener('click', (e) => {
-        const btn = e.target.closest('.btn-remove');
+    bookListEl.addEventListener('click', (e: Event) => {
+        const btn = (e.target as HTMLElement).closest('.btn-remove') as HTMLElement | null;
         if (!btn) return;
-        const index = parseInt(btn.dataset.index, 10);
+        const index = parseInt(btn.dataset.index!, 10);
         if (index >= 0 && index < state.books.length) {
             const removed = state.books.splice(index, 1)[0];
             bookSearcher.removeBookId(removed.id);
             renderUI();
         }
     });
-
 }
 
 // Retry button — registered at module level so it works even if init() fails
 btnRetry.addEventListener('click', () => {
-    errorOverlay.hidden = true;
-    loadingOverlay.hidden = false;
+    (errorOverlay as HTMLElement).hidden = true;
+    (loadingOverlay as HTMLElement).hidden = false;
     init();
 });
 
-function showError(message) {
-    loadingOverlay.hidden = true;
+function showError(message: string): void {
+    (loadingOverlay as HTMLElement).hidden = true;
     errorMessage.textContent = message;
-    errorOverlay.hidden = false;
+    (errorOverlay as HTMLElement).hidden = false;
 }
 
 // Register service worker
