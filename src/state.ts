@@ -6,6 +6,7 @@ export type ViewMode = 'home' | 'scan';
 
 export interface AppState {
     books: Book[];
+    candidateBooks: Book[];
     isScanning: boolean;
     autoScan: boolean;
     scanCount: number;
@@ -37,6 +38,7 @@ export function emit(event: EventType, data?: any): void {
 
 const state: AppState = {
     books: [],
+    candidateBooks: [],
     isScanning: false,
     autoScan: false,
     scanCount: 0,
@@ -72,6 +74,31 @@ export function removeBook(index: number): Book | null {
 
 export function clearBooks(): void {
     state.books = [];
+    emit('change');
+}
+
+export function addCandidates(books: Book[]): void {
+    let added = false;
+    for (const book of books) {
+        const isDuplicate = state.candidateBooks.some((c) => c.id === book.id)
+            || state.books.some((b) => b.id === book.id);
+        if (!isDuplicate) {
+            state.candidateBooks.push(book);
+            added = true;
+        }
+    }
+    if (added) {
+        emit('change');
+    }
+}
+
+export function removeCandidateById(bookId: string): void {
+    state.candidateBooks = state.candidateBooks.filter((c) => c.id !== bookId);
+    emit('change');
+}
+
+export function clearCandidates(): void {
+    state.candidateBooks = [];
     emit('change');
 }
 

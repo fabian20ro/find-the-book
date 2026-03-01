@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BookSearcher } from './books';
-
-// Mock toast to prevent import side effects
-vi.mock('./state', () => ({
-    toast: vi.fn(),
-}));
+import { BookSearcher, computeConfidence } from './books';
+import type { Book } from './books';
 
 function mockFetchResponse(data: object, status = 200) {
     return vi.fn().mockResolvedValue({
@@ -48,7 +44,7 @@ describe('BookSearcher', () => {
     });
 
     describe('search', () => {
-        it('returns books from API response', async () => {
+        it('returns books from API response with confidence', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(
                 googleBooksResponse([volume('v1', 'Test Book', ['Alice'], '9781234567890')]),
             ));
@@ -59,6 +55,8 @@ describe('BookSearcher', () => {
             expect(results[0].title).toBe('Test Book');
             expect(results[0].authors).toEqual(['Alice']);
             expect(results[0].isbn).toBe('9781234567890');
+            expect(results[0].confidence).toBeGreaterThan(0);
+            expect(results[0].confidence).toBeLessThanOrEqual(100);
         });
 
         it('skips queries shorter than 4 characters', async () => {
@@ -146,6 +144,32 @@ describe('BookSearcher', () => {
             expect(results[0].authors).toEqual([]);
             expect(results[0].isbn).toBeNull();
             expect(results[0].thumbnailUrl).toBeNull();
+            expect(results[0].confidence).toBe(0);
+        });
+
+        it('includes ratings in confidence when available', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
+                {
+                    id: 'v-rated',
+                    volumeInfo: {
+                        title: 'Rated Book',
+                        authors: ['Author'],
+                        publisher: 'Pub',
+                        publishedDate: '2024',
+                        description: 'Desc',
+                        pageCount: 100,
+                        industryIdentifiers: [{ type: 'ISBN_13', identifier: '9780000000000' }],
+                        imageLinks: { thumbnail: 'https://example.com/thumb.jpg' },
+                        averageRating: 4.5,
+                        ratingsCount: 50,
+                    },
+                },
+            ])));
+
+            const results = await searcher.search('rated book');
+            expect(results).toHaveLength(1);
+            // Full metadata (75) + rating contribution
+            expect(results[0].confidence).toBeGreaterThan(75);
         });
 
         it('upgrades http thumbnail to https', async () => {
@@ -208,5 +232,72 @@ describe('BookSearcher', () => {
             const results = await searcher.search('initial query');
             expect(results).toHaveLength(1);
         });
+    });
+});
+
+describe('computeConfidence', () => {
+    function makeBookData(overrides: Partial<Omit<Book, 'confidence'>> = {}): Omit<Book, 'confidence'> {
+        return {
+            id: 'b1',
+            title: 'Test Book',
+            authors: ['Author'],
+            publisher: 'Publisher',
+            publishedDate: '2024',
+            description: 'A book',
+            isbn: '9781234567890',
+            pageCount: 200,
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+            infoLink: 'https://example.com',
+            ...overrides,
+        };
+    }
+
+    it('returns max metadata score for complete book', () => {
+        const score = computeConfidence(makeBookData());
+        expect(score).toBe(75);
+    });
+
+    it('returns 0 for empty book', () => {
+        const score = computeConfidence(makeBookData({
+            title: 'Unknown Title',
+            authors: [],
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+        }));
+        expect(score).toBe(0);
+    });
+
+    it('adds rating points for averageRating', () => {
+        const withoutRating = computeConfidence(makeBookData());
+        const withRating = computeConfidence(makeBookData(), 4.0);
+        expect(withRating).toBeGreaterThan(withoutRating);
+    });
+
+    it('adds rating points for ratingsCount', () => {
+        const withoutCount = computeConfidence(makeBookData());
+        const withCount = computeConfidence(makeBookData(), undefined, 50);
+        expect(withCount).toBeGreaterThan(withoutCount);
+    });
+
+    it('caps at 100', () => {
+        const score = computeConfidence(makeBookData(), 5.0, 200);
+        expect(score).toBe(100);
+    });
+
+    it('scores partial metadata correctly', () => {
+        // Only title + authors = 10 + 15 = 25
+        const score = computeConfidence(makeBookData({
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+        }));
+        expect(score).toBe(25);
     });
 });

@@ -41,4 +41,26 @@
 
 ---
 
+### [2026-03-01] Refactor codebase for maintainability
+
+**Context:** User requested code refactoring for maintainability after several features were added (book selection popup, auto-scan pause, confidence scoring).
+
+**What happened:**
+- Fixed inline type imports (`import('./books').Book[]`) in scanner.ts and ui.ts — replaced with proper top-level imports
+- Extracted magic constants in ui.ts: `MAX_DISPLAY_TEXT_LENGTH`, `TOAST_DISPLAY_MS`, `TOAST_CLEANUP_FALLBACK_MS`, `CONFIDENCE_HIGH_THRESHOLD`, `CONFIDENCE_MID_THRESHOLD`, `NO_COVER_SVG`
+- Extracted shared helpers in ui.ts: `renderBookImage()`, `renderBookMeta()`, `confidenceClass()` — eliminated SVG fallback duplication and simplified renderCandidateList
+- Simplified `ocrStatus.hidden` assignment (was unnecessarily verbose if/else)
+- Extracted `searchTextBlocks()` in scanner.ts to deduplicate text-block-to-books loop used in scanOnce, scanFrame, and app.ts handleImageUpload (3 copies → 1 exported function)
+- Extracted `handleScanError()` in scanner.ts to unify error handling between scanOnce and scanFrame
+- Decoupled books.ts from state.ts: removed `toast` import, added `notify` callback parameter to BookSearcher constructor (dependency injection)
+- Removed unnecessary `vi.mock('./state')` from books.test.ts (no longer needed)
+
+**Outcome:** Success — all 151 tests pass, TypeScript compiles cleanly, no behavioral changes
+
+**Insight:** When decoupling modules, constructor-injected callbacks are the simplest pattern for notification side-effects. Default no-op parameter keeps tests simple while production code passes the real implementation.
+
+**Promoted to Lessons Learned:** No
+
+---
+
 <!-- New entries above this line, most recent first -->
