@@ -1,3 +1,5 @@
+import { getContext2D } from './dom';
+
 export class CameraManager {
     private video: HTMLVideoElement;
     private canvas: HTMLCanvasElement;
@@ -7,10 +9,10 @@ export class CameraManager {
     constructor(videoElement: HTMLVideoElement, canvasElement: HTMLCanvasElement) {
         this.video = videoElement;
         this.canvas = canvasElement;
-        this.ctx = canvasElement.getContext('2d')!;
+        this.ctx = getContext2D(canvasElement);
     }
 
-    async start(): Promise<void> {
+    async start(onDisconnect?: () => void): Promise<void> {
         const constraints: MediaStreamConstraints = {
             video: {
                 facingMode: 'environment',
@@ -20,7 +22,15 @@ export class CameraManager {
             audio: false,
         };
 
-        this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+            if (err instanceof DOMException && err.name === 'NotAllowedError') {
+                throw new Error('Camera permission denied. Please allow camera access and try again.');
+            }
+            throw new Error('Could not access camera. Ensure no other app is using it.');
+        }
+
         this.video.srcObject = this.stream;
 
         // Wait for video to be ready
@@ -31,6 +41,15 @@ export class CameraManager {
                 resolve();
             };
         });
+
+        // Listen for camera disconnection
+        const track = this.stream.getVideoTracks()[0];
+        if (track && onDisconnect) {
+            track.addEventListener('ended', () => {
+                console.warn('Camera track ended (disconnected or revoked)');
+                onDisconnect();
+            });
+        }
     }
 
     captureFrame(): HTMLCanvasElement | null {

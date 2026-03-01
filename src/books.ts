@@ -1,3 +1,5 @@
+import { toast } from './state';
+
 export interface Book {
     id: string;
     title: string;
@@ -30,6 +32,8 @@ interface GoogleBooksResponse {
     items?: GoogleBooksVolume[];
 }
 
+const MAX_CACHE_SIZE = 200;
+
 export class BookSearcher {
     private queryCache = new Set<string>();
     private foundBookIds = new Set<string>();
@@ -39,11 +43,26 @@ export class BookSearcher {
         if (normalized.length < 4 || this.queryCache.has(normalized)) {
             return [];
         }
+
+        // Bound the cache — evict oldest entry when full
+        if (this.queryCache.size >= MAX_CACHE_SIZE) {
+            const first = this.queryCache.values().next().value;
+            if (first !== undefined) this.queryCache.delete(first);
+        }
         this.queryCache.add(normalized);
 
         try {
             const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=3`;
             const response = await fetch(url);
+
+            if (response.status === 429) {
+                toast('Google Books API rate limit reached. Pausing briefly...');
+                await new Promise((r) => setTimeout(r, 5000));
+                // Remove from cache so it can be retried next time
+                this.queryCache.delete(normalized);
+                return [];
+            }
+
             if (!response.ok) return [];
             const data: GoogleBooksResponse = await response.json();
 
