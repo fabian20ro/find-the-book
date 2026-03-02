@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
+import type { OcrLine } from './ocr';
 import * as state from './state';
 
 // Mock state module
@@ -11,6 +12,19 @@ vi.mock('./state', async () => {
     };
 });
 
+// Mock frameBrightness to always return bright enough
+vi.mock('./ocr', async () => {
+    const actual = await vi.importActual('./ocr');
+    return {
+        ...actual,
+        frameBrightness: vi.fn().mockReturnValue(128),
+    };
+});
+
+function toOcrLines(texts: string[]): OcrLine[] {
+    return texts.map((text) => ({ text, confidence: 80 }));
+}
+
 function createMockCamera(frame: HTMLCanvasElement | null = document.createElement('canvas')) {
     return {
         captureFrame: vi.fn().mockReturnValue(frame),
@@ -21,7 +35,7 @@ function createMockCamera(frame: HTMLCanvasElement | null = document.createEleme
 
 function createMockOcr(lines: string[] = []) {
     return {
-        recognize: vi.fn().mockResolvedValue(lines),
+        recognize: vi.fn().mockResolvedValue(toOcrLines(lines)),
         resetProcessing: vi.fn(),
         init: vi.fn(),
         destroy: vi.fn(),
@@ -299,14 +313,14 @@ describe('scanner', () => {
     describe('searchTextBlocks', () => {
         it('sends combined query from all lines', async () => {
             const books = createMockBookSearcher();
-            await searchTextBlocks(['line one', 'line two', 'line three'], books as any);
+            await searchTextBlocks(toOcrLines(['line one', 'line two', 'line three']), books as any);
 
             expect(books.search).toHaveBeenCalledWith('line one line two line three');
         });
 
         it('also searches individual lines >= 8 chars', async () => {
             const books = createMockBookSearcher();
-            await searchTextBlocks(['line one', 'line two', 'line three'], books as any);
+            await searchTextBlocks(toOcrLines(['line one', 'line two', 'line three']), books as any);
 
             // combined + 3 individual long lines = 4 total
             expect(books.search).toHaveBeenCalledTimes(4);
@@ -318,7 +332,7 @@ describe('scanner', () => {
         it('does not send individual lines shorter than 8 chars', async () => {
             const books = createMockBookSearcher();
             // 'hi' (2), 'short' (5), 'text1' (5) — all < 8 chars individually
-            await searchTextBlocks(['hi', 'short', 'text1'], books as any);
+            await searchTextBlocks(toOcrLines(['hi', 'short', 'text1']), books as any);
 
             // Only the combined query is sent
             expect(books.search).toHaveBeenCalledTimes(1);
@@ -327,7 +341,7 @@ describe('scanner', () => {
 
         it('does not duplicate query when single line equals combined', async () => {
             const books = createMockBookSearcher();
-            await searchTextBlocks(['Some text'], books as any);
+            await searchTextBlocks(toOcrLines(['Some text']), books as any);
 
             expect(books.search).toHaveBeenCalledTimes(1);
             expect(books.search).toHaveBeenCalledWith('Some text');
@@ -335,7 +349,7 @@ describe('scanner', () => {
 
         it('updates lastDetectedText only once with first block', async () => {
             const books = createMockBookSearcher();
-            await searchTextBlocks(['first', 'second', 'third'], books as any);
+            await searchTextBlocks(toOcrLines(['first', 'second', 'third']), books as any);
 
             expect(state.getState().lastDetectedText).toBe('first');
         });
@@ -356,7 +370,7 @@ describe('scanner', () => {
                 .mockResolvedValueOnce([book1])
                 .mockResolvedValueOnce([book2]);
 
-            const result = await searchTextBlocks(['longtext1', 'short'], books as any);
+            const result = await searchTextBlocks(toOcrLines(['longtext1', 'short']), books as any);
             expect(result).toHaveLength(2);
             expect(result[0].title).toBe('Book One');
             expect(result[1].title).toBe('Book Two');
@@ -370,7 +384,7 @@ describe('scanner', () => {
                 .mockResolvedValueOnce([book1])
                 .mockRejectedValueOnce(new Error('API error'));
 
-            const result = await searchTextBlocks(['longtext1', 'short'], books as any);
+            const result = await searchTextBlocks(toOcrLines(['longtext1', 'short']), books as any);
             expect(result).toHaveLength(1);
             expect(result[0].title).toBe('Book One');
         });

@@ -208,6 +208,29 @@ export function initUI(handlers: UIHandlers): void {
     (bookPopup.querySelector('.book-popup-backdrop') as HTMLElement)
         .addEventListener('click', handlers.onDismissCandidates);
 
+    // Focus trap: keep Tab cycling within the popup while it's visible
+    bookPopup.addEventListener('keydown', (e: Event) => {
+        const ke = e as KeyboardEvent;
+        if (ke.key === 'Escape') {
+            handlers.onDismissCandidates();
+            return;
+        }
+        if (ke.key !== 'Tab') return;
+        const focusable = bookPopup.querySelectorAll<HTMLElement>(
+            'input, button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (ke.shiftKey && document.activeElement === first) {
+            ke.preventDefault();
+            last.focus();
+        } else if (!ke.shiftKey && document.activeElement === last) {
+            ke.preventDefault();
+            first.focus();
+        }
+    });
+
     // Book popup: add candidate (event delegation)
     bookPopupList.addEventListener('click', (e: Event) => {
         const btn = (e.target as HTMLElement).closest('.btn-add-book') as HTMLElement | null;
@@ -257,10 +280,12 @@ export function getCanvasElement(): HTMLCanvasElement {
 export function showError(message: string): void {
     errorMessage.textContent = message;
     errorOverlay.hidden = false;
+    document.body.style.overflow = 'hidden';
 }
 
 export function hideError(): void {
     errorOverlay.hidden = true;
+    document.body.style.overflow = '';
 }
 
 function renderUI(): void {
@@ -314,6 +339,7 @@ function renderUI(): void {
 
     // Book selection popup
     const candidates = state.candidateBooks;
+    const wasPopupHidden = bookPopup.hidden;
     bookPopup.hidden = candidates.length === 0;
     if (candidates.length > 0) {
         const popupTitle = bookPopup.querySelector('.book-popup-title') as HTMLElement;
@@ -337,6 +363,11 @@ function renderUI(): void {
         // Sync input without cursor jump
         if (candidateSearch.value !== state.candidateFilter) {
             candidateSearch.value = state.candidateFilter;
+        }
+
+        // Focus search input when popup first appears
+        if (wasPopupHidden) {
+            candidateSearch.focus();
         }
     } else {
         candidateSearch.value = '';

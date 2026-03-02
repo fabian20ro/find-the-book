@@ -47,4 +47,5 @@ Specialized agents in `.claude/agents/`. Invoke proactively — don't wait to be
 | Architect | `.claude/agents/architect.md` | System design, scalability, refactoring, ADRs |
 | Planner | `.claude/agents/planner.md` | Complex multi-step features — plan before coding |
 | UX Expert | `.claude/agents/ux-expert.md` | UI components, interaction patterns, accessibility |
+| OCR Expert | `.claude/agents/ocr-expert.md` | OCR quality, Tesseract tuning, text extraction pipeline |
 | Agent Creator | `.claude/agents/agent-creator.md` | Need a new specialized agent for a recurring task domain |

@@ -4,9 +4,11 @@ import { TextRecognizer } from './ocr';
 // Mock global Tesseract
 const mockRecognize = vi.fn();
 const mockTerminate = vi.fn();
+const mockSetParameters = vi.fn().mockResolvedValue(undefined);
 const mockWorker = {
     recognize: mockRecognize,
     terminate: mockTerminate,
+    setParameters: mockSetParameters,
 };
 
 beforeEach(() => {
@@ -15,6 +17,7 @@ beforeEach(() => {
     });
     mockRecognize.mockReset();
     mockTerminate.mockReset();
+    mockSetParameters.mockReset().mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -47,9 +50,9 @@ describe('TextRecognizer', () => {
             mockRecognize.mockResolvedValue({
                 data: {
                     lines: [
-                        { text: '  Hello World  ' },
-                        { text: 'Another Line' },
-                        { text: 'AB' }, // too short, should be filtered
+                        { text: '  Hello World  ', confidence: 90 },
+                        { text: 'Another Line', confidence: 80 },
+                        { text: 'AB', confidence: 95 }, // too short, should be filtered
                     ],
                 },
             });
@@ -60,16 +63,19 @@ describe('TextRecognizer', () => {
             const canvas = document.createElement('canvas');
             const results = await recognizer.recognize(canvas);
 
-            expect(results).toEqual(['Hello World', 'Another Line']);
+            expect(results).toEqual([
+                { text: 'Hello World', confidence: 90 },
+                { text: 'Another Line', confidence: 80 },
+            ]);
         });
 
         it('filters lines shorter than 3 chars', async () => {
             mockRecognize.mockResolvedValue({
                 data: {
                     lines: [
-                        { text: 'OK' },
-                        { text: 'AB' },
-                        { text: '' },
+                        { text: 'OK', confidence: 90 },
+                        { text: 'AB', confidence: 80 },
+                        { text: '', confidence: 50 },
                     ],
                 },
             });
@@ -95,9 +101,9 @@ describe('TextRecognizer', () => {
             expect(second).toEqual([]);
 
             // Resolve first call
-            resolveOcr!({ data: { lines: [{ text: 'Done' }] } });
+            resolveOcr!({ data: { lines: [{ text: 'Done', confidence: 90 }] } });
             const firstResult = await first;
-            expect(firstResult).toEqual(['Done']);
+            expect(firstResult).toEqual([{ text: 'Done', confidence: 90 }]);
         });
 
         it('throws if not initialized', async () => {
@@ -138,14 +144,14 @@ describe('TextRecognizer', () => {
             vi.spyOn(canvas, 'getContext').mockReturnValue(null);
 
             mockRecognize.mockResolvedValue({
-                data: { lines: [{ text: 'Hello' }] },
+                data: { lines: [{ text: 'Hello', confidence: 80 }] },
             });
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
             const results = await recognizer.recognize(canvas);
             // Preprocessing is skipped; original canvas passed to Tesseract — still works
-            expect(results).toEqual(['Hello']);
+            expect(results).toEqual([{ text: 'Hello', confidence: 80 }]);
             expect(mockRecognize).toHaveBeenCalledWith(canvas);
         });
     });
@@ -170,9 +176,9 @@ describe('TextRecognizer', () => {
             recognizer.resetProcessing();
 
             // Now a new call should work
-            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After reset' }] } });
+            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After reset', confidence: 90 }] } });
             const afterReset = await recognizer.recognize(canvas);
-            expect(afterReset).toEqual(['After reset']);
+            expect(afterReset).toEqual([{ text: 'After reset', confidence: 90 }]);
 
             // Clean up dangling promise
             resolveOcr!({ data: { lines: [] } });
@@ -213,9 +219,9 @@ describe('TextRecognizer', () => {
             // Switching language should reset processing flag
             await recognizer.setLanguage('eng');
 
-            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After switch' }] } });
+            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After switch', confidence: 85 }] } });
             const result = await recognizer.recognize(canvas);
-            expect(result).toEqual(['After switch']);
+            expect(result).toEqual([{ text: 'After switch', confidence: 85 }]);
 
             // Clean up
             resolveOcr!({ data: { lines: [] } });

@@ -1,10 +1,13 @@
 import type { CameraManager } from './camera';
-import type { TextRecognizer } from './ocr';
+import type { TextRecognizer, OcrLine } from './ocr';
+import { frameBrightness } from './ocr';
 import type { Book, BookSearcher } from './books';
 import { addCandidates, update, toast, getState } from './state';
 
 const SCAN_INTERVAL_MS = 2000;
 const OCR_TIMEOUT_MS = 10_000;
+const MIN_BRIGHTNESS = 40;
+const SECONDARY_QUERY_MIN_LENGTH = 8;
 
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let isPaused = false;
@@ -57,7 +60,12 @@ export async function scanOnce(
             return;
         }
 
-        const textBlocks = await withTimeout(
+        if (frameBrightness(canvas) < MIN_BRIGHTNESS) {
+            toast('Scene too dark — try better lighting');
+            return;
+        }
+
+        const ocrLines = await withTimeout(
             ocr.recognize(canvas),
             OCR_TIMEOUT_MS,
             'OCR timed out',
@@ -65,9 +73,9 @@ export async function scanOnce(
 
         update({ scanCount: getState().scanCount + 1 });
 
-        const allNewBooks = await searchTextBlocks(textBlocks, bookSearcher);
+        const allNewBooks = await searchTextBlocks(ocrLines, bookSearcher);
 
-        if (textBlocks.length === 0) {
+        if (ocrLines.length === 0) {
             toast('No text detected');
         } else if (allNewBooks.length === 0) {
             toast('No new books found');
@@ -130,8 +138,14 @@ async function scanFrame(
             return;
         }
 
+        // Skip dark frames — avoids wasting OCR time on garbage input
+        if (frameBrightness(canvas) < MIN_BRIGHTNESS) {
+            scheduleNext(camera, ocr, bookSearcher);
+            return;
+        }
+
         // OCR with timeout
-        const textBlocks = await withTimeout(
+        const ocrLines = await withTimeout(
             ocr.recognize(canvas),
             OCR_TIMEOUT_MS,
             'OCR timed out',
@@ -139,7 +153,7 @@ async function scanFrame(
 
         update({ scanCount: getState().scanCount + 1 });
 
-        const allNewBooks = await searchTextBlocks(textBlocks, bookSearcher);
+        const allNewBooks = await searchTextBlocks(ocrLines, bookSearcher);
         if (allNewBooks.length > 0) {
             addCandidates(allNewBooks);
         }
@@ -171,17 +185,18 @@ function onVisibilityChange(
     }
 }
 
-export async function searchTextBlocks(textBlocks: string[], bookSearcher: BookSearcher): Promise<Book[]> {
-    if (textBlocks.length === 0) return [];
+export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSearcher): Promise<Book[]> {
+    if (ocrLines.length === 0) return [];
 
-    update({ lastDetectedText: textBlocks[0] });
+    const texts = ocrLines.map((l) => l.text);
+    update({ lastDetectedText: texts[0] });
 
     // Primary query: all lines joined — gives Google Books the full context
-    const combined = textBlocks.join(' ');
+    const combined = texts.join(' ');
 
     // Secondary queries: individual lines long enough to be meaningful (>= 8 chars),
     // deduped and excluding lines that are identical to the combined query (single-line case)
-    const longIndividuals = [...new Set(textBlocks.filter((t) => t.length >= 8 && t !== combined))];
+    const longIndividuals = [...new Set(texts.filter((t) => t.length >= SECONDARY_QUERY_MIN_LENGTH && t !== combined))];
 
     const queries = [combined, ...longIndividuals];
 

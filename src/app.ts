@@ -122,22 +122,24 @@ async function init(): Promise<void> {
     });
 }
 
+function waitForOcrReady(): Promise<void> {
+    if (getState().ocrReady) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+        const unsub = on('change', () => {
+            if (getState().ocrReady) { unsub(); resolve(); }
+        });
+        // Re-check after subscribing to close the race window
+        if (getState().ocrReady) { unsub(); resolve(); }
+    });
+}
+
 async function startCameraView(): Promise<void> {
     try {
         hideError();
 
         if (!getState().ocrReady) {
             toast('Preparing scanner, please wait...');
-            // Wait for OCR to finish loading
-            await new Promise<void>((resolve) => {
-                const check = () => {
-                    if (getState().ocrReady) { resolve(); return; }
-                    const unsub = on('change', () => {
-                        if (getState().ocrReady) { unsub(); resolve(); }
-                    });
-                };
-                check();
-            });
+            await waitForOcrReady();
         }
 
         const videoEl = getVideoElement();
@@ -153,7 +155,7 @@ async function startCameraView(): Promise<void> {
 
         startScanning(cameraManager, textRecognizer, bookSearcher);
     } catch (err) {
-        showError((err as Error).message || 'Failed to start camera. Please ensure camera access is allowed.');
+        showError(err instanceof Error ? err.message : 'Failed to start camera. Please ensure camera access is allowed.');
     }
 }
 
@@ -212,43 +214,43 @@ async function handleImageUpload(file: File): Promise<void> {
     try {
         if (!getState().ocrReady) {
             toast('Scanner is still loading, please wait...');
-            await new Promise<void>((resolve) => {
-                const unsub = on('change', () => {
-                    if (getState().ocrReady) { unsub(); resolve(); }
-                });
-            });
+            await waitForOcrReady();
         }
 
         const img = new Image();
         const url = URL.createObjectURL(file);
-        img.src = url;
+        let canvas: HTMLCanvasElement;
+        try {
+            img.src = url;
 
-        await new Promise<void>((resolve, reject) => {
-            img.onload = () => resolve();
-            img.onerror = () => reject(new Error('Failed to load image'));
-        });
+            await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = () => reject(new Error('Failed to load image'));
+            });
 
-        // Cap dimensions for performance
-        let w = img.naturalWidth;
-        let h = img.naturalHeight;
-        if (w > MAX_IMAGE_DIM || h > MAX_IMAGE_DIM) {
-            const scale = MAX_IMAGE_DIM / Math.max(w, h);
-            w = Math.round(w * scale);
-            h = Math.round(h * scale);
+            // Cap dimensions for performance
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            if (w > MAX_IMAGE_DIM || h > MAX_IMAGE_DIM) {
+                const scale = MAX_IMAGE_DIM / Math.max(w, h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            }
+
+            canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error('Could not create canvas context');
+            ctx.drawImage(img, 0, 0, w, h);
+        } finally {
+            URL.revokeObjectURL(url);
         }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Could not create canvas context');
-        ctx.drawImage(img, 0, 0, w, h);
-        URL.revokeObjectURL(url);
+        const ocrLines = await textRecognizer.recognize(canvas);
+        const allNewBooks = await searchTextBlocks(ocrLines, bookSearcher);
 
-        const textBlocks = await textRecognizer.recognize(canvas);
-        const allNewBooks = await searchTextBlocks(textBlocks, bookSearcher);
-
-        if (textBlocks.length === 0) {
+        if (ocrLines.length === 0) {
             toast('No text detected in this image');
         } else if (allNewBooks.length === 0) {
             toast('No new books found in this image');
