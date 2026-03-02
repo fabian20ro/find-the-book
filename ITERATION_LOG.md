@@ -63,4 +63,24 @@
 
 ---
 
+### [2026-03-02] Create OCR Expert sub-agent
+
+**Context:** Project needed a specialized agent for OCR quality, Tesseract.js tuning, and text extraction pipeline work — a recurring task domain with dedicated modules (ocr.ts, scanner.ts).
+
+**What happened:**
+- Explored OCR codebase: ocr.ts (TextRecognizer, preprocessCanvas), scanner.ts (scanOnce, scanFrame, searchTextBlocks), type definitions, app.ts integration
+- Created `.claude/agents/ocr-expert.md` following Agent Creator template and validation checklist
+- Agent covers 2 modules (ocr.ts, scanner.ts) with output templates for preprocessing changes and recognition tuning
+- Includes key module knowledge section with project-specific constants and constraints
+- 5 actionable principles based on actual codebase patterns (scan interval, contrast stretch, line thresholds, worker recycling, debugging advice)
+- Registered in AGENTS.md Sub-Agents table
+
+**Outcome:** Success — agent file created, under 100 lines, focused scope, registered
+
+**Insight:** When creating an OCR-focused agent, the most valuable content is project-specific constants and tuning thresholds (min line length, scan interval, timeout) that aren't discoverable from generic Tesseract docs.
+
+**Promoted to Lessons Learned:** No
+
+---
+
 <!-- New entries above this line, most recent first -->
