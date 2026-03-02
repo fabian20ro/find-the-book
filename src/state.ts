@@ -20,21 +20,26 @@ export interface AppState {
     isChangingLanguage: boolean;
 }
 
-// --- Lightweight event emitter ---
+// --- Typed event emitter ---
 
-type EventType = 'change' | 'toast';
-type Listener = (data?: any) => void;
-
-const listeners = new Map<EventType, Set<Listener>>();
-
-export function on(event: EventType, fn: Listener): () => void {
-    if (!listeners.has(event)) listeners.set(event, new Set());
-    listeners.get(event)!.add(fn);
-    return () => { listeners.get(event)!.delete(fn); };
+interface EventMap {
+    change: void;
+    toast: string;
 }
 
-export function emit(event: EventType, data?: any): void {
-    listeners.get(event)?.forEach((fn) => fn(data));
+type EventType = keyof EventMap;
+type Listener<K extends EventType> = EventMap[K] extends void ? () => void : (data: EventMap[K]) => void;
+
+const listeners = new Map<EventType, Set<Listener<EventType>>>();
+
+export function on<K extends EventType>(event: K, fn: Listener<K>): () => void {
+    if (!listeners.has(event)) listeners.set(event, new Set());
+    listeners.get(event)!.add(fn as Listener<EventType>);
+    return () => { listeners.get(event)!.delete(fn as Listener<EventType>); };
+}
+
+export function emit<K extends EventType>(event: K, ...args: EventMap[K] extends void ? [] : [EventMap[K]]): void {
+    listeners.get(event)?.forEach((fn) => (fn as (...a: unknown[]) => void)(...args));
 }
 
 // --- State container ---
@@ -80,6 +85,7 @@ export function removeBook(index: number): Book | null {
 
 export function clearBooks(): void {
     state.books = [];
+    state.candidateFilter = '';
     emit('change');
 }
 
