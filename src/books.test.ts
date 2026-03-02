@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BookSearcher, computeConfidence } from './books';
+import { BookSearcher, computeConfidence, queryMatchRatio } from './books';
 import type { Book } from './books';
 
 function mockFetchResponse(data: object, status = 200) {
@@ -168,8 +168,8 @@ describe('BookSearcher', () => {
 
             const results = await searcher.search('rated book');
             expect(results).toHaveLength(1);
-            // Full metadata (75) + rating contribution
-            expect(results[0].confidence).toBeGreaterThan(75);
+            // Full metadata (50) + query match + rating contribution
+            expect(results[0].confidence).toBeGreaterThan(50);
         });
 
         it('upgrades http thumbnail to https', async () => {
@@ -252,9 +252,9 @@ describe('computeConfidence', () => {
         };
     }
 
-    it('returns max metadata score for complete book', () => {
+    it('returns max metadata score for complete book (no query)', () => {
         const score = computeConfidence(makeBookData());
-        expect(score).toBe(75);
+        expect(score).toBe(50);
     });
 
     it('returns 0 for empty book', () => {
@@ -284,12 +284,12 @@ describe('computeConfidence', () => {
     });
 
     it('caps at 100', () => {
-        const score = computeConfidence(makeBookData(), 5.0, 200);
+        const score = computeConfidence(makeBookData(), 5.0, 200, 'Test Book Author');
         expect(score).toBe(100);
     });
 
     it('scores partial metadata correctly', () => {
-        // Only title + authors = 10 + 15 = 25
+        // Only title + authors = 10 + 10 = 20
         const score = computeConfidence(makeBookData({
             publisher: null,
             publishedDate: null,
@@ -298,6 +298,62 @@ describe('computeConfidence', () => {
             pageCount: null,
             thumbnailUrl: null,
         }));
-        expect(score).toBe(25);
+        expect(score).toBe(20);
+    });
+
+    it('adds query match points when query words match title/authors', () => {
+        const withoutQuery = computeConfidence(makeBookData());
+        const withQuery = computeConfidence(makeBookData(), undefined, undefined, 'Test Book Author');
+        expect(withQuery).toBeGreaterThan(withoutQuery);
+    });
+
+    it('gives higher score when more query words match', () => {
+        const partialMatch = computeConfidence(makeBookData(), undefined, undefined, 'Test something unrelated');
+        const fullMatch = computeConfidence(makeBookData(), undefined, undefined, 'Test Book Author');
+        expect(fullMatch).toBeGreaterThan(partialMatch);
+    });
+});
+
+describe('queryMatchRatio', () => {
+    function makeBookData(overrides: Partial<Omit<Book, 'confidence'>> = {}): Omit<Book, 'confidence'> {
+        return {
+            id: 'b1',
+            title: 'The Great Gatsby',
+            authors: ['F. Scott Fitzgerald'],
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+            infoLink: null,
+            ...overrides,
+        };
+    }
+
+    it('returns 0 for empty query', () => {
+        expect(queryMatchRatio(makeBookData(), '')).toBe(0);
+    });
+
+    it('returns 0 when no words match', () => {
+        expect(queryMatchRatio(makeBookData(), 'completely unrelated words')).toBe(0);
+    });
+
+    it('returns 1 when all query words match title/authors', () => {
+        expect(queryMatchRatio(makeBookData(), 'Great Gatsby Fitzgerald')).toBe(1);
+    });
+
+    it('returns partial ratio when some words match', () => {
+        // "Great" matches, "random" doesn't — 1/2 = 0.5
+        expect(queryMatchRatio(makeBookData(), 'Great random')).toBe(0.5);
+    });
+
+    it('ignores short words (< 3 chars)', () => {
+        // "The" is 3 chars and matches, "a" and "of" are too short and ignored
+        expect(queryMatchRatio(makeBookData(), 'The a of')).toBe(1);
+    });
+
+    it('is case-insensitive', () => {
+        expect(queryMatchRatio(makeBookData(), 'GREAT GATSBY')).toBe(1);
     });
 });

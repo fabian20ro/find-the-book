@@ -83,6 +83,7 @@ describe('app', () => {
         expect(capturedHandlers).toHaveProperty('onAutoScanToggle');
         expect(capturedHandlers).toHaveProperty('onManualScan');
         expect(capturedHandlers).toHaveProperty('onImageUpload');
+        expect(capturedHandlers).toHaveProperty('onExportText');
         expect(capturedHandlers).toHaveProperty('onExport');
         expect(capturedHandlers).toHaveProperty('onClear');
         expect(capturedHandlers).toHaveProperty('onRetry');
@@ -95,7 +96,7 @@ describe('app', () => {
 
     it('all handlers are callable functions', () => {
         for (const key of ['onStartCamera', 'onStopCamera', 'onAutoScanToggle',
-            'onManualScan', 'onImageUpload', 'onExport', 'onClear', 'onRetry', 'onRemoveBook']) {
+            'onManualScan', 'onImageUpload', 'onExportText', 'onExport', 'onClear', 'onRetry', 'onRemoveBook']) {
             expect(typeof capturedHandlers[key]).toBe('function');
         }
     });

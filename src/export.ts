@@ -9,6 +9,30 @@ function escapeCsv(field: string | number | null): string {
     return str;
 }
 
+export function formatBooksAsText(books: Book[]): string {
+    return books.map((book) => {
+        const authors = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown';
+        return `${authors} - ${book.title}`;
+    }).join('\n');
+}
+
+export function exportToText(books: Book[]): void {
+    if (books.length === 0) return;
+
+    const text = formatBooksAsText(books);
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'found_books.txt';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
 export function exportToCsv(books: Book[]): void {
     if (books.length === 0) return;
 
