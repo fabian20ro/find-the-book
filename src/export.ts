@@ -16,21 +16,28 @@ export function formatBooksAsText(books: Book[]): string {
     }).join('\n');
 }
 
-export function exportToText(books: Book[]): void {
+export async function shareBooks(books: Book[], notify: (msg: string) => void): Promise<void> {
     if (books.length === 0) return;
 
     const text = formatBooksAsText(books);
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'found_books.txt';
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: 'My Book Collection', text });
+            return;
+        } catch (err) {
+            // User cancelled or share failed — fall through to clipboard
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof Error && err.name === 'AbortError') return;
+        }
+    }
+
+    try {
+        await navigator.clipboard.writeText(text);
+        notify('Book list copied to clipboard');
+    } catch {
+        notify('Could not share or copy book list');
+    }
 }
 
 export function exportToCsv(books: Book[]): void {

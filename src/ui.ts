@@ -72,7 +72,7 @@ let photoInput: HTMLInputElement;
 let homeProcessing: HTMLElement;
 let homeBookCount: HTMLElement;
 let homeBookList: HTMLElement;
-let btnHomeExportText: HTMLElement;
+let btnHomeShare: HTMLElement;
 let btnHomeExport: HTMLElement;
 let btnHomeClear: HTMLElement;
 
@@ -113,7 +113,7 @@ export interface UIHandlers {
     onAutoScanToggle: () => void;
     onManualScan: () => void;
     onImageUpload: (file: File) => void;
-    onExportText: () => void;
+    onShare: () => void;
     onExport: () => void;
     onClear: () => void;
     onRetry: () => void;
@@ -134,7 +134,7 @@ export function initUI(handlers: UIHandlers): void {
     homeProcessing = $('#home-processing');
     homeBookCount = $('#home-book-count');
     homeBookList = $('#home-book-list');
-    btnHomeExportText = $('#btn-home-export-text');
+    btnHomeShare = $('#btn-home-share');
     btnHomeExport = $('#btn-home-export');
     btnHomeClear = $('#btn-home-clear');
 
@@ -170,7 +170,7 @@ export function initUI(handlers: UIHandlers): void {
     btnStartCamera.addEventListener('click', handlers.onStartCamera);
     btnBack.addEventListener('click', handlers.onStopCamera);
     btnRetry.addEventListener('click', handlers.onRetry);
-    btnHomeExportText.addEventListener('click', handlers.onExportText);
+    btnHomeShare.addEventListener('click', handlers.onShare);
     btnHomeExport.addEventListener('click', handlers.onExport);
     btnHomeClear.addEventListener('click', handlers.onClear);
 
@@ -358,7 +358,7 @@ function renderUI(): void {
     renderHomeBookList();
     const count = state.books.length;
     homeBookCount.textContent = `${count} book${count !== 1 ? 's' : ''} found`;
-    (btnHomeExportText as HTMLButtonElement).disabled = count === 0;
+    (btnHomeShare as HTMLButtonElement).disabled = count === 0;
     (btnHomeExport as HTMLButtonElement).disabled = count === 0;
     (btnHomeClear as HTMLButtonElement).disabled = count === 0;
 

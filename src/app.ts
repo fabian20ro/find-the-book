@@ -2,7 +2,7 @@ import './style.css';
 import { CameraManager } from './camera';
 import { TextRecognizer } from './ocr';
 import { BookSearcher } from './books';
-import { exportToCsv, exportToText } from './export';
+import { exportToCsv, shareBooks } from './export';
 import { getState, update, addBook, addCandidates, removeCandidateById, clearCandidates, clearBooks, removeBook, on, toast, type Book } from './state';
 import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
 import { initUI, getVideoElement, getCanvasElement, showError, hideError, getAllLanguages } from './ui';
@@ -280,12 +280,12 @@ initUI({
     onAutoScanToggle: () => handleAutoScanToggle(),
     onManualScan: () => handleManualScan(),
     onImageUpload: (file: File) => handleImageUpload(file),
-    onExportText: () => {
+    onShare: () => {
         if (getState().books.length === 0) {
-            toast('No books to export');
+            toast('No books to share');
             return;
         }
-        exportToText(getState().books);
+        shareBooks(getState().books, toast);
     },
     onExport: () => {
         if (getState().books.length === 0) {
