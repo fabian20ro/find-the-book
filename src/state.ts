@@ -83,6 +83,15 @@ export function removeBook(index: number): Book | null {
     return removed;
 }
 
+export function moveBook(fromIndex: number, toIndex: number): void {
+    if (fromIndex === toIndex) return;
+    if (fromIndex < 0 || fromIndex >= state.books.length) return;
+    if (toIndex < 0 || toIndex >= state.books.length) return;
+    const [book] = state.books.splice(fromIndex, 1);
+    state.books.splice(toIndex, 0, book);
+    emit('change');
+}
+
 export function clearBooks(): void {
     state.books = [];
     state.candidateFilter = '';

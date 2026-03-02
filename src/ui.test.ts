@@ -27,6 +27,7 @@ function createHandlers(): UIHandlers {
         onAutoScanToggle: vi.fn(),
         onManualScan: vi.fn(),
         onImageUpload: vi.fn(),
+        onShare: vi.fn(),
         onExport: vi.fn(),
         onClear: vi.fn(),
         onRetry: vi.fn(),
@@ -52,6 +53,7 @@ function setupDOM() {
             <div class="home-book-header">
                 <span id="home-book-count">0 books found</span>
                 <div class="control-buttons">
+                    <button id="btn-home-share" disabled>Share</button>
                     <button id="btn-home-export" disabled>Export</button>
                     <button id="btn-home-clear" disabled>Clear</button>
                 </div>

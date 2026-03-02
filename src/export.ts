@@ -9,6 +9,37 @@ function escapeCsv(field: string | number | null): string {
     return str;
 }
 
+export function formatBooksAsText(books: Book[]): string {
+    return books.map((book) => {
+        const authors = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown';
+        return `${authors} - ${book.title}`;
+    }).join('\n');
+}
+
+export async function shareBooks(books: Book[], notify: (msg: string) => void): Promise<void> {
+    if (books.length === 0) return;
+
+    const text = formatBooksAsText(books);
+
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: 'My Book Collection', text });
+            return;
+        } catch (err) {
+            // User cancelled or share failed — fall through to clipboard
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+            if (err instanceof Error && err.name === 'AbortError') return;
+        }
+    }
+
+    try {
+        await navigator.clipboard.writeText(text);
+        notify('Book list copied to clipboard');
+    } catch {
+        notify('Could not share or copy book list');
+    }
+}
+
 export function exportToCsv(books: Book[]): void {
     if (books.length === 0) return;
 

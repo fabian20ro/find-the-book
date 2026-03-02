@@ -34,37 +34,66 @@ interface GoogleBooksResponse {
 }
 
 /**
- * Compute a 0–100 confidence score based on metadata completeness and ratings.
+ * Count how many words from the query appear in the book's title and authors.
+ * Returns a ratio 0–1 of matched words / total query words.
+ */
+export function queryMatchRatio(book: Omit<Book, 'confidence'>, query: string): number {
+    if (!query || query.trim().length === 0) return 0;
+
+    const queryWords = query.toLowerCase().split(/\s+/).filter((w) => w.length >= 3);
+    if (queryWords.length === 0) return 0;
+
+    const bookText = [
+        book.title,
+        ...book.authors,
+    ].join(' ').toLowerCase();
+
+    let matched = 0;
+    for (const word of queryWords) {
+        if (bookText.includes(word)) matched++;
+    }
+    return matched / queryWords.length;
+}
+
+/**
+ * Compute a 0–100 confidence score based on metadata completeness, ratings,
+ * and how well the book matches the original search query.
  *
  * Scoring breakdown:
- *   Metadata (up to 75): title 10, authors 15, ISBN 15, thumbnail 10,
- *     description 10, publisher 5, publishedDate 5, pageCount 5
- *   Ratings (up to 25): averageRating contributes up to 15,
- *     ratingsCount contributes up to 10
+ *   Metadata (up to 50): title 10, authors 10, ISBN 10, thumbnail 5,
+ *     description 5, publisher 5, publishedDate 5
+ *   Query match (up to 30): ratio of query words found in title+authors
+ *   Ratings (up to 20): averageRating contributes up to 12,
+ *     ratingsCount contributes up to 8
  */
 export function computeConfidence(
     book: Omit<Book, 'confidence'>,
     averageRating?: number,
     ratingsCount?: number,
+    query?: string,
 ): number {
     let score = 0;
 
-    // Metadata completeness (up to 75)
+    // Metadata completeness (up to 50)
     if (book.title && book.title !== 'Unknown Title') score += 10;
-    if (book.authors.length > 0) score += 15;
-    if (book.isbn) score += 15;
-    if (book.thumbnailUrl) score += 10;
-    if (book.description) score += 10;
+    if (book.authors.length > 0) score += 10;
+    if (book.isbn) score += 10;
+    if (book.thumbnailUrl) score += 5;
+    if (book.description) score += 5;
     if (book.publisher) score += 5;
     if (book.publishedDate) score += 5;
-    if (book.pageCount) score += 5;
 
-    // Ratings (up to 25)
+    // Query match (up to 30)
+    if (query) {
+        score += Math.round(queryMatchRatio(book, query) * 30);
+    }
+
+    // Ratings (up to 20)
     if (averageRating != null && averageRating > 0) {
-        score += Math.round((averageRating / 5) * 15);
+        score += Math.round((averageRating / 5) * 12);
     }
     if (ratingsCount != null && ratingsCount > 0) {
-        score += Math.round(Math.min(ratingsCount, 100) / 100 * 10);
+        score += Math.round(Math.min(ratingsCount, 100) / 100 * 8);
     }
 
     return Math.min(score, 100);
@@ -110,7 +139,7 @@ export class BookSearcher {
             const data: GoogleBooksResponse = await response.json();
 
             return (data.items || [])
-                .map((item) => this.parseBook(item))
+                .map((item) => this.parseBook(item, query))
                 .filter((book) => {
                     if (this.foundBookIds.has(book.id)) return false;
                     this.foundBookIds.add(book.id);
@@ -122,7 +151,7 @@ export class BookSearcher {
         }
     }
 
-    private parseBook(item: GoogleBooksVolume): Book {
+    private parseBook(item: GoogleBooksVolume, query?: string): Book {
         const info = item.volumeInfo || {};
         const identifiers = info.industryIdentifiers || [];
         const isbn13 = identifiers.find((id) => id.type === 'ISBN_13');
@@ -144,7 +173,7 @@ export class BookSearcher {
 
         return {
             ...book,
-            confidence: computeConfidence(book, info.averageRating, info.ratingsCount),
+            confidence: computeConfidence(book, info.averageRating, info.ratingsCount, query),
         };
     }
 

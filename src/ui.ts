@@ -1,5 +1,5 @@
 import { $, $as } from './dom';
-import { getState, update, on, type Book } from './state';
+import { getState, update, on, moveBook, type Book } from './state';
 
 const MAX_DISPLAY_TEXT_LENGTH = 60;
 const TOAST_DISPLAY_MS = 2000;
@@ -72,6 +72,7 @@ let photoInput: HTMLInputElement;
 let homeProcessing: HTMLElement;
 let homeBookCount: HTMLElement;
 let homeBookList: HTMLElement;
+let btnHomeShare: HTMLElement;
 let btnHomeExport: HTMLElement;
 let btnHomeClear: HTMLElement;
 
@@ -112,6 +113,7 @@ export interface UIHandlers {
     onAutoScanToggle: () => void;
     onManualScan: () => void;
     onImageUpload: (file: File) => void;
+    onShare: () => void;
     onExport: () => void;
     onClear: () => void;
     onRetry: () => void;
@@ -132,6 +134,7 @@ export function initUI(handlers: UIHandlers): void {
     homeProcessing = $('#home-processing');
     homeBookCount = $('#home-book-count');
     homeBookList = $('#home-book-list');
+    btnHomeShare = $('#btn-home-share');
     btnHomeExport = $('#btn-home-export');
     btnHomeClear = $('#btn-home-clear');
 
@@ -167,6 +170,7 @@ export function initUI(handlers: UIHandlers): void {
     btnStartCamera.addEventListener('click', handlers.onStartCamera);
     btnBack.addEventListener('click', handlers.onStopCamera);
     btnRetry.addEventListener('click', handlers.onRetry);
+    btnHomeShare.addEventListener('click', handlers.onShare);
     btnHomeExport.addEventListener('click', handlers.onExport);
     btnHomeClear.addEventListener('click', handlers.onClear);
 
@@ -201,6 +205,52 @@ export function initUI(handlers: UIHandlers): void {
         if (index >= 0 && index < getState().books.length) {
             handlers.onRemoveBook(index);
         }
+    });
+
+    // Drag-and-drop reorder
+    let dragFromIndex = -1;
+
+    homeBookList.addEventListener('dragstart', (e: Event) => {
+        const de = e as DragEvent;
+        const card = (de.target as HTMLElement).closest('.book-card') as HTMLElement | null;
+        if (!card) return;
+        dragFromIndex = parseInt(card.dataset.index!, 10);
+        card.classList.add('dragging');
+        if (de.dataTransfer) {
+            de.dataTransfer.effectAllowed = 'move';
+        }
+    });
+
+    homeBookList.addEventListener('dragover', (e: Event) => {
+        e.preventDefault();
+        const de = e as DragEvent;
+        if (de.dataTransfer) de.dataTransfer.dropEffect = 'move';
+        const card = (de.target as HTMLElement).closest('.book-card') as HTMLElement | null;
+        if (!card) return;
+        card.classList.add('drag-over');
+    });
+
+    homeBookList.addEventListener('dragleave', (e: Event) => {
+        const card = (e.target as HTMLElement).closest('.book-card') as HTMLElement | null;
+        if (card) card.classList.remove('drag-over');
+    });
+
+    homeBookList.addEventListener('drop', (e: Event) => {
+        e.preventDefault();
+        const card = (e.target as HTMLElement).closest('.book-card') as HTMLElement | null;
+        if (!card) return;
+        card.classList.remove('drag-over');
+        const toIndex = parseInt(card.dataset.index!, 10);
+        if (dragFromIndex >= 0 && dragFromIndex !== toIndex) {
+            moveBook(dragFromIndex, toIndex);
+        }
+        dragFromIndex = -1;
+    });
+
+    homeBookList.addEventListener('dragend', (e: Event) => {
+        const card = (e.target as HTMLElement).closest('.book-card') as HTMLElement | null;
+        if (card) card.classList.remove('dragging');
+        dragFromIndex = -1;
     });
 
     // Book popup: dismiss
@@ -308,6 +358,7 @@ function renderUI(): void {
     renderHomeBookList();
     const count = state.books.length;
     homeBookCount.textContent = `${count} book${count !== 1 ? 's' : ''} found`;
+    (btnHomeShare as HTMLButtonElement).disabled = count === 0;
     (btnHomeExport as HTMLButtonElement).disabled = count === 0;
     (btnHomeClear as HTMLButtonElement).disabled = count === 0;
 
@@ -450,14 +501,25 @@ function renderHomeBookList(): void {
             ? `<a href="${infoLink}" target="_blank" rel="noopener noreferrer" class="book-link">${escapeHtml(book.title)}</a>`
             : escapeHtml(book.title);
 
-        return `<div class="book-card">
+        return `<div class="book-card" draggable="true" data-index="${index}">
+            <div class="drag-handle" aria-label="Drag to reorder" title="Drag to reorder">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="8" cy="4" r="2"/><circle cx="16" cy="4" r="2"/>
+                    <circle cx="8" cy="12" r="2"/><circle cx="16" cy="12" r="2"/>
+                    <circle cx="8" cy="20" r="2"/><circle cx="16" cy="20" r="2"/>
+                </svg>
+            </div>
             ${renderBookImage(book)}
             <div class="book-info">
                 <div class="book-title">${titleHtml}</div>
                 ${book.authors.length ? `<div class="book-authors">${escapeHtml(book.authors.join(', '))}</div>` : ''}
                 ${book.isbn ? `<div class="book-isbn">ISBN: ${escapeHtml(book.isbn)}</div>` : ''}
             </div>
-            <button class="btn-remove" data-index="${index}" title="Remove" aria-label="Remove ${escapeHtml(book.title)}">&times;</button>
+            <button class="btn-remove" data-index="${index}" title="Remove" aria-label="Remove ${escapeHtml(book.title)}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                </svg>
+            </button>
         </div>`;
     }).join('');
 }

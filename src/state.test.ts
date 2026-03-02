@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, update, addBook, removeBook, clearBooks, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
+import { getState, update, addBook, removeBook, moveBook, clearBooks, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {
@@ -283,6 +283,46 @@ describe('state', () => {
             update({ scanCount: 1 });
             expect(a).toHaveBeenCalled();
             expect(b).toHaveBeenCalled();
+        });
+    });
+
+    describe('moveBook', () => {
+        it('moves a book from one position to another', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            moveBook(0, 2);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['B', 'C', 'A']);
+        });
+
+        it('does nothing when from equals to', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 0);
+            expect(listener).not.toHaveBeenCalled();
+        });
+
+        it('does nothing for out-of-bounds indices', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+
+            moveBook(-1, 0);
+            moveBook(0, 5);
+            expect(getState().books).toHaveLength(1);
+        });
+
+        it('emits change event', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 1);
+            expect(listener).toHaveBeenCalled();
         });
     });
 });
