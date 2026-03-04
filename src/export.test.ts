@@ -112,10 +112,10 @@ describe('formatBooksAsText', () => {
 });
 
 describe('shareBooks', () => {
-    let notify: ReturnType<typeof vi.fn>;
+    let notify: ReturnType<typeof vi.fn<(msg: string) => void>>;
 
     beforeEach(() => {
-        notify = vi.fn();
+        notify = vi.fn<(msg: string) => void>();
     });
 
     afterEach(() => {
