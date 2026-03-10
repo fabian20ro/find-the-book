@@ -3,6 +3,7 @@
 const BUILD_HASH = '__BUILD_HASH__';
 const CACHE_NAME = 'findthebook-' + BUILD_HASH;
 
+const CACHE_MAX_AGE = 3 * 60 * 1000; // 3 minutes in ms
 const PRECACHE_ASSETS = ['./', './index.html', './manifest.json'];
 
 // Install: precache shell assets, then skip waiting to activate immediately
@@ -49,6 +50,12 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(request));
 });
 
+function isCacheExpired(response) {
+    const dateHeader = response.headers.get('date');
+    if (!dateHeader) return true;
+    return (Date.now() - new Date(dateHeader).getTime()) > CACHE_MAX_AGE;
+}
+
 function networkFirst(request) {
     return fetch(request)
         .then((response) => {
@@ -63,7 +70,7 @@ function networkFirst(request) {
 
 function cacheFirst(request) {
     return caches.match(request).then((cached) => {
-        if (cached) return cached;
+        if (cached && !isCacheExpired(cached)) return cached;
         return fetch(request).then((response) => {
             if (response.ok) {
                 const clone = response.clone();
@@ -83,6 +90,7 @@ function staleWhileRevalidate(request) {
             }
             return response;
         });
-        return cached || fetchPromise;
+        if (cached && !isCacheExpired(cached)) return cached;
+        return fetchPromise;
     });
 }
