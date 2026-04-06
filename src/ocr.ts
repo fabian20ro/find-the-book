@@ -39,8 +39,12 @@ function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
     // Convert to grayscale and find min/max for contrast stretch
     const grays = new Uint8Array(pixelCount);
     let min = 255, max = 0;
+
+    // ⚡ Bolt Optimization: Use integer arithmetic and bitwise shifts instead of floating point math
+    // 0.299 * 256 ≈ 77, 0.587 * 256 ≈ 150, 0.114 * 256 ≈ 29
     for (let i = 0; i < pixelCount; i++) {
-        const gray = Math.round(0.299 * src[i * 4] + 0.587 * src[i * 4 + 1] + 0.114 * src[i * 4 + 2]);
+        const i4 = i * 4;
+        const gray = (77 * src[i4] + 150 * src[i4 + 1] + 29 * src[i4 + 2]) >> 8;
         grays[i] = gray;
         if (gray < min) min = gray;
         if (gray > max) max = gray;
@@ -49,8 +53,11 @@ function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
     // Contrast stretch (min-max normalization)
     const range = max - min || 1;
     const stretched = new Uint8Array(pixelCount);
+
+    // ⚡ Bolt Optimization: Precalculate scaling factor and use bitwise OR to truncate
+    const scale = 255 / range;
     for (let i = 0; i < pixelCount; i++) {
-        stretched[i] = Math.round(((grays[i] - min) / range) * 255);
+        stretched[i] = ((grays[i] - min) * scale) | 0;
     }
 
     // Lightweight unsharp mask: sharpen = original + strength * (original - blurred)
@@ -58,20 +65,26 @@ function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
     const STRENGTH = 0.5;
     const sharpened = new Uint8Array(pixelCount);
     for (let y = 0; y < height; y++) {
+        // ⚡ Bolt Optimization: Precalculate row offsets
+        const yw = y * width;
+        const ym1w = (y - 1) * width;
+        const yp1w = (y + 1) * width;
+
         for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
+            const idx = yw + x;
             if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
                 sharpened[idx] = stretched[idx];
                 continue;
             }
             // 3x3 box blur (average of neighbors)
             const blurred = (
-                stretched[(y - 1) * width + (x - 1)] + stretched[(y - 1) * width + x] + stretched[(y - 1) * width + (x + 1)] +
-                stretched[y * width + (x - 1)]        + stretched[y * width + x]        + stretched[y * width + (x + 1)] +
-                stretched[(y + 1) * width + (x - 1)] + stretched[(y + 1) * width + x] + stretched[(y + 1) * width + (x + 1)]
+                stretched[ym1w + (x - 1)] + stretched[ym1w + x] + stretched[ym1w + (x + 1)] +
+                stretched[yw + (x - 1)]   + stretched[yw + x]   + stretched[yw + (x + 1)] +
+                stretched[yp1w + (x - 1)] + stretched[yp1w + x] + stretched[yp1w + (x + 1)]
             ) / 9;
             const v = stretched[idx] + STRENGTH * (stretched[idx] - blurred);
-            sharpened[idx] = Math.max(0, Math.min(255, Math.round(v)));
+            // ⚡ Bolt Optimization: Fast inline clamp
+            sharpened[idx] = v < 0 ? 0 : (v > 255 ? 255 : (v | 0));
         }
     }
 
@@ -81,10 +94,12 @@ function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
     const outCtx = out.getContext('2d')!;
     const outData = outCtx.createImageData(width, height);
     for (let i = 0; i < pixelCount; i++) {
-        outData.data[i * 4]     = sharpened[i];
-        outData.data[i * 4 + 1] = sharpened[i];
-        outData.data[i * 4 + 2] = sharpened[i];
-        outData.data[i * 4 + 3] = 255;
+        const i4 = i * 4;
+        const val = sharpened[i];
+        outData.data[i4]     = val;
+        outData.data[i4 + 1] = val;
+        outData.data[i4 + 2] = val;
+        outData.data[i4 + 3] = 255;
     }
     outCtx.putImageData(outData, 0, 0);
     return out;
