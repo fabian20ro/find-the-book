@@ -1,0 +1,3 @@
+## 2026-04-06 - Enhance Custom Element Accessibility
+**Learning:** When building custom interactive elements like custom toggle switches or custom language buttons, it's crucial to explicitly manage their semantic state for screen reader users since they aren't native input elements. Attributes like `aria-pressed` on buttons that act like toggles, `aria-expanded` on elements that control visibility of other regions, and `aria-live` with `role=status` for processing states are very easy to miss but significantly improve the screen reader experience.
+**Action:** Add explicit ARIA state attributes on UI components mimicking native behavior, and always add `aria-live=polite` or `role=status` to containers that display processing spinners or messages dynamically.
