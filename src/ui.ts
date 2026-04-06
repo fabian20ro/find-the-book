@@ -496,7 +496,8 @@ function renderHomeBookList(): void {
     }
 
     homeBookList.innerHTML = books.map((book, index) => {
-        const infoLink = book.infoLink ? escapeHtml(book.infoLink) : '';
+        const isSafeLink = book.infoLink && /^https?:\/\//i.test(book.infoLink);
+        const infoLink = isSafeLink ? escapeHtml(book.infoLink!) : '';
         const titleHtml = infoLink
             ? `<a href="${infoLink}" target="_blank" rel="noopener noreferrer" class="book-link">${escapeHtml(book.title)}</a>`
             : escapeHtml(book.title);
@@ -536,9 +537,12 @@ function renderCandidateList(candidates: Book[]): void {
 }
 
 function escapeHtml(str: string): string {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function showToast(message: string): void {
