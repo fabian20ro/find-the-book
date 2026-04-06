@@ -436,13 +436,13 @@ function renderLanguageSelector(): void {
 
     for (const lang of visible) {
         const isActive = lang.code === state.ocrLanguage;
-        html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" data-lang="${lang.code}" title="${lang.name}"${disabled ? ' disabled' : ''}>
+        html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" aria-pressed="${isActive}" data-lang="${lang.code}" title="${lang.name}"${disabled ? ' disabled' : ''}>
             <span class="lang-flag">${lang.flag}</span>
             <span class="lang-label">${lang.name}</span>
         </button>`;
     }
 
-    html += `<button class="lang-btn lang-more${languageExpanded ? ' lang-active' : ''}" data-lang="more" title="More languages">
+    html += `<button class="lang-btn lang-more${languageExpanded ? ' lang-active' : ''}" data-lang="more" title="More languages" aria-expanded="${languageExpanded}">
         <span class="lang-flag">\u{22EF}</span>
         <span class="lang-label">More</span>
     </button>`;
@@ -453,7 +453,7 @@ function renderLanguageSelector(): void {
         html += '<div class="lang-grid lang-grid-expanded">';
         for (const lang of remaining) {
             const isActive = lang.code === state.ocrLanguage;
-            html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" data-lang="${lang.code}" title="${lang.name}"${disabled ? ' disabled' : ''}>
+            html += `<button class="lang-btn${isActive ? ' lang-active' : ''}" aria-pressed="${isActive}" data-lang="${lang.code}" title="${lang.name}"${disabled ? ' disabled' : ''}>
                 <span class="lang-flag">${lang.flag}</span>
                 <span class="lang-label">${lang.name}</span>
             </button>`;
