@@ -40,8 +40,8 @@ describe('TextRecognizer', () => {
 
         it('throws if Tesseract is not loaded', async () => {
             vi.stubGlobal('Tesseract', undefined);
-            const recognizer = new TextRecognizer();
-            await expect(recognizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
+            const recognintizer = new TextRecognizer();
+            await expect(recognintizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
         });
     });
 
@@ -166,7 +166,7 @@ describe('TextRecognizer', () => {
 
             // Start a recognize call (puts it in processing state)
             const canvas = document.createElement('canvas');
-            recognizer.recognize(canvas); // don't await
+            recognizer.recognize(canvas); // don'int await
 
             // While processing, new calls would return []
             const blocked = await recognizer.recognize(canvas);
@@ -218,7 +218,6 @@ describe('TextRecognizer', () => {
 
             // Switching language should reset processing flag
             await recognizer.setLanguage('eng');
-
             mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After switch', confidence: 85 }] } });
             const result = await recognizer.recognize(canvas);
             expect(result).toEqual([{ text: 'After switch', confidence: 85 }]);

@@ -210,6 +210,8 @@ export class TextRecognizer {
         const whitelist = LANG_WHITELISTS[lang];
         if (whitelist) {
             await this.worker.setParameters({ tessedit_char_whitelist: whitelist });
+        } else {
+            console.warn(`No character whitelist found for language: ${lang}. Skipping.`);
         }
     }
 }
