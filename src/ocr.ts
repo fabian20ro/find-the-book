@@ -180,7 +180,10 @@ export class TextRecognizer {
                 .map((line) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
                 .filter((line) => line.text.length >= MIN_LINE_LENGTH && line.confidence >= MIN_LINE_CONFIDENCE);
         } catch (e) {
-            console.error('OCR error:', e);
+            const env = typeof process !== 'undefined' && process.env;
+            if (env && (env.NODE_ENV === 'test' || env.DEBUG_OCR === 'true')) {
+                console.error('OCR error:', e);
+            }
             return [];
         } finally {
             this.isProcessing = false;
