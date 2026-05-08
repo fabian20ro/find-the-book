@@ -27,6 +27,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
+**[2026-05-08] Validate serialized storage before restoring state** — Treat localStorage/sessionStorage payloads as untrusted. Parse to `unknown`, normalize each record, and skip malformed entries so one bad object does not block restoring the rest.
+
 ## Testing & Quality
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->

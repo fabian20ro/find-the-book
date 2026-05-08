@@ -26,11 +26,51 @@ function saveBooks(): void {
     }
 }
 
+function normalizeStoredBook(value: unknown): Book | null {
+    if (!value || typeof value !== 'object') return null;
+
+    const candidate = value as Partial<Book>;
+    if (typeof candidate.id !== 'string' || typeof candidate.title !== 'string') return null;
+
+    const authors = Array.isArray(candidate.authors)
+        ? candidate.authors.filter((author): author is string => typeof author === 'string')
+        : [];
+
+    return {
+        id: candidate.id,
+        title: candidate.title,
+        authors,
+        publisher: typeof candidate.publisher === 'string' ? candidate.publisher : null,
+        publishedDate: typeof candidate.publishedDate === 'string' ? candidate.publishedDate : null,
+        description: typeof candidate.description === 'string' ? candidate.description : null,
+        isbn: typeof candidate.isbn === 'string' ? candidate.isbn : null,
+        pageCount: typeof candidate.pageCount === 'number' ? candidate.pageCount : null,
+        thumbnailUrl: typeof candidate.thumbnailUrl === 'string' ? candidate.thumbnailUrl : null,
+        infoLink: typeof candidate.infoLink === 'string' ? candidate.infoLink : null,
+        confidence: typeof candidate.confidence === 'number' ? candidate.confidence : 0,
+    };
+}
+
+export function parseStoredBooks(serialized: string | null): Book[] {
+    if (!serialized) return [];
+
+    try {
+        const parsed: unknown = JSON.parse(serialized);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.flatMap((item) => {
+            const book = normalizeStoredBook(item);
+            return book ? [book] : [];
+        });
+    } catch {
+        return [];
+    }
+}
+
 function loadBooks(): void {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const books: Book[] = JSON.parse(stored);
+        const books = parseStoredBooks(localStorage.getItem(STORAGE_KEY));
+        if (books.length > 0) {
             update({ books });
             for (const book of books) {
                 bookSearcher.preloadBookId(book.id);

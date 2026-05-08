@@ -45,6 +45,7 @@ vi.mock('./export', () => ({
 }));
 
 let capturedHandlers: any = null;
+let appModule: typeof import('./app');
 
 vi.mock('./ui', () => ({
     initUI: vi.fn((handlers: any) => { capturedHandlers = handlers; }),
@@ -67,7 +68,7 @@ describe('app', () => {
         });
 
         vi.resetModules();
-        await import('./app');
+        appModule = await import('./app');
         // Let microtasks (like OCR init promise) flush
         await new Promise((r) => setTimeout(r, 10));
     });
@@ -106,9 +107,36 @@ describe('app', () => {
 
         vi.resetModules();
         capturedHandlers = null;
-        await import('./app');
+        appModule = await import('./app');
         await new Promise((r) => setTimeout(r, 10));
 
         expect(capturedHandlers).not.toBeNull();
+    });
+
+    it('restores only well-formed saved books from storage', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'good-book',
+                title: 'Saved Book',
+                authors: ['Author A'],
+                publisher: 'Publisher',
+                publishedDate: '2024',
+                description: 'Stored book',
+                isbn: '9780000000000',
+                pageCount: 123,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://example.com/info',
+                confidence: 84,
+            },
+            { id: 42, title: 'Broken entry' },
+            null,
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'good-book',
+            title: 'Saved Book',
+            confidence: 84,
+        });
     });
 });

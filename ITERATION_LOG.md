@@ -8,7 +8,19 @@
 
 ---
 
-### [YYYY-MM-DD] Brief Description
+### [2026-05-08] Harden saved book restore
+
+**Context:** Improve startup resilience when restoring saved books from localStorage.
+**What happened:**
+- Added `parseStoredBooks()` in `src/app.ts` to parse `ftb-books` defensively
+- Normalizes stored book records and skips malformed entries instead of failing the entire restore
+- Added an app test that verifies only well-formed saved books survive the restore pass
+- Ran the full Vitest suite and production build successfully after installing dependencies locally
+**Outcome:** Success — restore path is safer, tests pass, build passes
+**Insight:** Persistent client storage should be treated as untrusted input; a small normalizer preserves good data even when one stored record is corrupted.
+**Promoted to Lessons Learned:** Yes
+
+---
 
 **Context:** What was the goal
 **What happened:** Key actions, decisions
