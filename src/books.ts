@@ -125,7 +125,7 @@ export class BookSearcher {
     this.queryCache.add(normalized);
 
     try {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=3`;
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`;
       const response = await fetch(url);
 
       if (response.status === 429) {
