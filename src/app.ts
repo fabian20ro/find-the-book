@@ -29,25 +29,26 @@ function saveBooks(): void {
 function normalizeStoredBook(value: unknown): Book | null {
     if (!value || typeof value !== 'object') return null;
 
-    const candidate = value as Partial<Book>;
-    if (typeof candidate.id !== 'string' || typeof candidate.title !== 'string') return null;
+    const c = value as Partial<Book>;
+    if (typeof c.id !== 'string' || typeof c.title !== 'string') return null;
 
-    const authors = Array.isArray(candidate.authors)
-        ? candidate.authors.filter((author): author is string => typeof author === 'string')
-        : [];
+    const getString = (val: unknown) => typeof val === 'string' ? val : null;
+    const getNum = (val: unknown) => typeof val === 'number' ? val : null;
 
     return {
-        id: candidate.id,
-        title: candidate.title,
-        authors,
-        publisher: typeof candidate.publisher === 'string' ? candidate.publisher : null,
-        publishedDate: typeof candidate.publishedDate === 'string' ? candidate.publishedDate : null,
-        description: typeof candidate.description === 'string' ? candidate.description : null,
-        isbn: typeof candidate.isbn === 'string' ? candidate.isbn : null,
-        pageCount: typeof candidate.pageCount === 'number' ? candidate.pageCount : null,
-        thumbnailUrl: typeof candidate.thumbnailUrl === 'string' ? candidate.thumbnailUrl : null,
-        infoLink: typeof candidate.infoLink === 'string' ? candidate.infoLink : null,
-        confidence: typeof candidate.confidence === 'number' ? candidate.confidence : 0,
+        id: c.id,
+        title: c.title,
+        authors: Array.isArray(c.authors)
+            ? c.authors.filter((a): a is string => typeof a === 'string')
+            : [],
+        publisher: getString(c.publisher),
+        publishedDate: getString(c.publishedDate),
+        description: getString(c.description),
+        isbn: getString(c.isbn),
+        pageCount: getNum(c.pageCount),
+        thumbnailUrl: getString(c.thumbnailUrl),
+        infoLink: getString(c.infoLink),
+        confidence: getNum(c.confidence) ?? 0,
     };
 }
 
