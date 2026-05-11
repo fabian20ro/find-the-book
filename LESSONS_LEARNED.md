@@ -29,6 +29,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 **[2026-05-11] Normalize stored preference maps before using them** — Treat localStorage/sessionStorage maps as untrusted. Parse to `unknown`, keep only finite numeric counts, and drop malformed entries so one bad value does not corrupt counters or ordering.
 
+**[2026-05-11] Reject blank required fields during restore** — When rehydrating stored entities, validate required string fields are non-empty after trimming. Empty ids/titles behave like corrupted records and should be skipped rather than restored.
+
 **[2026-05-08] Validate serialized storage before restoring state** — Treat localStorage/sessionStorage payloads as untrusted. Parse to `unknown`, normalize each record, and skip malformed entries so one bad object does not block restoring the rest.
 
 ## Testing & Quality

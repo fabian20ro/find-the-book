@@ -8,6 +8,19 @@
 
 ---
 
+### [2026-05-11] Harden saved book restore
+
+**Context:** Make the stored-book restore path ignore malformed required fields and non-finite numeric values.
+**What happened:**
+- Tightened `normalizeStoredBook()` in `src/app.ts` to skip blank ids/titles and reject non-finite numeric fields
+- Added app tests covering blank required fields and `1e999`/`-1e999` numeric payloads in stored JSON
+- Ran the focused `src/app.test.ts` Vitest file successfully
+**Outcome:** Success — restore path now drops corrupted stored books instead of reviving them
+**Insight:** Storage validation should reject both malformed shapes and semantically blank required fields; a string is not automatically a usable id/title.
+**Promoted to Lessons Learned:** Yes
+
+---
+
 ### [2026-05-11] Normalize saved language usage data
 
 **Context:** Make the language-usage preference store resilient to malformed localStorage payloads.
