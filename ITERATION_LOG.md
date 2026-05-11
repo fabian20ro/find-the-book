@@ -8,6 +8,20 @@
 
 ---
 
+### [2026-05-11] Normalize saved language usage data
+
+**Context:** Make the language-usage preference store resilient to malformed localStorage payloads.
+**What happened:**
+- Added `normalizeLanguageUsage()` in `src/app.ts` to parse stored usage data defensively
+- `getLanguageUsage()` now drops non-object payloads, non-numeric counts, and zero/negative values
+- Added app tests covering malformed JSON and invalid usage entries
+- Ran the focused app test file and the full Vitest suite successfully
+**Outcome:** Success — language usage ordering is now robust against bad storage values
+**Insight:** Preference maps deserve the same defensive treatment as restored entity lists; a single bad value should not poison the whole map.
+**Promoted to Lessons Learned:** Yes
+
+---
+
 ### [2026-05-08] Harden saved book restore
 
 **Context:** Improve startup resilience when restoring saved books from localStorage.

@@ -134,10 +134,24 @@ function incrementLanguageUsage(code: string): void {
     }
 }
 
+function normalizeLanguageUsage(value: unknown): Record<string, number> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+    const normalized: Record<string, number> = {};
+    for (const [code, count] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
+            normalized[code] = count;
+        }
+    }
+    return normalized;
+}
+
 export function getLanguageUsage(): Record<string, number> {
     try {
         const stored = localStorage.getItem(LANG_USAGE_KEY);
-        return stored ? JSON.parse(stored) : {};
+        if (!stored) return {};
+        const parsed: unknown = JSON.parse(stored);
+        return normalizeLanguageUsage(parsed);
     } catch {
         return {};
     }

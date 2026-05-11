@@ -113,6 +113,26 @@ describe('app', () => {
         expect(capturedHandlers).not.toBeNull();
     });
 
+    it('normalizes stored language usage before returning it', () => {
+        localStorage.setItem('ftb-lang-usage', JSON.stringify({
+            eng: 3,
+            fra: 'nope',
+            pol: 0,
+            ces: 2,
+        }));
+
+        expect(appModule.getLanguageUsage()).toEqual({
+            eng: 3,
+            ces: 2,
+        });
+    });
+
+    it('returns an empty language usage map for malformed storage', () => {
+        localStorage.setItem('ftb-lang-usage', '{not-json');
+
+        expect(appModule.getLanguageUsage()).toEqual({});
+    });
+
     it('restores only well-formed saved books from storage', () => {
         const restored = appModule.parseStoredBooks(JSON.stringify([
             {
