@@ -30,10 +30,10 @@ function normalizeStoredBook(value: unknown): Book | null {
     if (!value || typeof value !== 'object') return null;
 
     const c = value as Partial<Book>;
-    if (typeof c.id !== 'string' || typeof c.title !== 'string') return null;
+    if (typeof c.id !== 'string' || c.id.trim() === '' || typeof c.title !== 'string' || c.title.trim() === '') return null;
 
     const getString = (val: unknown) => typeof val === 'string' ? val : null;
-    const getNum = (val: unknown) => typeof val === 'number' ? val : null;
+    const getNum = (val: unknown) => typeof val === 'number' && val === val && val !== Infinity && val !== -Infinity ? val : null;
 
     return {
         id: c.id,

@@ -159,4 +159,30 @@ describe('app', () => {
             confidence: 84,
         });
     });
+
+    it('drops books with blank required fields when restoring from storage', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { id: '', title: 'Blank id' },
+            { id: 'blank-title', title: '   ' },
+            { id: 'good-book', title: 'Kept Book' },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'good-book',
+            title: 'Kept Book',
+        });
+    });
+
+    it('drops non-finite stored numeric fields when restoring books', () => {
+        const restored = appModule.parseStoredBooks('[{"id":"numeric-book","title":"Numeric Book","pageCount":1e999,"confidence":-1e999}]');
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'numeric-book',
+            title: 'Numeric Book',
+            pageCount: null,
+            confidence: 0,
+        });
+    });
 });
