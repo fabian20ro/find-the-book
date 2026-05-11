@@ -53,6 +53,24 @@ vi.mock('./ui', () => ({
     getCanvasElement: vi.fn().mockReturnValue(document.createElement('canvas')),
     showError: vi.fn(),
     hideError: vi.fn(),
+    getAllLanguages: vi.fn().mockReturnValue([
+        { code: 'ron', name: 'Romanian', flag: 'RO' },
+        { code: 'eng', name: 'English', flag: 'EN' },
+        { code: 'fra', name: 'French', flag: 'FR' },
+        { code: 'deu', name: 'German', flag: 'DE' },
+        { code: 'ita', name: 'Italian', flag: 'IT' },
+        { code: 'spa', name: 'Spanish', flag: 'ES' },
+        { code: 'por', name: 'Portuguese', flag: 'PT' },
+        { code: 'nld', name: 'Dutch', flag: 'NL' },
+        { code: 'pol', name: 'Polish', flag: 'PL' },
+        { code: 'hun', name: 'Hungarian', flag: 'HU' },
+        { code: 'ces', name: 'Czech', flag: 'CS' },
+        { code: 'tur', name: 'Turkish', flag: 'TR' },
+        { code: 'swe', name: 'Swedish', flag: 'SV' },
+        { code: 'rus', name: 'Russian', flag: 'RU' },
+        { code: 'jpn', name: 'Japanese', flag: 'JP' },
+        { code: 'zho', name: 'Chinese', flag: 'ZH' },
+    ]),
 }));
 
 describe('app', () => {
@@ -119,6 +137,7 @@ describe('app', () => {
             fra: 'nope',
             pol: 0,
             ces: 2,
+            zzz: 99,
         }));
 
         expect(appModule.getLanguageUsage()).toEqual({

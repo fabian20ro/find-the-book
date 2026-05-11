@@ -31,6 +31,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 **[2026-05-11] Reject blank required fields during restore** — When rehydrating stored entities, validate required string fields are non-empty after trimming. Empty ids/titles behave like corrupted records and should be skipped rather than restored.
 
+**[2026-05-11] Filter preference-map keys against the supported option list** — When persisted ordering data is tied to a finite choice set, discard unknown keys during restore so stale or injected values cannot influence UI ordering or visibility.
+
 **[2026-05-08] Validate serialized storage before restoring state** — Treat localStorage/sessionStorage payloads as untrusted. Parse to `unknown`, normalize each record, and skip malformed entries so one bad object does not block restoring the rest.
 
 ## Testing & Quality

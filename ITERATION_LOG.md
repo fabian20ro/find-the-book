@@ -8,6 +8,19 @@
 
 ---
 
+### [2026-05-11] Filter stored OCR language usage to supported codes
+
+**Context:** Prevent stale or injected OCR language counters from affecting the language selector order.
+**What happened:**
+- Added a supported-language whitelist in `normalizeLanguageUsage()` so `ftb-lang-usage` only keeps known OCR codes
+- Added a regression test that confirms unknown usage keys are dropped alongside invalid counts
+- Verified the updated app test file with `npm exec vitest run --no-typecheck src/app.test.ts`
+**Outcome:** Success — language usage restore is now bounded to the current option catalog
+**Insight:** Persisted preference maps should be normalized against both value shape and the current supported key set; numeric validity alone is not enough.
+**Promoted to Lessons Learned:** Yes
+
+---
+
 ### [2026-05-11] Harden saved book restore
 
 **Context:** Make the stored-book restore path ignore malformed required fields and non-finite numeric values.

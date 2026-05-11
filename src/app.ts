@@ -17,6 +17,7 @@ const STORAGE_KEY = 'ftb-books';
 const AUTOSCAN_KEY = 'ftb-autoscan';
 const LANG_KEY = 'ftb-language';
 const LANG_USAGE_KEY = 'ftb-lang-usage';
+const SUPPORTED_LANGUAGE_CODES = new Set(getAllLanguages().map((language) => language.code));
 
 function saveBooks(): void {
     try {
@@ -139,6 +140,7 @@ function normalizeLanguageUsage(value: unknown): Record<string, number> {
 
     const normalized: Record<string, number> = {};
     for (const [code, count] of Object.entries(value as Record<string, unknown>)) {
+        if (!SUPPORTED_LANGUAGE_CODES.has(code)) continue;
         if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
             normalized[code] = count;
         }
