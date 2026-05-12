@@ -27,6 +27,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
+**[2026-05-12] Quote CSV fields that contain carriage returns** — CSV escaping should treat `\r` as a quoting trigger alongside commas, quotes, and `\n`; otherwise a field can break line structure in spreadsheet imports even when the visible content looks fine.
+
 **[2026-05-11] Normalize stored preference maps before using them** — Treat localStorage/sessionStorage maps as untrusted. Parse to `unknown`, keep only finite numeric counts, and drop malformed entries so one bad value does not corrupt counters or ordering.
 
 **[2026-05-11] Reject blank required fields during restore** — When rehydrating stored entities, validate required string fields are non-empty after trimming. Empty ids/titles behave like corrupted records and should be skipped rather than restored.

@@ -148,4 +148,16 @@
 
 ---
 
+### [2026-05-12] Harden CSV export for carriage returns
+
+**Context:** Prevent CSV exports from producing broken rows when a field contains a bare carriage return.
+**What happened:**
+- Updated `escapeCsv()` in `src/export.ts` to quote fields containing `\r` in addition to commas, quotes, and line feeds
+- Added a regression test that exports a title containing `\r` and asserts the serialized CSV keeps the field quoted
+- Verified the focused `src/export.test.ts` Vitest file successfully
+- A direct `tsc --noEmit` check still reports pre-existing `process` type errors in `src/ocr.ts`
+**Outcome:** Success — CSV export now preserves carriage-return fields safely
+**Insight:** CSV escaping should consider carriage returns as line-structure characters, not just newline bytes; spreadsheet imports can split rows on `\r` even when `\n` is absent.
+**Promoted to Lessons Learned:** Yes
+
 <!-- New entries above this line, most recent first -->

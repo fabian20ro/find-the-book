@@ -3,7 +3,7 @@ import type { Book } from './books';
 function escapeCsv(field: string | number | null): string {
     if (field == null) return '';
     const str = String(field);
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
         return '"' + str.replace(/"/g, '""') + '"';
     }
     return str;

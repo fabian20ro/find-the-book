@@ -75,6 +75,13 @@ describe('exportToCsv', () => {
         expect(capturedBlob).not.toBeNull();
     });
 
+    it('quotes fields that contain carriage returns', async () => {
+        exportToCsv([makeBook({ title: 'Line 1\rLine 2' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        await expect(capturedBlob!.text()).resolves.toContain('"Line 1\rLine 2"');
+    });
+
     it('revokes object URL after download', () => {
         exportToCsv([makeBook()]);
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
