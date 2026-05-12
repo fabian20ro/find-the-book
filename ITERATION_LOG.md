@@ -135,4 +135,17 @@
 
 ---
 
+### [2026-05-12] Cover visible language ranking in UI tests
+
+**Context:** Add regression coverage for the language selector's visible-language ranking so the top-6 ordering stays intentional.
+**What happened:**
+- Added a UI test that exercises `getVisibleLanguages()` with a descending usage map and asserts the visible set is capped at six entries in usage order
+- Verified the focused UI test file with `npm test -- src/ui.test.ts`
+- The helper auto-lint step emitted broad TypeScript lib/module-resolution noise, but the Vitest run itself passed cleanly
+**Outcome:** Success — the visible-language ordering contract now has explicit regression coverage
+**Insight:** For this repo, a focused Vitest run is the signal that matters when helper-triggered typecheck noise comes from pre-existing tsconfig/lib friction
+**Promoted to Lessons Learned:** Yes
+
+---
+
 <!-- New entries above this line, most recent first -->

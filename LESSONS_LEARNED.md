@@ -39,6 +39,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
+**[2026-05-12] Prefer focused Vitest over noisy helper typecheck when the repo's TS libs are misaligned** — If an automated patch or helper step emits broad `ReadonlyMap`/`WeakSet`/module-resolution errors from dependencies, but the targeted Vitest file passes, treat the Vitest run as the meaningful verification signal instead of widening scope to fix repo-wide TS config during a small change.
+
 ## Performance & Infrastructure
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
