@@ -33,7 +33,11 @@ function normalizeStoredBook(value: unknown): Book | null {
     const c = value as Partial<Book>;
     if (typeof c.id !== 'string' || c.id.trim() === '' || typeof c.title !== 'string' || c.title.trim() === '') return null;
 
-    const getString = (val: unknown) => typeof val === 'string' ? val : null;
+    const getTrimmedString = (val: unknown) => {
+        if (typeof val !== 'string') return null;
+        const trimmed = val.trim();
+        return trimmed ? trimmed : null;
+    };
     const getPositiveInt = (val: unknown) => typeof val === 'number' && Number.isInteger(val) && val > 0 ? val : null;
     const getStoredConfidence = (val: unknown) => {
         if (typeof val !== 'number' || !Number.isFinite(val)) return null;
@@ -49,16 +53,13 @@ function normalizeStoredBook(value: unknown): Book | null {
                 .map((author) => author.trim())
                 .filter((author) => author.length > 0)
             : [],
-        publisher: getString(c.publisher),
-        publishedDate: getString(c.publishedDate),
-        description: getString(c.description),
-        isbn: (() => {
-            const isbn = getString(c.isbn)?.trim();
-            return isbn ? isbn : null;
-        })(),
+        publisher: getTrimmedString(c.publisher),
+        publishedDate: getTrimmedString(c.publishedDate),
+        description: getTrimmedString(c.description),
+        isbn: getTrimmedString(c.isbn),
         pageCount: getPositiveInt(c.pageCount),
-        thumbnailUrl: getString(c.thumbnailUrl),
-        infoLink: getString(c.infoLink),
+        thumbnailUrl: getTrimmedString(c.thumbnailUrl),
+        infoLink: getTrimmedString(c.infoLink),
         confidence: getStoredConfidence(c.confidence) ?? 0,
     };
 }

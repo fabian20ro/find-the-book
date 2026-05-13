@@ -236,4 +236,27 @@ describe('app', () => {
         expect(restored[0].isbn).toBe('9781234567890');
         expect(restored[1].isbn).toBeNull();
     });
+
+    it('trims and drops blank optional metadata fields when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'meta-book',
+                title: 'Metadata Book',
+                publisher: '  Publisher  ',
+                publishedDate: ' 2024 ',
+                description: '  Description  ',
+                thumbnailUrl: '  https://example.com/thumb.jpg  ',
+                infoLink: '   ',
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            publisher: 'Publisher',
+            publishedDate: '2024',
+            description: 'Description',
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+            infoLink: null,
+        });
+    });
 });

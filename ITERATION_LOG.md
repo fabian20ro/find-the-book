@@ -200,3 +200,16 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-13] Trim restored optional metadata fields during book rehydration
+
+**Context:** Prevent padded or blank optional metadata from surviving localStorage restore and leaking into the UI.
+**What happened:**
+- Updated `normalizeStoredBook()` in `src/app.ts` to trim optional metadata strings for publisher, publishedDate, description, thumbnailUrl, infoLink, and isbn
+- Added a regression test that verifies trimmed values are restored and blank optional metadata drops to `null`
+- Added a reusable lesson so future storage restore work keeps applying the same cleanup pattern across optional string fields
+**Outcome:** Success — restored book metadata now comes back normalized instead of replaying storage whitespace
+**Insight:** If a storage restore path already trims authors and ISBNs, other optional string metadata should follow the same contract unless there is a documented exception
+**Promoted to Lessons Learned:** Yes
+
+---
