@@ -217,4 +217,23 @@ describe('app', () => {
         expect(restored).toHaveLength(1);
         expect(restored[0].authors).toEqual(['Alice', 'Bob']);
     });
+
+    it('trims whitespace from restored ISBN values and drops blank ones', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'isbn-book',
+                title: 'ISBN Book',
+                isbn: ' 9781234567890 ',
+            },
+            {
+                id: 'blank-isbn-book',
+                title: 'Blank ISBN Book',
+                isbn: '   ',
+            },
+        ]));
+
+        expect(restored).toHaveLength(2);
+        expect(restored[0].isbn).toBe('9781234567890');
+        expect(restored[1].isbn).toBeNull();
+    });
 });

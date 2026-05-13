@@ -187,3 +187,16 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-13] Trim restored ISBN values during book rehydration
+
+**Context:** Prevent whitespace-only ISBN strings from surviving localStorage restore and leaking into the UI/export surfaces.
+**What happened:**
+- Updated `normalizeStoredBook()` in `src/app.ts` to trim restored ISBN strings and drop blank results
+- Added an app regression test that checks trimmed ISBN restore and blank ISBN normalization
+- Verified the focused `src/app.test.ts` Vitest file successfully
+**Outcome:** Success — restored ISBN data now comes back clean instead of preserving storage whitespace
+**Insight:** Optional scalar fields should get the same trim-and-drop treatment as authors when their user-facing surfaces treat blank values as absent
+**Promoted to Lessons Learned:** Yes
+
+---

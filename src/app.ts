@@ -52,7 +52,10 @@ function normalizeStoredBook(value: unknown): Book | null {
         publisher: getString(c.publisher),
         publishedDate: getString(c.publishedDate),
         description: getString(c.description),
-        isbn: getString(c.isbn),
+        isbn: (() => {
+            const isbn = getString(c.isbn)?.trim();
+            return isbn ? isbn : null;
+        })(),
         pageCount: getPositiveInt(c.pageCount),
         thumbnailUrl: getString(c.thumbnailUrl),
         infoLink: getString(c.infoLink),
