@@ -160,4 +160,17 @@
 **Insight:** CSV escaping should consider carriage returns as line-structure characters, not just newline bytes; spreadsheet imports can split rows on `\r` even when `\n` is absent.
 **Promoted to Lessons Learned:** Yes
 
-<!-- New entries above this line, most recent first -->
+### [2026-05-13] Bound restored numeric book fields before rehydration
+
+**Context:** Tighten the localStorage restore path so invalid persisted numeric book fields cannot come back into state with semantically broken values.
+**What happened:**
+- Updated `normalizeStoredBook()` in `src/app.ts` to require positive integer `pageCount` values during restore
+- Clamped restored `confidence` values to the 0–100 range instead of trusting any finite number
+- Replaced the app restore regression test with a case that exercises a negative `pageCount` and an out-of-range confidence value
+- Verified the focused `src/app.test.ts` Vitest file successfully
+- Ran a direct TypeScript no-emit check; it still reports pre-existing `process` type errors in `src/ocr.ts`
+**Outcome:** Success — restored books now reject invalid numeric metadata instead of replaying it verbatim
+**Insight:** Persisted numeric fields need semantic bounds as well as finite checks; "finite" alone still allows corrupt-but-non-crashing data back into state
+**Promoted to Lessons Learned:** Yes
+
+---

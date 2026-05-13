@@ -193,15 +193,15 @@ describe('app', () => {
         });
     });
 
-    it('drops non-finite stored numeric fields when restoring books', () => {
-        const restored = appModule.parseStoredBooks('[{"id":"numeric-book","title":"Numeric Book","pageCount":1e999,"confidence":-1e999}]');
+    it('drops invalid stored numeric fields when restoring books', () => {
+        const restored = appModule.parseStoredBooks('[{"id":"numeric-book","title":"Numeric Book","pageCount":-12,"confidence":123.8}]');
 
         expect(restored).toHaveLength(1);
         expect(restored[0]).toMatchObject({
             id: 'numeric-book',
             title: 'Numeric Book',
             pageCount: null,
-            confidence: 0,
+            confidence: 100,
         });
     });
 });

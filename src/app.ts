@@ -34,7 +34,11 @@ function normalizeStoredBook(value: unknown): Book | null {
     if (typeof c.id !== 'string' || c.id.trim() === '' || typeof c.title !== 'string' || c.title.trim() === '') return null;
 
     const getString = (val: unknown) => typeof val === 'string' ? val : null;
-    const getNum = (val: unknown) => typeof val === 'number' && val === val && val !== Infinity && val !== -Infinity ? val : null;
+    const getPositiveInt = (val: unknown) => typeof val === 'number' && Number.isInteger(val) && val > 0 ? val : null;
+    const getStoredConfidence = (val: unknown) => {
+        if (typeof val !== 'number' || !Number.isFinite(val)) return null;
+        return Math.min(100, Math.max(0, Math.round(val)));
+    };
 
     return {
         id: c.id,
@@ -46,10 +50,10 @@ function normalizeStoredBook(value: unknown): Book | null {
         publishedDate: getString(c.publishedDate),
         description: getString(c.description),
         isbn: getString(c.isbn),
-        pageCount: getNum(c.pageCount),
+        pageCount: getPositiveInt(c.pageCount),
         thumbnailUrl: getString(c.thumbnailUrl),
         infoLink: getString(c.infoLink),
-        confidence: getNum(c.confidence) ?? 0,
+        confidence: getStoredConfidence(c.confidence) ?? 0,
     };
 }
 
