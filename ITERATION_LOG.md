@@ -213,3 +213,16 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-13] Trim restored required book ids and titles during rehydration
+
+**Context:** Keep stored book ids and titles from re-entering state with leading/trailing whitespace.
+**What happened:**
+- Updated `normalizeStoredBook()` in `src/app.ts` to trim required `id` and `title` fields before accepting a restored book
+- Added a regression test that verifies padded required fields normalize to clean values
+- Added a reusable lesson so future restore work remembers to normalize required book identifiers, not just optional metadata
+**Outcome:** Success — restored books now normalize core identifiers instead of preserving storage padding
+**Insight:** Required fields can be technically non-empty and still be semantically dirty; restore paths should trim before validation so ids and titles stay canonical
+**Promoted to Lessons Learned:** Yes
+
+---

@@ -31,7 +31,11 @@ function normalizeStoredBook(value: unknown): Book | null {
     if (!value || typeof value !== 'object') return null;
 
     const c = value as Partial<Book>;
-    if (typeof c.id !== 'string' || c.id.trim() === '' || typeof c.title !== 'string' || c.title.trim() === '') return null;
+    if (typeof c.id !== 'string' || typeof c.title !== 'string') return null;
+
+    const id = c.id.trim();
+    const title = c.title.trim();
+    if (id === '' || title === '') return null;
 
     const getTrimmedString = (val: unknown) => {
         if (typeof val !== 'string') return null;
@@ -45,8 +49,8 @@ function normalizeStoredBook(value: unknown): Book | null {
     };
 
     return {
-        id: c.id,
-        title: c.title,
+        id,
+        title,
         authors: Array.isArray(c.authors)
             ? c.authors
                 .filter((a): a is string => typeof a === 'string')

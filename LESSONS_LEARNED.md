@@ -44,6 +44,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 **[2026-05-13] Bound restored numeric book fields before rehydration** — When reading saved books from localStorage, treat `pageCount` as a positive integer and clamp `confidence` to the 0–100 range instead of trusting any finite number. Finite-but-invalid persisted values can still be semantically broken.
 **[2026-05-13] Trim restored optional author names** — When normalizing stored book arrays, trim string author entries and drop blanks after trimming. Otherwise old localStorage payloads can preserve whitespace-only names that leak into the UI.
 
+**[2026-05-13] Trim restored required ids and titles** — When restoring saved books, trim string ids and titles before accepting the record. Padded ids can break deduplication and padded titles leak into the UI unless the restore path normalizes them.
+
 **[2026-05-13] Trim restored ISBN values** — When restoring saved books, trim string ISBNs and drop blank results before rehydration. Whitespace-only ISBNs otherwise survive storage restore and leak into filter/export/display surfaces.
 
 **[2026-05-13] Trim restored optional metadata strings** — When rehydrating saved books, apply the same trim-and-drop cleanup to optional string metadata fields such as publisher, publishedDate, description, thumbnailUrl, and infoLink. Storage corruption often leaves padding around these values, and the UI should not replay it verbatim.

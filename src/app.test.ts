@@ -193,6 +193,21 @@ describe('app', () => {
         });
     });
 
+    it('trims whitespace from restored required fields', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: '  spaced-id  ',
+                title: '  Spaced Title  ',
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'spaced-id',
+            title: 'Spaced Title',
+        });
+    });
+
     it('drops invalid stored numeric fields when restoring books', () => {
         const restored = appModule.parseStoredBooks('[{"id":"numeric-book","title":"Numeric Book","pageCount":-12,"confidence":123.8}]');
 
