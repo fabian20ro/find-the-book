@@ -174,3 +174,16 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-13] Trim restored author names during book rehydration
+
+**Context:** Keep old localStorage book entries from carrying whitespace-only or padded author names into the UI.
+**What happened:**
+- Updated `normalizeStoredBook()` in `src/app.ts` to trim author strings and drop blank entries during restore
+- Added an app regression test that verifies padded and blank authors normalize to a clean author list
+- Verified the focused `src/app.test.ts` Vitest file and the full Vitest suite successfully
+**Outcome:** Success — restored books now keep author metadata clean instead of replaying storage whitespace
+**Insight:** Optional array fields deserve the same cleanup pass as required scalars; whitespace-only entries are still junk even when the parent record is valid
+**Promoted to Lessons Learned:** Yes
+
+---

@@ -44,7 +44,10 @@ function normalizeStoredBook(value: unknown): Book | null {
         id: c.id,
         title: c.title,
         authors: Array.isArray(c.authors)
-            ? c.authors.filter((a): a is string => typeof a === 'string')
+            ? c.authors
+                .filter((a): a is string => typeof a === 'string')
+                .map((author) => author.trim())
+                .filter((author) => author.length > 0)
             : [],
         publisher: getString(c.publisher),
         publishedDate: getString(c.publishedDate),

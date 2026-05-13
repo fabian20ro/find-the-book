@@ -204,4 +204,17 @@ describe('app', () => {
             confidence: 100,
         });
     });
+
+    it('trims and drops blank author names when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'author-book',
+                title: 'Author Book',
+                authors: ['  Alice  ', '', 'Bob', '   ', 42],
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].authors).toEqual(['Alice', 'Bob']);
+    });
 });
