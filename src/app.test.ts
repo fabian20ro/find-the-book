@@ -14,10 +14,12 @@ vi.mock('./camera', () => ({
 }));
 
 const mockOcrInit = vi.fn().mockResolvedValue(undefined);
+const mockSetLanguage = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('./ocr', () => ({
     TextRecognizer: class {
         init = mockOcrInit;
+        setLanguage = mockSetLanguage;
         recognize = vi.fn().mockResolvedValue(['Test text']);
         resetProcessing = vi.fn();
         destroy = vi.fn();
@@ -79,6 +81,7 @@ describe('app', () => {
         localStorage.clear();
         capturedHandlers = null;
         mockOcrInit.mockClear();
+        mockSetLanguage.mockClear();
 
         // Stub service worker
         Object.defineProperty(navigator, 'serviceWorker', {
@@ -141,6 +144,16 @@ describe('app', () => {
         await new Promise((r) => setTimeout(r, 10));
 
         expect(getState().ocrLanguage).toBe('ron');
+    });
+
+    it('keeps the previous OCR language when a switch fails', async () => {
+        mockSetLanguage.mockRejectedValueOnce(new Error('language download failed'));
+
+        await capturedHandlers.onLanguageChange('eng');
+
+        expect(getState().ocrLanguage).toBe('ron');
+        expect(localStorage.getItem('ftb-language')).toBeNull();
+        expect(mockSetLanguage).toHaveBeenCalledWith('eng');
     });
 
     it('normalizes stored language usage before returning it', () => {

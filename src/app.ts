@@ -260,12 +260,13 @@ async function handleManualScan(): Promise<void> {
 async function handleLanguageChange(langCode: string): Promise<void> {
     if (langCode === getState().ocrLanguage) return;
 
-    update({ isChangingLanguage: true, ocrLanguage: langCode });
-    saveLanguagePref();
-    incrementLanguageUsage(langCode);
+    update({ isChangingLanguage: true });
 
     try {
         await textRecognizer.setLanguage(langCode);
+        update({ ocrLanguage: langCode });
+        saveLanguagePref();
+        incrementLanguageUsage(langCode);
     } catch (err) {
         console.error('Language change failed:', err);
         toast('Failed to load language data. Check your connection.');
