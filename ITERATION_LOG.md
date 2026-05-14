@@ -240,3 +240,17 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+
+### [2026-05-14] Keep restored OCR language preferences bounded to supported codes
+
+**Context:** Prevent stale or injected OCR language preferences from changing the scanner to an unsupported language.
+**What happened:**
+- Simplified `loadLanguagePref()` in `src/app.ts` to validate persisted language codes against the cached supported-language set
+- Added a regression test that proves unsupported saved OCR languages are ignored and the default language remains active
+- Ran the focused app test file and the full Vitest suite successfully
+**Outcome:** Success — language restore now shares the same supported-code contract as the language usage store
+**Insight:** Persisted config should be checked against the same bounded option set the UI exposes; a cached contract surface is easier to keep in sync than a fresh scan on every restore
+**Promoted to Lessons Learned:** Yes
+
+---

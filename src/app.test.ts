@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { getState } from './state';
 
 // Mock style import
 vi.mock('./style.css', () => ({}));
@@ -129,6 +130,17 @@ describe('app', () => {
         await new Promise((r) => setTimeout(r, 10));
 
         expect(capturedHandlers).not.toBeNull();
+    });
+
+    it('ignores unsupported saved OCR languages', async () => {
+        localStorage.setItem('ftb-language', 'zzz');
+
+        vi.resetModules();
+        capturedHandlers = null;
+        appModule = await import('./app');
+        await new Promise((r) => setTimeout(r, 10));
+
+        expect(getState().ocrLanguage).toBe('ron');
     });
 
     it('normalizes stored language usage before returning it', () => {

@@ -120,12 +120,8 @@ function saveAutoScanPref(): void {
 function loadLanguagePref(): void {
     try {
         const stored = localStorage.getItem(LANG_KEY);
-        if (stored) {
-            // Validate stored code is a known language
-            const all = getAllLanguages();
-            if (all.some((l) => l.code === stored)) {
-                update({ ocrLanguage: stored });
-            }
+        if (stored && SUPPORTED_LANGUAGE_CODES.has(stored)) {
+            update({ ocrLanguage: stored });
         }
     } catch {
         // Ignore — default is 'ron'
