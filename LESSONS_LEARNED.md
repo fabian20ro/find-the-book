@@ -27,6 +27,8 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
+**[2026-05-14] Normalize book search text with Unicode-aware matching** — Query matching should preserve letters and numbers from non-ASCII book titles/authors, then strip punctuation and accent marks via normalization. ASCII-only `\w` cleaning can under-match accents and non-Latin scripts in the search score.
+
 **[2026-05-12] Quote CSV fields that contain carriage returns** — CSV escaping should treat `\r` as a quoting trigger alongside commas, quotes, and `\n`; otherwise a field can break line structure in spreadsheet imports even when the visible content looks fine.
 
 **[2026-05-11] Normalize stored preference maps before using them** — Treat localStorage/sessionStorage maps as untrusted. Parse to `unknown`, keep only finite numeric counts, and drop malformed entries so one bad value does not corrupt counters or ordering.

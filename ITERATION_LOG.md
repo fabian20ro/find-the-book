@@ -226,3 +226,17 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-14] Make query matching accent-aware
+
+**Context:** Improve search confidence scoring for books with accented titles and authors.
+**What happened:**
+- Updated `queryMatchRatio()` in `src/books.ts` to normalize text with Unicode-aware matching before stripping punctuation
+- Added a regression test proving `Café Society` matches a plain ASCII query after normalization
+- Recorded the Unicode-aware matching rule in `LESSONS_LEARNED.md` for future search work
+- Verified the full Vitest suite (`npm test`) successfully
+**Outcome:** Success — query scoring now treats accented titles more like users expect
+**Insight:** ASCII-only `\w` cleanup can under-score languages that the app already claims to support; normalize first, then compare on Unicode letters and numbers
+**Promoted to Lessons Learned:** Yes
+
+---
