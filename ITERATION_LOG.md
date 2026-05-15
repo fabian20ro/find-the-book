@@ -267,3 +267,15 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-15] Sync README with fail-safe OCR language switching
+
+**Context:** Keep the top-level feature list and performance notes aligned with the current OCR language-switch behavior.
+**What happened:**
+- Updated `README.md` to note that OCR language selection now switches fail-safely and keeps scanning on a failed language download
+- Appended this iteration to the append-only log to preserve the project learning workflow
+**Outcome:** Success — user-facing docs now reflect the current recoverable language-switch behavior
+**Insight:** When a small reliability fix changes user-visible behavior, the README should say so near the feature it affects instead of leaving the behavior buried in tests or lessons
+**Promoted to Lessons Learned:** No
+
+---
