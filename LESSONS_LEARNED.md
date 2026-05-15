@@ -27,7 +27,7 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
-**[2026-05-14] Normalize book search text with Unicode-aware matching** — Query matching should preserve letters and numbers from non-ASCII book titles/authors, then strip punctuation and accent marks via normalization. ASCII-only `\w` cleaning can under-match accents and non-Latin scripts in the search score.
+**[2026-05-15] Document visible UI affordances in the README** — If the UI exposes a user-facing action or state that materially changes how the app is used, surface it in the top-level README feature list or nearby usage section so the affordance is discoverable without spelunking the source.
 
 **[2026-05-14] Validate stored OCR language codes against the cached supported set** — When restoring a persisted OCR language, compare against the app's supported code set rather than re-scanning the full language list. The cached set is the contract surface and keeps restore logic aligned with the current UI catalog.
 

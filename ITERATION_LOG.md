@@ -279,3 +279,16 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-05-15] Document book-list sharing in the README
+
+**Context:** The app already exposes a share action for the saved book list, but the top-level README only mentioned CSV export.
+**What happened:**
+- Updated the feature list to mention native share-sheet support with clipboard fallback
+- Updated the usage section to tell readers they can share or export saved books
+- Kept the append-only iteration log current with this docs sync
+**Outcome:** Success — the README now surfaces an existing user-facing action that was previously easy to miss
+**Insight:** If a button is visible in the UI but missing from the README feature list, that is a discoverability gap worth closing even when no code changes are needed
+**Promoted to Lessons Learned:** No
+
+---

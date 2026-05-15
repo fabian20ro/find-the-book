@@ -26,6 +26,7 @@ against the Google Books database.
 - Search filter in candidate popup — filter by title, author, or ISBN
 - Auto-deduplication (same book won't appear twice)
 - Export found books to CSV download
+- Share the current book list via the native share sheet, with clipboard fallback
 - Remove individual books from the list
 - In-browser OCR via WebAssembly (no server, no cloud costs)
 - PWA support (installable, works offline after first load)
@@ -90,7 +91,7 @@ npm run test:watch   # Run tests in watch mode
 4. Select your book language using the flag buttons at the bottom
 5. Point camera at book spines or covers — auto-scan runs continuously
 6. Found books appear in a popup sorted by confidence; use the search bar to filter
-7. Add books to your list, export to CSV, or clear
+7. Add books to your list, share or export them, or clear when needed
 
 ## Performance Notes
 
