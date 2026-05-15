@@ -143,19 +143,33 @@ export class TextRecognizer {
 
     async setLanguage(lang: string): Promise<void> {
         if (lang === this.currentLang && this.worker) return;
+
         const prevLang = this.currentLang;
-        if (this.worker) {
-            await this.worker.terminate();
-            this.worker = null;
-        }
+        const prevWorker = this.worker;
+        let nextWorker: TesseractWorker | null = null;
+
         this.isProcessing = false;
         this.currentLang = lang;
+
         try {
-            this.worker = await Tesseract.createWorker(lang);
+            nextWorker = await Tesseract.createWorker(lang);
+            this.worker = nextWorker;
             await this.applyWhitelist(lang);
+
+            if (prevWorker) {
+                await prevWorker.terminate();
+            }
         } catch (e) {
-            // Restore previous language on failure to keep state consistent
+            if (nextWorker) {
+                try {
+                    await nextWorker.terminate();
+                } catch {
+                    // Best effort cleanup only.
+                }
+            }
+
             this.currentLang = prevLang;
+            this.worker = prevWorker;
             throw e;
         }
     }

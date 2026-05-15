@@ -254,3 +254,16 @@
 **Promoted to Lessons Learned:** Yes
 
 ---
+
+### [2026-05-15] Preserve the OCR worker across failed language switches
+
+**Context:** Prevent a failed OCR language change from leaving the recognizer without a usable worker.
+**What happened:**
+- Reworked `TextRecognizer.setLanguage()` in `src/ocr.ts` so the current worker is only terminated after the replacement worker is created and whitelisted successfully
+- Added a regression test proving a failed language switch keeps the previous worker usable for subsequent OCR calls
+- Ran focused verification with `npm test -- --run src/ocr.test.ts src/app.test.ts`
+**Outcome:** Success — OCR language switching now fails safely instead of dropping the existing worker
+**Insight:** Stateful swaps should keep the old instance alive until the replacement is fully ready; otherwise a partial failure can convert a recoverable config change into a hard stop
+**Promoted to Lessons Learned:** Yes
+
+---
