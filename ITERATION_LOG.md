@@ -292,3 +292,15 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-05-16] Document the OCR language picker overflow in the README
+
+**Context:** The language selector already exposes a visible `More languages` expander, but the top-level README only described the flag buttons and ordering.
+**What happened:**
+- Updated the README feature list to mention the `More languages` expander alongside the flag buttons
+- Kept the append-only iteration log current with the docs sync
+**Outcome:** Success — the README now matches the shipped language-picker affordance more closely
+**Insight:** When a control has a visible overflow path, the user-facing docs should name it explicitly so the affordance is discoverable without source spelunking
+**Promoted to Lessons Learned:** No
+
+---

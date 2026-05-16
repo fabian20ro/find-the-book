@@ -21,7 +21,7 @@ against the Google Books database.
 
 - Real-time continuous scanning with auto-scan toggle (pause/resume)
 - Manual single-scan and image upload modes
-- OCR language selection — 16 languages with flag buttons, usage-based ordering, persisted preference, fail-safe language switching
+- OCR language selection — 16 languages with flag buttons and a More languages expander, usage-based ordering, persisted preference, fail-safe language switching
 - Book candidates sorted by confidence score (highest first)
 - Search filter in candidate popup — filter by title, author, or ISBN
 - Auto-deduplication (same book won't appear twice)
