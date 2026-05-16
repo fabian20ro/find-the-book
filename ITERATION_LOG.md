@@ -304,3 +304,15 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-05-16] Document the manual scan button label in the README
+
+**Context:** The UI already shows a `Capture and scan` button when auto-scan is off, but the README only said the app supports manual single-scan mode.
+**What happened:**
+- Updated the README feature list to name the `Capture and scan` affordance explicitly
+- Kept the append-only iteration log current with the docs sync
+**Outcome:** Success — the manual-scan fallback is now discoverable by its shipped label
+**Insight:** When a control only appears in a specific mode, docs should name both the mode and the exact label so readers can find it quickly
+**Promoted to Lessons Learned:** No
+
+---
