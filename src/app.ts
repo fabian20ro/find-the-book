@@ -17,6 +17,7 @@ const STORAGE_KEY = 'ftb-books';
 const AUTOSCAN_KEY = 'ftb-autoscan';
 const LANG_KEY = 'ftb-language';
 const LANG_USAGE_KEY = 'ftb-lang-usage';
+const SUPPORTED_LANGUAGE_CODES = new Set(getAllLanguages().map((language) => language.code));
 
 function saveBooks(): void {
     try {
@@ -26,11 +27,67 @@ function saveBooks(): void {
     }
 }
 
+function normalizeStoredBook(value: unknown): Book | null {
+    if (!value || typeof value !== 'object') return null;
+
+    const c = value as Partial<Book>;
+    if (typeof c.id !== 'string' || typeof c.title !== 'string') return null;
+
+    const id = c.id.trim();
+    const title = c.title.trim();
+    if (id === '' || title === '') return null;
+
+    const getTrimmedString = (val: unknown) => {
+        if (typeof val !== 'string') return null;
+        const trimmed = val.trim();
+        return trimmed ? trimmed : null;
+    };
+    const getPositiveInt = (val: unknown) => typeof val === 'number' && Number.isInteger(val) && val > 0 ? val : null;
+    const getStoredConfidence = (val: unknown) => {
+        if (typeof val !== 'number' || !Number.isFinite(val)) return null;
+        return Math.min(100, Math.max(0, Math.round(val)));
+    };
+
+    return {
+        id,
+        title,
+        authors: Array.isArray(c.authors)
+            ? c.authors
+                .filter((a): a is string => typeof a === 'string')
+                .map((author) => author.trim())
+                .filter((author) => author.length > 0)
+            : [],
+        publisher: getTrimmedString(c.publisher),
+        publishedDate: getTrimmedString(c.publishedDate),
+        description: getTrimmedString(c.description),
+        isbn: getTrimmedString(c.isbn),
+        pageCount: getPositiveInt(c.pageCount),
+        thumbnailUrl: getTrimmedString(c.thumbnailUrl),
+        infoLink: getTrimmedString(c.infoLink),
+        confidence: getStoredConfidence(c.confidence) ?? 0,
+    };
+}
+
+export function parseStoredBooks(serialized: string | null): Book[] {
+    if (!serialized) return [];
+
+    try {
+        const parsed: unknown = JSON.parse(serialized);
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.flatMap((item) => {
+            const book = normalizeStoredBook(item);
+            return book ? [book] : [];
+        });
+    } catch {
+        return [];
+    }
+}
+
 function loadBooks(): void {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const books: Book[] = JSON.parse(stored);
+        const books = parseStoredBooks(localStorage.getItem(STORAGE_KEY));
+        if (books.length > 0) {
             update({ books });
             for (const book of books) {
                 bookSearcher.preloadBookId(book.id);
@@ -63,12 +120,8 @@ function saveAutoScanPref(): void {
 function loadLanguagePref(): void {
     try {
         const stored = localStorage.getItem(LANG_KEY);
-        if (stored) {
-            // Validate stored code is a known language
-            const all = getAllLanguages();
-            if (all.some((l) => l.code === stored)) {
-                update({ ocrLanguage: stored });
-            }
+        if (stored && SUPPORTED_LANGUAGE_CODES.has(stored)) {
+            update({ ocrLanguage: stored });
         }
     } catch {
         // Ignore — default is 'ron'
@@ -93,10 +146,25 @@ function incrementLanguageUsage(code: string): void {
     }
 }
 
+function normalizeLanguageUsage(value: unknown): Record<string, number> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+    const normalized: Record<string, number> = {};
+    for (const [code, count] of Object.entries(value as Record<string, unknown>)) {
+        if (!SUPPORTED_LANGUAGE_CODES.has(code)) continue;
+        if (typeof count === 'number' && Number.isFinite(count) && count > 0) {
+            normalized[code] = count;
+        }
+    }
+    return normalized;
+}
+
 export function getLanguageUsage(): Record<string, number> {
     try {
         const stored = localStorage.getItem(LANG_USAGE_KEY);
-        return stored ? JSON.parse(stored) : {};
+        if (!stored) return {};
+        const parsed: unknown = JSON.parse(stored);
+        return normalizeLanguageUsage(parsed);
     } catch {
         return {};
     }
@@ -192,12 +260,13 @@ async function handleManualScan(): Promise<void> {
 async function handleLanguageChange(langCode: string): Promise<void> {
     if (langCode === getState().ocrLanguage) return;
 
-    update({ isChangingLanguage: true, ocrLanguage: langCode });
-    saveLanguagePref();
-    incrementLanguageUsage(langCode);
+    update({ isChangingLanguage: true });
 
     try {
         await textRecognizer.setLanguage(langCode);
+        update({ ocrLanguage: langCode });
+        saveLanguagePref();
+        incrementLanguageUsage(langCode);
     } catch (err) {
         console.error('Language change failed:', err);
         toast('Failed to load language data. Check your connection.');

@@ -356,4 +356,8 @@ describe('queryMatchRatio', () => {
     it('is case-insensitive', () => {
         expect(queryMatchRatio(makeBookData(), 'GREAT GATSBY')).toBe(1);
     });
+
+    it('matches accented queries after normalization', () => {
+        expect(queryMatchRatio(makeBookData({ title: 'Café Society' }), 'Cafe Society')).toBe(1);
+    });
 });

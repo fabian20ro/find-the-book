@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { update, addBook, addCandidates, clearCandidates, getState } from './state';
-import { initUI, showError, hideError, type UIHandlers } from './ui';
+import { initUI, showError, hideError, getVisibleLanguages, type UIHandlers } from './ui';
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {
@@ -511,6 +511,27 @@ describe('ui', () => {
             update({ view: 'home', ocrLanguage: 'ron' });
             const buttons = document.querySelectorAll('.lang-btn');
             expect(buttons.length).toBeGreaterThanOrEqual(7); // 6 + More
+        });
+
+        it('prioritizes the most-used languages in the visible set', () => {
+            const visible = getVisibleLanguages({
+                zho: 12,
+                jpn: 11,
+                eng: 10,
+                fra: 9,
+                deu: 8,
+                ita: 7,
+                spa: 6,
+            });
+
+            expect(visible.map((language) => language.code)).toEqual([
+                'zho',
+                'jpn',
+                'eng',
+                'fra',
+                'deu',
+                'ita',
+            ]);
         });
 
         it('highlights active language', () => {

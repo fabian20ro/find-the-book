@@ -20,12 +20,13 @@ against the Google Books database.
 ## Features
 
 - Real-time continuous scanning with auto-scan toggle (pause/resume)
-- Manual single-scan and image upload modes
-- OCR language selection — 16 languages with flag buttons, usage-based ordering, persisted preference
+- Manual single-scan and image upload modes (`Capture and scan` appears when auto-scan is off)
+- OCR language selection — 16 languages with flag buttons and a More languages expander, usage-based ordering, persisted preference, fail-safe language switching
 - Book candidates sorted by confidence score (highest first)
 - Search filter in candidate popup — filter by title, author, or ISBN
 - Auto-deduplication (same book won't appear twice)
 - Export found books to CSV download
+- Share the current book list via the native share sheet, with clipboard fallback
 - Remove individual books from the list
 - In-browser OCR via WebAssembly (no server, no cloud costs)
 - PWA support (installable, works offline after first load)
@@ -90,12 +91,13 @@ npm run test:watch   # Run tests in watch mode
 4. Select your book language using the flag buttons at the bottom
 5. Point camera at book spines or covers — auto-scan runs continuously
 6. Found books appear in a popup sorted by confidence; use the search bar to filter
-7. Add books to your list, export to CSV, or clear
+7. Add books to your list, share or export them, or clear when needed
 
 ## Performance Notes
 
 - Text blocks are searched in parallel against Google Books API, minimizing scan-to-result latency
 - Tesseract.js OCR takes ~1-3 seconds per frame; the scan interval naturally accommodates this
 - First load downloads Tesseract WASM + language data (~2-6MB depending on language); cached by the service worker
+- If an OCR language download fails mid-switch, the app keeps scanning with the previous worker instead of dropping the recognizer
 - Best results with good lighting and clear book spines
 - Optimized for back camera on mobile devices (uses `facingMode: 'environment'`)

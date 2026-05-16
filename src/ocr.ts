@@ -143,19 +143,33 @@ export class TextRecognizer {
 
     async setLanguage(lang: string): Promise<void> {
         if (lang === this.currentLang && this.worker) return;
+
         const prevLang = this.currentLang;
-        if (this.worker) {
-            await this.worker.terminate();
-            this.worker = null;
-        }
+        const prevWorker = this.worker;
+        let nextWorker: TesseractWorker | null = null;
+
         this.isProcessing = false;
         this.currentLang = lang;
+
         try {
-            this.worker = await Tesseract.createWorker(lang);
+            nextWorker = await Tesseract.createWorker(lang);
+            this.worker = nextWorker;
             await this.applyWhitelist(lang);
+
+            if (prevWorker) {
+                await prevWorker.terminate();
+            }
         } catch (e) {
-            // Restore previous language on failure to keep state consistent
+            if (nextWorker) {
+                try {
+                    await nextWorker.terminate();
+                } catch {
+                    // Best effort cleanup only.
+                }
+            }
+
             this.currentLang = prevLang;
+            this.worker = prevWorker;
             throw e;
         }
     }
@@ -180,7 +194,10 @@ export class TextRecognizer {
                 .map((line) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
                 .filter((line) => line.text.length >= MIN_LINE_LENGTH && line.confidence >= MIN_LINE_CONFIDENCE);
         } catch (e) {
-            console.error('OCR error:', e);
+            const env = typeof process !== 'undefined' && process.env;
+            if (env && (env.NODE_ENV === 'test' || env.DEBUG_OCR === 'true')) {
+                console.error('OCR error:', e);
+            }
             return [];
         } finally {
             this.isProcessing = false;
@@ -207,6 +224,8 @@ export class TextRecognizer {
         const whitelist = LANG_WHITELISTS[lang];
         if (whitelist) {
             await this.worker.setParameters({ tessedit_char_whitelist: whitelist });
+        } else {
+            console.warn(`No character whitelist found for language: ${lang}. Skipping.`);
         }
     }
 }

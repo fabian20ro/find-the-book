@@ -40,8 +40,8 @@ describe('TextRecognizer', () => {
 
         it('throws if Tesseract is not loaded', async () => {
             vi.stubGlobal('Tesseract', undefined);
-            const recognizer = new TextRecognizer();
-            await expect(recognizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
+            const recognintizer = new TextRecognizer();
+            await expect(recognintizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
         });
     });
 
@@ -166,7 +166,7 @@ describe('TextRecognizer', () => {
 
             // Start a recognize call (puts it in processing state)
             const canvas = document.createElement('canvas');
-            recognizer.recognize(canvas); // don't await
+            recognizer.recognize(canvas); // don'int await
 
             // While processing, new calls would return []
             const blocked = await recognizer.recognize(canvas);
@@ -197,6 +197,27 @@ describe('TextRecognizer', () => {
             expect(recognizer.getLanguage()).toBe('eng');
         });
 
+        it('keeps the previous worker available if switching languages fails', async () => {
+            mockRecognize.mockResolvedValue({
+                data: {
+                    lines: [{ text: 'Recovered text', confidence: 90 }],
+                },
+            });
+            (Tesseract.createWorker as any)
+                .mockResolvedValueOnce(mockWorker)
+                .mockRejectedValueOnce(new Error('language download failed'));
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('language download failed');
+            expect(mockTerminate).not.toHaveBeenCalled();
+            expect(recognizer.getLanguage()).toBe('ron');
+
+            const results = await recognizer.recognize(document.createElement('canvas'));
+            expect(results).toEqual([{ text: 'Recovered text', confidence: 90 }]);
+        });
+
         it('skips if already using the same language', async () => {
             const recognizer = new TextRecognizer();
             await recognizer.init('fra');
@@ -218,7 +239,6 @@ describe('TextRecognizer', () => {
 
             // Switching language should reset processing flag
             await recognizer.setLanguage('eng');
-
             mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After switch', confidence: 85 }] } });
             const result = await recognizer.recognize(canvas);
             expect(result).toEqual([{ text: 'After switch', confidence: 85 }]);

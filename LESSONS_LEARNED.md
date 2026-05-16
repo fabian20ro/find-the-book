@@ -27,9 +27,36 @@ Obsolete lessons → Archive section at bottom (with date and reason). Never del
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
 
+**[2026-05-15] Document visible UI affordances in the README** — If the UI exposes a user-facing action or state that materially changes how the app is used, surface it in the top-level README feature list or nearby usage section so the affordance is discoverable without spelunking the source.
+
+**[2026-05-14] Validate stored OCR language codes against the cached supported set** — When restoring a persisted OCR language, compare against the app's supported code set rather than re-scanning the full language list. The cached set is the contract surface and keeps restore logic aligned with the current UI catalog.
+
+**[2026-05-15] Swap OCR workers only after the replacement is ready** — When changing OCR languages, keep the previous worker alive until the new worker is created and configured successfully. Terminating the old worker before the swap succeeds can leave the recognizer unrecoverable if the new language download or whitelist setup fails.
+
+**[2026-05-12] Quote CSV fields that contain carriage returns** — CSV escaping should treat `\r` as a quoting trigger alongside commas, quotes, and `\n`; otherwise a field can break line structure in spreadsheet imports even when the visible content looks fine.
+
+**[2026-05-11] Normalize stored preference maps before using them** — Treat localStorage/sessionStorage maps as untrusted. Parse to `unknown`, keep only finite numeric counts, and drop malformed entries so one bad value does not corrupt counters or ordering.
+
+**[2026-05-11] Reject blank required fields during restore** — When rehydrating stored entities, validate required string fields are non-empty after trimming. Empty ids/titles behave like corrupted records and should be skipped rather than restored.
+
+**[2026-05-11] Filter preference-map keys against the supported option list** — When persisted ordering data is tied to a finite choice set, discard unknown keys during restore so stale or injected values cannot influence UI ordering or visibility.
+
+**[2026-05-08] Validate serialized storage before restoring state** — Treat localStorage/sessionStorage payloads as untrusted. Parse to `unknown`, normalize each record, and skip malformed entries so one bad object does not block restoring the rest.
+
 ## Testing & Quality
 
 <!-- Format: **[YYYY-MM-DD]** Brief title — Explanation -->
+
+**[2026-05-13] Bound restored numeric book fields before rehydration** — When reading saved books from localStorage, treat `pageCount` as a positive integer and clamp `confidence` to the 0–100 range instead of trusting any finite number. Finite-but-invalid persisted values can still be semantically broken.
+**[2026-05-13] Trim restored optional author names** — When normalizing stored book arrays, trim string author entries and drop blanks after trimming. Otherwise old localStorage payloads can preserve whitespace-only names that leak into the UI.
+
+**[2026-05-13] Trim restored required ids and titles** — When restoring saved books, trim string ids and titles before accepting the record. Padded ids can break deduplication and padded titles leak into the UI unless the restore path normalizes them.
+
+**[2026-05-13] Trim restored ISBN values** — When restoring saved books, trim string ISBNs and drop blank results before rehydration. Whitespace-only ISBNs otherwise survive storage restore and leak into filter/export/display surfaces.
+
+**[2026-05-13] Trim restored optional metadata strings** — When rehydrating saved books, apply the same trim-and-drop cleanup to optional string metadata fields such as publisher, publishedDate, description, thumbnailUrl, and infoLink. Storage corruption often leaves padding around these values, and the UI should not replay it verbatim.
+
+**[2026-05-12] Prefer focused Vitest over noisy helper typecheck when the repo's TS libs are misaligned** — If an automated patch or helper step emits broad `ReadonlyMap`/`WeakSet`/module-resolution errors from dependencies, but the targeted Vitest file passes, treat the Vitest run as the meaningful verification signal instead of widening scope to fix repo-wide TS config during a small change.
 
 ## Performance & Infrastructure
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { getState } from './state';
 
 // Mock style import
 vi.mock('./style.css', () => ({}));
@@ -13,10 +14,12 @@ vi.mock('./camera', () => ({
 }));
 
 const mockOcrInit = vi.fn().mockResolvedValue(undefined);
+const mockSetLanguage = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('./ocr', () => ({
     TextRecognizer: class {
         init = mockOcrInit;
+        setLanguage = mockSetLanguage;
         recognize = vi.fn().mockResolvedValue(['Test text']);
         resetProcessing = vi.fn();
         destroy = vi.fn();
@@ -45,6 +48,7 @@ vi.mock('./export', () => ({
 }));
 
 let capturedHandlers: any = null;
+let appModule: typeof import('./app');
 
 vi.mock('./ui', () => ({
     initUI: vi.fn((handlers: any) => { capturedHandlers = handlers; }),
@@ -52,6 +56,24 @@ vi.mock('./ui', () => ({
     getCanvasElement: vi.fn().mockReturnValue(document.createElement('canvas')),
     showError: vi.fn(),
     hideError: vi.fn(),
+    getAllLanguages: vi.fn().mockReturnValue([
+        { code: 'ron', name: 'Romanian', flag: 'RO' },
+        { code: 'eng', name: 'English', flag: 'EN' },
+        { code: 'fra', name: 'French', flag: 'FR' },
+        { code: 'deu', name: 'German', flag: 'DE' },
+        { code: 'ita', name: 'Italian', flag: 'IT' },
+        { code: 'spa', name: 'Spanish', flag: 'ES' },
+        { code: 'por', name: 'Portuguese', flag: 'PT' },
+        { code: 'nld', name: 'Dutch', flag: 'NL' },
+        { code: 'pol', name: 'Polish', flag: 'PL' },
+        { code: 'hun', name: 'Hungarian', flag: 'HU' },
+        { code: 'ces', name: 'Czech', flag: 'CS' },
+        { code: 'tur', name: 'Turkish', flag: 'TR' },
+        { code: 'swe', name: 'Swedish', flag: 'SV' },
+        { code: 'rus', name: 'Russian', flag: 'RU' },
+        { code: 'jpn', name: 'Japanese', flag: 'JP' },
+        { code: 'zho', name: 'Chinese', flag: 'ZH' },
+    ]),
 }));
 
 describe('app', () => {
@@ -59,6 +81,7 @@ describe('app', () => {
         localStorage.clear();
         capturedHandlers = null;
         mockOcrInit.mockClear();
+        mockSetLanguage.mockClear();
 
         // Stub service worker
         Object.defineProperty(navigator, 'serviceWorker', {
@@ -67,7 +90,7 @@ describe('app', () => {
         });
 
         vi.resetModules();
-        await import('./app');
+        appModule = await import('./app');
         // Let microtasks (like OCR init promise) flush
         await new Promise((r) => setTimeout(r, 10));
     });
@@ -106,9 +129,174 @@ describe('app', () => {
 
         vi.resetModules();
         capturedHandlers = null;
-        await import('./app');
+        appModule = await import('./app');
         await new Promise((r) => setTimeout(r, 10));
 
         expect(capturedHandlers).not.toBeNull();
+    });
+
+    it('ignores unsupported saved OCR languages', async () => {
+        localStorage.setItem('ftb-language', 'zzz');
+
+        vi.resetModules();
+        capturedHandlers = null;
+        appModule = await import('./app');
+        await new Promise((r) => setTimeout(r, 10));
+
+        expect(getState().ocrLanguage).toBe('ron');
+    });
+
+    it('keeps the previous OCR language when a switch fails', async () => {
+        mockSetLanguage.mockRejectedValueOnce(new Error('language download failed'));
+
+        await capturedHandlers.onLanguageChange('eng');
+
+        expect(getState().ocrLanguage).toBe('ron');
+        expect(localStorage.getItem('ftb-language')).toBeNull();
+        expect(mockSetLanguage).toHaveBeenCalledWith('eng');
+    });
+
+    it('normalizes stored language usage before returning it', () => {
+        localStorage.setItem('ftb-lang-usage', JSON.stringify({
+            eng: 3,
+            fra: 'nope',
+            pol: 0,
+            ces: 2,
+            zzz: 99,
+        }));
+
+        expect(appModule.getLanguageUsage()).toEqual({
+            eng: 3,
+            ces: 2,
+        });
+    });
+
+    it('returns an empty language usage map for malformed storage', () => {
+        localStorage.setItem('ftb-lang-usage', '{not-json');
+
+        expect(appModule.getLanguageUsage()).toEqual({});
+    });
+
+    it('restores only well-formed saved books from storage', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'good-book',
+                title: 'Saved Book',
+                authors: ['Author A'],
+                publisher: 'Publisher',
+                publishedDate: '2024',
+                description: 'Stored book',
+                isbn: '9780000000000',
+                pageCount: 123,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://example.com/info',
+                confidence: 84,
+            },
+            { id: 42, title: 'Broken entry' },
+            null,
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'good-book',
+            title: 'Saved Book',
+            confidence: 84,
+        });
+    });
+
+    it('drops books with blank required fields when restoring from storage', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { id: '', title: 'Blank id' },
+            { id: 'blank-title', title: '   ' },
+            { id: 'good-book', title: 'Kept Book' },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'good-book',
+            title: 'Kept Book',
+        });
+    });
+
+    it('trims whitespace from restored required fields', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: '  spaced-id  ',
+                title: '  Spaced Title  ',
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'spaced-id',
+            title: 'Spaced Title',
+        });
+    });
+
+    it('drops invalid stored numeric fields when restoring books', () => {
+        const restored = appModule.parseStoredBooks('[{"id":"numeric-book","title":"Numeric Book","pageCount":-12,"confidence":123.8}]');
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'numeric-book',
+            title: 'Numeric Book',
+            pageCount: null,
+            confidence: 100,
+        });
+    });
+
+    it('trims and drops blank author names when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'author-book',
+                title: 'Author Book',
+                authors: ['  Alice  ', '', 'Bob', '   ', 42],
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].authors).toEqual(['Alice', 'Bob']);
+    });
+
+    it('trims whitespace from restored ISBN values and drops blank ones', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'isbn-book',
+                title: 'ISBN Book',
+                isbn: ' 9781234567890 ',
+            },
+            {
+                id: 'blank-isbn-book',
+                title: 'Blank ISBN Book',
+                isbn: '   ',
+            },
+        ]));
+
+        expect(restored).toHaveLength(2);
+        expect(restored[0].isbn).toBe('9781234567890');
+        expect(restored[1].isbn).toBeNull();
+    });
+
+    it('trims and drops blank optional metadata fields when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'meta-book',
+                title: 'Metadata Book',
+                publisher: '  Publisher  ',
+                publishedDate: ' 2024 ',
+                description: '  Description  ',
+                thumbnailUrl: '  https://example.com/thumb.jpg  ',
+                infoLink: '   ',
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            publisher: 'Publisher',
+            publishedDate: '2024',
+            description: 'Description',
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+            infoLink: null,
+        });
     });
 });
