@@ -4,6 +4,19 @@
 > **Add an entry at the end of every iteration.**
 > Same issue 2+ times? Promote to `LESSONS_LEARNED.md`.
 
+---
+
+### [2026-05-16] Fix OCR debug env typecheck
+
+**Context:** Production build failed because browser OCR code referenced Node's global `process` without Node type definitions.
+**What happened:**
+- Replaced direct `process.env` access in `src/ocr.ts` with a typed optional `globalThis.process?.env` lookup
+- Kept debug logging behavior for test/debug environments without adding Node typings or dependencies
+- Verified with `npm run build`
+**Outcome:** Success — TypeScript and Vite production build pass
+**Insight:** Browser code that conditionally reads Node-like globals should type the optional global shape locally instead of requiring Node ambient types.
+**Promoted to Lessons Learned:** No
+
 ## Entry Format
 
 ---
