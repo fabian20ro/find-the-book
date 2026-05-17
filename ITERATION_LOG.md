@@ -316,3 +316,16 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-05-17] Document the upload entrypoint in the README
+
+**Context:** The home screen already exposes `Upload Image`, but the usage flow still read as camera-first.
+**What happened:**
+- Updated the README feature list to name `Upload Image` as the saved-photo scanning entrypoint
+- Updated the usage steps to start from `Scan with Camera` versus `Upload Image`
+- Kept the append-only iteration log current with the docs sync
+**Outcome:** Success — the README now mirrors both shipped home-screen scan entrypoints
+**Insight:** When a home screen offers multiple primary entrypoints, usage docs should name each exact label before describing permission or scanning flow
+**Promoted to Lessons Learned:** No
+
+---
