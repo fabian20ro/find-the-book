@@ -156,9 +156,8 @@ export class BookSearcher {
     const info = item.volumeInfo || {};
     const identifiers = info.industryIdentifiers || [];
     const isbn13 = identifiers.find((id) => id.type === "ISBN_13");
-    const isbn = isbn13
-      ? isbn13.identifier
-      : identifiers[0]?.identifier || null;
+    const isbn14 = identifiers.find((id) => id.type === "ISBN_10");
+    const isbn = isbn13?.identifier || isbn14?.identifier || identifiers[0]?.identifier || null;
     const thumbnail =
       info.imageLinks?.thumbnail?.replace("http://", "https://") || null;
 
