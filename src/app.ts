@@ -22,7 +22,8 @@ const SUPPORTED_LANGUAGE_CODES = new Set(getAllLanguages().map((language) => lan
 function saveBooks(): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(getState().books));
-    } catch {
+    } catch (err) {
+        console.error('Failed to save books to localStorage:', err);
         toast('Could not save books. Storage may be full.');
     }
 }
