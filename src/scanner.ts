@@ -188,7 +188,10 @@ function onVisibilityChange(
 export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSearcher): Promise<Book[]> {
     if (ocrLines.length === 0) return [];
 
-    const texts = ocrLines.map((l) => l.text);
+    // Clean the input lines: trim whitespace and remove empty strings
+    const texts = ocrLines.map((l) => l.text.trim()).filter((t) => t.length > 0);
+    if (texts.length === 0) return [];
+
     update({ lastDetectedText: texts[0] });
 
     // Primary query: all lines joined — gives Google Books the full context

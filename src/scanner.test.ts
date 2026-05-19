@@ -339,12 +339,11 @@ describe('scanner', () => {
             expect(books.search).toHaveBeenCalledWith('hi short text1');
         });
 
-        it('does not duplicate query when single line equals combined', async () => {
+        it('skips purely whitespace lines and does not trigger search if no content left', async () => {
             const books = createMockBookSearcher();
-            await searchTextBlocks(toOcrLines(['Some text']), books as any);
+            await searchTextBlocks(toOcrLines(['  ', '   ']), books as any);
 
-            expect(books.search).toHaveBeenCalledTimes(1);
-            expect(books.search).toHaveBeenCalledWith('Some text');
+            expect(books.search).not.toHaveBeenCalled();
         });
 
         it('updates lastDetectedText only once with first block', async () => {
