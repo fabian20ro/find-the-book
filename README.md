@@ -20,7 +20,7 @@ against the Google Books database.
 ## Features
 
 - Real-time continuous scanning with auto-scan toggle (pause/resume)
-- Manual single-scan and image upload modes (`Capture and scan` appears when auto-scan is off)
+- Manual single-scan and image upload modes (`Capture and scan` appears when auto-scan is off; `Upload Image` scans a saved photo from the home screen)
 - OCR language selection — 16 languages with flag buttons and a More languages expander, usage-based ordering, persisted preference, fail-safe language switching
 - Book candidates sorted by confidence score (highest first)
 - Search filter in candidate popup — filter by title, author, or ISBN
@@ -86,12 +86,13 @@ npm run test:watch   # Run tests in watch mode
 ## Usage
 
 1. Open the app URL in Chrome on your phone
-2. Grant camera permission when prompted
-3. Wait for OCR engine to initialize (first load downloads language data ~2-4MB)
-4. Select your book language using the flag buttons at the bottom
-5. Point camera at book spines or covers — auto-scan runs continuously
-6. Found books appear in a popup sorted by confidence; use the search bar to filter
-7. Add books to your list, share or export them, or clear when needed
+2. Choose `Scan with Camera` for live scanning, or `Upload Image` to scan a saved photo
+3. Grant camera permission when prompted for live scanning
+4. Wait for OCR engine to initialize (first load downloads language data ~2-4MB)
+5. Select your book language using the flag buttons at the bottom
+6. Point camera at book spines or covers — auto-scan runs continuously
+7. Found books appear in a popup sorted by confidence; use the search bar to filter
+8. Add books to your list, share or export them, or clear when needed
 
 ## Performance Notes
 

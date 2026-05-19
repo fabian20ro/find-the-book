@@ -19,8 +19,9 @@ function swVersionPlugin(): Plugin {
 export default defineConfig({
   base: '/find-the-book/',
   plugins: [swVersionPlugin()],
-  test: {
-    environment: 'jsdom',
-    include: ['src/**/*.test.ts'],
-  },
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./vitest.setup.ts'],
+      include: ['src/**/*.test.ts'],
+    },
 });
