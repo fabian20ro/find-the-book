@@ -70,8 +70,12 @@ export function update(patch: Partial<AppState>): void {
 }
 
 export function addBook(book: Book): boolean {
-    if (state.books.some((b) => b.id === book.id)) return false;
-    state.books.push(book);
+    const trimmedId = book.id.trim();
+    const trimmedTitle = book.title.trim();
+    if (state.books.some((b) => b.id === trimmedId)) return false;
+    
+    const updatedBook = { ...book, id: trimmedId, title: trimmedTitle };
+    state.books.push(updatedBook);
     emit('change');
     return true;
 }
