@@ -107,6 +107,8 @@ export function addCandidates(books: Book[]): void {
     for (const book of books) {
         const trimmedId = book.id.trim();
         const trimmedTitle = book.title.trim();
+        if (!trimmedId || !trimmedTitle) continue;
+
         const updatedBook = { ...book, id: trimmedId, title: trimmedTitle };
 
         const isDuplicate = state.candidateBooks.some((c) => c.id === trimmedId)

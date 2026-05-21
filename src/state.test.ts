@@ -198,6 +198,13 @@ describe('state', () => {
             expect(getState().candidateBooks).toHaveLength(2);
         });
 
+        it('rejects candidates with empty id or title', () => {
+            addCandidates([makeBook({ id: '', title: 'Valid Title' })]);
+            addCandidates([makeBook({ id: 'valid-id', title: '' })]);
+            addCandidates([makeBook({ id: '  ', title: '  ' })]);
+            expect(getState().candidateBooks).toHaveLength(0);
+        });
+
         it('deduplicates against already-added books', () => {
             addBook(makeBook({ id: 'b1' }));
             addCandidates([makeBook({ id: 'b1' })]);
