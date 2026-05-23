@@ -44,14 +44,15 @@ export function queryMatchRatio(
   if (!query || query.trim().length === 0) return 0;
 
   const clean = (text: string) => text.normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, "");
-  const queryWords = clean(query).split(/\s+/).filter((w) => w.length >= 3);
+  const queryWords = clean(query).split(/\s+/).filter((w) => w.length >= 2);
   if (queryWords.length === 0) return 0;
 
   const bookText = clean([book.title, ...book.authors].join(" "));
 
   let matched = 0;
+  const bookWords = new Set(bookText.split(/\s+/));
   for (const word of queryWords) {
-    if (bookText.includes(word)) matched++;
+    if (bookWords.has(word)) matched++;
   }
   return matched / queryWords.length;
 }
@@ -113,7 +114,7 @@ export class BookSearcher {
 
   async search(query: string): Promise<Book[]> {
     const normalized = query.toLowerCase().trim();
-    if (normalized.length < 4 || this.queryCache.has(normalized)) {
+    if (normalized.length < 2 || this.queryCache.has(normalized)) {
       return [];
     }
 
