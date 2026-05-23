@@ -360,4 +360,8 @@ describe('queryMatchRatio', () => {
     it('matches accented queries after normalization', () => {
         expect(queryMatchRatio(makeBookData({ title: 'Café Society' }), 'Cafe Society')).toBe(1);
     });
+
+    it('ignores punctuation in queries', () => {
+        expect(queryMatchRatio(makeBookData({ title: 'The Great Gatsby!' }), 'Great, Gatsby?')).toBe(1);
+    });
 });

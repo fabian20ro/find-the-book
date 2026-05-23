@@ -70,8 +70,12 @@ export function update(patch: Partial<AppState>): void {
 }
 
 export function addBook(book: Book): boolean {
-    if (state.books.some((b) => b.id === book.id)) return false;
-    state.books.push(book);
+    const trimmedId = book.id.trim();
+    const trimmedTitle = book.title.trim();
+    if (state.books.some((b) => b.id === trimmedId)) return false;
+    
+    const updatedBook = { ...book, id: trimmedId, title: trimmedTitle };
+    state.books.push(updatedBook);
     emit('change');
     return true;
 }
@@ -101,10 +105,14 @@ export function clearBooks(): void {
 export function addCandidates(books: Book[]): void {
     let added = false;
     for (const book of books) {
-        const isDuplicate = state.candidateBooks.some((c) => c.id === book.id)
-            || state.books.some((b) => b.id === book.id);
+        const trimmedId = book.id.trim();
+        const trimmedTitle = book.title.trim();
+        const updatedBook = { ...book, id: trimmedId, title: trimmedTitle };
+
+        const isDuplicate = state.candidateBooks.some((c) => c.id === trimmedId)
+            || state.books.some((b) => b.id === trimmedId);
         if (!isDuplicate) {
-            state.candidateBooks.push(book);
+            state.candidateBooks.push(updatedBook);
             added = true;
         }
     }
@@ -114,7 +122,8 @@ export function addCandidates(books: Book[]): void {
 }
 
 export function removeCandidateById(bookId: string): void {
-    state.candidateBooks = state.candidateBooks.filter((c) => c.id !== bookId);
+    const trimmedId = bookId.trim();
+    state.candidateBooks = state.candidateBooks.filter((c) => c.id !== trimmedId);
     emit('change');
 }
 
