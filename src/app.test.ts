@@ -245,6 +245,17 @@ describe('app', () => {
         });
     });
 
+    it('treats pageCount of 0 as invalid/null', () => {
+        const restored = appModule.parseStoredBooks('[{"id":"zero-book","title":"Zero Book","pageCount":0}]');
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0]).toMatchObject({
+            id: 'zero-book',
+            title: 'Zero Book',
+            pageCount: null,
+        });
+    });
+
     it('trims and drops blank author names when restoring books', () => {
         const restored = appModule.parseStoredBooks(JSON.stringify([
             {
