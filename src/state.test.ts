@@ -172,17 +172,26 @@ describe('state', () => {
         it('emits change event', () => {
             const listener = vi.fn();
             on('change', listener);
-            clearBooks();
+            addBook(makeBook());
             expect(listener).toHaveBeenCalled();
         });
-    });
 
-    describe('addCandidates', () => {
-        it('adds candidate books', () => {
-            addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
-            expect(getState().candidateBooks).toHaveLength(2);
+        it('trims whitespace from id and title during addBook', () => {
+            addBook(makeBook({ id: '  dup-1  ', title: '  Title 1  ' }));
+            addBook(makeBook({ id: 'dup-2', title: 'Title 2' }));
+            const books = getState().books;
+            expect(books).toHaveLength(2);
+            expect(books[0].id).toBe('dup-1');
+            expect(books[0].title).toBe('Title 1');
         });
 
+        it('rejects duplicate book by id even with whitespace', () => {
+            addBook(makeBook({ id: 'dup' }));
+            const result = addBook(makeBook({ id: '  dup  ', title: 'Different Title' }));
+            expect(result).toBe(false);
+            expect(getState().books).toHaveLength(1);
+        });
+        
         it('deduplicates against existing candidates', () => {
             addCandidates([makeBook({ id: 'c1' })]);
             addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
