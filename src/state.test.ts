@@ -191,6 +191,32 @@ describe('state', () => {
             expect(result).toBe(false);
             expect(getState().books).toHaveLength(1);
         });
+
+        it('trims ISBN and optional metadata fields during addBook', () => {
+            addBook(makeBook({
+                isbn: '  978-0-123456-78-9  ',
+                publisher: '  Publisher Co  ',
+                publishedDate: '  2024  ',
+                description: '  A great book  ',
+            }));
+            const [book] = getState().books;
+            expect(book.isbn).toBe('978-0-123456-78-9');
+            expect(book.publisher).toBe('Publisher Co');
+            expect(book.publishedDate).toBe('2024');
+            expect(book.description).toBe('A great book');
+        });
+
+        it('trims author names and drops whitespace-only authors during addBook', () => {
+            addBook(makeBook({ authors: ['  Author A  ', '   ', 'Author B'] }));
+            const [book] = getState().books;
+            expect(book.authors).toEqual(['Author A', 'Author B']);
+        });
+
+        it('converts whitespace-only isbn to null during addBook', () => {
+            addBook(makeBook({ isbn: '   ' }));
+            const [book] = getState().books;
+            expect(book.isbn).toBeNull();
+        });
         
         it('deduplicates against existing candidates', () => {
             addCandidates([makeBook({ id: 'c1' })]);
@@ -202,6 +228,19 @@ describe('state', () => {
             addBook(makeBook({ id: 'b1' }));
             addCandidates([makeBook({ id: 'b1' })]);
             expect(getState().candidateBooks).toHaveLength(0);
+        });
+
+        it('trims metadata fields during addCandidates', () => {
+            addCandidates([makeBook({
+                id: 'c-trim',
+                isbn: '  978-0-123456-78-9  ',
+                authors: ['  Author A  ', '   '],
+                publisher: '  Pub Co  ',
+            })]);
+            const [candidate] = getState().candidateBooks;
+            expect(candidate.isbn).toBe('978-0-123456-78-9');
+            expect(candidate.authors).toEqual(['Author A']);
+            expect(candidate.publisher).toBe('Pub Co');
         });
 
         it('emits change event when candidates added', () => {

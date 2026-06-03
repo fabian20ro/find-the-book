@@ -69,13 +69,30 @@ export function update(patch: Partial<AppState>): void {
     emit('change');
 }
 
+/**
+ * Trim all string fields on a book to prevent whitespace-only or padded values
+ * from leaking into the UI. Consistent with LESSONS_LEARNED normalization rules.
+ */
+function normalizeBook(book: Book): Book {
+    return {
+        ...book,
+        id: book.id.trim(),
+        title: book.title.trim(),
+        authors: book.authors.map((a) => a.trim()).filter((a) => a.length > 0),
+        isbn: book.isbn?.trim() || null,
+        publisher: book.publisher?.trim() || null,
+        publishedDate: book.publishedDate?.trim() || null,
+        description: book.description?.trim() || null,
+        thumbnailUrl: book.thumbnailUrl?.trim() || null,
+        infoLink: book.infoLink?.trim() || null,
+    };
+}
+
 export function addBook(book: Book): boolean {
-    const trimmedId = book.id.trim();
-    const trimmedTitle = book.title.trim();
-    if (state.books.some((b) => b.id === trimmedId)) return false;
-    
-    const updatedBook = { ...book, id: trimmedId, title: trimmedTitle };
-    state.books.push(updatedBook);
+    const normalized = normalizeBook(book);
+    if (state.books.some((b) => b.id === normalized.id)) return false;
+
+    state.books.push(normalized);
     emit('change');
     return true;
 }
@@ -105,14 +122,12 @@ export function clearBooks(): void {
 export function addCandidates(books: Book[]): void {
     let added = false;
     for (const book of books) {
-        const trimmedId = book.id.trim();
-        const trimmedTitle = book.title.trim();
-        const updatedBook = { ...book, id: trimmedId, title: trimmedTitle };
+        const normalized = normalizeBook(book);
 
-        const isDuplicate = state.candidateBooks.some((c) => c.id === trimmedId)
-            || state.books.some((b) => b.id === trimmedId);
+        const isDuplicate = state.candidateBooks.some((c) => c.id === normalized.id)
+            || state.books.some((b) => b.id === normalized.id);
         if (!isDuplicate) {
-            state.candidateBooks.push(updatedBook);
+            state.candidateBooks.push(normalized);
             added = true;
         }
     }
