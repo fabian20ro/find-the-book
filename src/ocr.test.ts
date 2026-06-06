@@ -186,16 +186,18 @@ describe('TextRecognizer', () => {
     });
 
     describe('setLanguage', () => {
-        it('switches to a new language', async () => {
+        it('rolls back currentLang if setting language fails', async () => {
             const recognizer = new TextRecognizer();
-            await recognizer.init();
+            await recognizer.init('ron');
             expect(recognizer.getLanguage()).toBe('ron');
 
-            await recognizer.setLanguage('eng');
-            expect(mockTerminate).toHaveBeenCalled();
-            expect(Tesseract.createWorker).toHaveBeenCalledWith('eng');
-            expect(recognizer.getLanguage()).toBe('eng');
+            // Mock createWorker to fail
+            vi.mocked(Tesseract.createWorker).mockRejectedValueOnce(new Error('Worker creation failed'));
+
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('Worker creation failed');
+            expect(recognizer.getLanguage()).toBe('ron'); // Should be rolled back
         });
+
 
         it('keeps the previous worker available if switching languages fails', async () => {
             mockRecognize.mockResolvedValue({
