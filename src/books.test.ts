@@ -59,8 +59,8 @@ describe('BookSearcher', () => {
             expect(results[0].confidence).toBeLessThanOrEqual(100);
         });
 
-        it('skips queries shorter than 4 characters', async () => {
-            const results = await searcher.search('ab');
+        it('skips queries shorter than 2 characters', async () => {
+            const results = await searcher.search('a');
             expect(results).toEqual([]);
             expect(fetch).not.toHaveBeenCalled();
         });
@@ -348,9 +348,9 @@ describe('queryMatchRatio', () => {
         expect(queryMatchRatio(makeBookData(), 'Great random')).toBe(0.5);
     });
 
-    it('ignores short words (< 3 chars)', () => {
-        // "The" is 3 chars and matches, "a" and "of" are too short and ignored
-        expect(queryMatchRatio(makeBookData(), 'The a of')).toBe(1);
+    it('includes length 2 words (e.g., "at")', () => {
+        // "The" is 3 chars and matches, "at" is 2 chars and should now match in "The at"
+        expect(queryMatchRatio(makeBookData({title: 'The at'}), 'The at')).toBe(1);
     });
 
     it('is case-insensitive', () => {
