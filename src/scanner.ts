@@ -206,8 +206,12 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
 
     const allNewBooks: Book[] = [];
     for (const query of queries) {
-        const results = await bookSearcher.search(query);
-        allNewBooks.push(...results);
+        try {
+            const results = await bookSearcher.search(query);
+            allNewBooks.push(...results);
+        } catch (err) {
+            console.error(`Search failed for query "${query}":`, err);
+        }
     }
     return allNewBooks;
 }
