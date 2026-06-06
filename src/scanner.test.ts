@@ -374,6 +374,14 @@ describe('scanner', () => {
             expect(result[1].title).toBe('Book Two');
         });
 
+        it('limits total queries to MAX_QUERIES_PER_SCAN', async () => {
+            const books = createMockBookSearcher();
+            // 1 combined + 5 long individuals = 6 queries total, should be capped to 5
+            await searchTextBlocks(toOcrLines(['longline1', 'longline2', 'longline3', 'longline4', 'longline5', 'longline6']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(5);
+        });
+
         it('handles search failures gracefully', async () => {
             const book1 = makeBook('b1', 'Book One');
             const books = createMockBookSearcher();
