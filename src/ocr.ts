@@ -27,7 +27,7 @@ const LANG_WHITELISTS: Record<string, string> = {
  * Convert to grayscale, apply linear contrast stretch, and sharpen.
  * Falls back to the original canvas if 2D context is unavailable.
  */
-function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
+export function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
 
