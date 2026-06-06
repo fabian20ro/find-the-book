@@ -204,24 +204,25 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
 
     const queries = [combined, ...longIndividuals].slice(0, MAX_QUERIES_PER_SCAN);
 
-    const results = await Promise.allSettled(
-        queries.map((text) => bookSearcher.search(text)),
-    );
-
     const allNewBooks: Book[] = [];
-    for (const result of results) {
-        if (result.status === 'fulfilled') {
-            allNewBooks.push(...result.value);
-        }
+    for (const query of queries) {
+        const results = await bookSearcher.search(query);
+        allNewBooks.push(...results);
     }
     return allNewBooks;
 }
 
 function handleScanError(err: unknown, label: string, ocr: TextRecognizer): void {
     console.error(label, err);
-    if (err instanceof Error && err.message === 'OCR timed out') {
-        toast('OCR timed out — retrying on next scan.');
-        ocr.resetProcessing();
+    if (err instanceof Error) {
+        if (err.message === 'OCR timed out') {
+            toast('OCR timed out — retrying on next scan.');
+            ocr.resetProcessing();
+        } else {
+            toast(`${label} ${err.message}`);
+        }
+    } else {
+        toast(`${label} An unknown error occurred.`);
     }
 }
 

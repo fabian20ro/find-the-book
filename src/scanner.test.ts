@@ -230,17 +230,16 @@ describe('scanner', () => {
             expect(state.toast).toHaveBeenCalledWith('Could not capture frame');
         });
 
-        it('handles OCR timeout', async () => {
+        it('handles OCR timeout by toasting and resetting processing', async () => {
             const camera = createMockCamera();
-            const ocr = createMockOcr();
-            ocr.recognize.mockRejectedValue(new Error('OCR timed out'));
+            const ocr = createMockOcr(['text']);
             const books = createMockBookSearcher();
+            ocr.recognize.mockRejectedValue(new Error('OCR timed out'));
 
-            // scanOnce uses withTimeout internally, but the mock rejects immediately
-            // However we're mocking recognize to reject with 'OCR timed out'
-            // The scanOnce function catches this and toasts
             await scanOnce(camera as any, ocr as any, books as any);
-            // It should handle the error gracefully (not throw)
+
+            expect(state.toast).toHaveBeenCalledWith('OCR timed out — retrying on next scan.');
+            expect(ocr.resetProcessing).toHaveBeenCalled();
         });
     });
 

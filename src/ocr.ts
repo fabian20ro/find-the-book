@@ -27,7 +27,7 @@ const LANG_WHITELISTS: Record<string, string> = {
  * Convert to grayscale, apply linear contrast stretch, and sharpen.
  * Falls back to the original canvas if 2D context is unavailable.
  */
-function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
+export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0.5): HTMLCanvasElement {
     const ctx = canvas.getContext('2d');
     if (!ctx) return canvas;
 
@@ -82,7 +82,7 @@ function preprocessCanvas(canvas: HTMLCanvasElement): HTMLCanvasElement {
                 stretched[yw + (x - 1)]   + stretched[yw + x]   + stretched[yw + (x + 1)] +
                 stretched[yp1w + (x - 1)] + stretched[yp1w + x] + stretched[yp1w + (x + 1)]
             ) / 9;
-            const v = stretched[idx] + STRENGTH * (stretched[idx] - blurred);
+            const v = stretched[idx] + strength * (stretched[idx] - blurred);
             // ⚡ Bolt Optimization: Fast inline clamp
             sharpened[idx] = v < 0 ? 0 : (v > 255 ? 255 : (v | 0));
         }
