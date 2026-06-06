@@ -203,15 +203,10 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
 
     const queries = [combined, ...longIndividuals];
 
-    const results = await Promise.allSettled(
-        queries.map((text) => bookSearcher.search(text)),
-    );
-
     const allNewBooks: Book[] = [];
-    for (const result of results) {
-        if (result.status === 'fulfilled') {
-            allNewBooks.push(...result.value);
-        }
+    for (const query of queries) {
+        const results = await bookSearcher.search(query);
+        allNewBooks.push(...results);
     }
     return allNewBooks;
 }
