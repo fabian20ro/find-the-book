@@ -8,6 +8,7 @@ const SCAN_INTERVAL_MS = 2000;
 const OCR_TIMEOUT_MS = 10_000;
 const MIN_BRIGHTNESS = 40;
 const SECONDARY_QUERY_MIN_LENGTH = 8;
+const MAX_QUERIES_PER_SCAN = 5;
 
 let scanTimer: ReturnType<typeof setTimeout> | null = null;
 let isPaused = false;
@@ -201,7 +202,7 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
     // deduped and excluding lines that are identical to the combined query (single-line case)
     const longIndividuals = [...new Set(texts.filter((t) => t.length >= SECONDARY_QUERY_MIN_LENGTH && t !== combined))];
 
-    const queries = [combined, ...longIndividuals];
+    const queries = [combined, ...longIndividuals].slice(0, MAX_QUERIES_PER_SCAN);
 
     const results = await Promise.allSettled(
         queries.map((text) => bookSearcher.search(text)),
