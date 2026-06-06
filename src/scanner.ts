@@ -218,9 +218,15 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
 
 function handleScanError(err: unknown, label: string, ocr: TextRecognizer): void {
     console.error(label, err);
-    if (err instanceof Error && err.message === 'OCR timed out') {
-        toast('OCR timed out — retrying on next scan.');
-        ocr.resetProcessing();
+    if (err instanceof Error) {
+        if (err.message === 'OCR timed out') {
+            toast('OCR timed out — retrying on next scan.');
+            ocr.resetProcessing();
+        } else {
+            toast(`${label} ${err.message}`);
+        }
+    } else {
+        toast(`${label} An unknown error occurred.`);
     }
 }
 
