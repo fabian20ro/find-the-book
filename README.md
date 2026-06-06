@@ -17,6 +17,13 @@ against the Google Books database.
 3. **Search** — Extracted text blocks are queried in parallel against Google Books API (free, no API key)
 4. **Display** — Matched books appear in a scrollable popup sorted by confidence, with cover, title, author, and ISBN
 
+## Core Features
+
+- **Google Books API integration**: No API key required (1k requests/day limit).
+- **OCR via Tesseract.js**: High-quality, in-browser OCR (loaded via CDN).
+- **Local storage persistence**: Your collections and search preferences are saved locally.
+- **Offline capabilities**: Service worker enabled for reliable offline use.
+
 ## Features
 
 - Real-time continuous scanning with auto-scan toggle (pause/resume)
