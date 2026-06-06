@@ -28,7 +28,7 @@ against the Google Books database.
 - Export found books to CSV download
 - Share the current book list via the native share sheet, with clipboard fallback
 - Remove individual books from the list
-- In-browser OCR via WebAssembly (no server, no cloud costs)
+- In-browser OCR via WebAssembly (no server, no cloud costs, **fully private/on-device**)
 - PWA support (installable, works offline after first load)
 
 ## Tech Stack
