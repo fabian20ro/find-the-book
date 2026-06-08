@@ -1,3 +1,4 @@
+import 'vitest-canvas-mock';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TextRecognizer } from './ocr';
 
@@ -269,6 +270,48 @@ describe('TextRecognizer', () => {
         it('is safe to call when not initialized', async () => {
             const recognizer = new TextRecognizer();
             await recognizer.destroy(); // should not throw
+        });
+    });
+});
+
+import { preprocessCanvas, frameBrightness } from './ocr';
+
+describe('ocr utilities', () => {
+    describe('preprocessCanvas', () => {
+        it('converts to grayscale and applies contrast stretch', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2;
+            canvas.height = 2;
+            const ctx = canvas.getContext('2d')!;
+            const imageData = ctx.createImageData(2, 2);
+            imageData.data.set([
+                255, 0, 0, 255,
+                0, 255, 0, 255,
+                0, 0, 255, 255,
+                255, 255, 255, 255
+            ]);
+            ctx.putImageData(imageData, 0, 0);
+
+            const result = preprocessCanvas(canvas, 0.5);
+            const resultData = ctx.getImageData(0, 0, 2, 2).data;
+            
+            expect(resultData[3]).toBe(255);
+            expect(resultData[4]).toBeDefined();
+        });
+    });
+
+    describe('frameBrightness', () => {
+        it('calculates brightness correctly', () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d')!;
+            const imageData = ctx.createImageData(1, 1);
+            imageData.data.set([100, 100, 100, 255]);
+            ctx.putImageData(imageData, 0, 0);
+
+            const brightness = frameBrightness(canvas);
+            expect(brightness).toBeCloseTo(100);
         });
     });
 });

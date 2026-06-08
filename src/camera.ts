@@ -36,11 +36,17 @@ export class CameraManager {
 
         // Wait for video to be ready
         await new Promise<void>((resolve) => {
-            this.video.onloadedmetadata = () => {
+            const onLoadedMetadata = () => {
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
                 resolve();
             };
+
+            if (this.video.readyState >= 2) {
+                onLoadedMetadata();
+            } else {
+                this.video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+            }
         });
 
         // Listen for camera disconnection
