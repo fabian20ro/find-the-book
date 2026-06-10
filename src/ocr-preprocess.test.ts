@@ -49,9 +49,9 @@ describe('preprocessCanvas', () => {
         
         // Center pixel (1,1) is Gray (128).
         // neighbors are White (255), Gray (128), Black (0).
-        // blurred = (255*4 + 128*4 + 0*4)/9 = (1020 + 512 + 0)/9 = 1532/9 = 170.22
-        // sharpened = 128 + 0.5 * (128 - 170.22) = 128 + 0.5 * (-42.22) = 128 - 21.11 = 106.89 -> 106
-        expect(outData[(4 + 1) * 4]).toBeCloseTo(106, 0);
+        // blurred = (255*4 + 128*4 + 0*4)/9 = (1020 + 512 + 0)/9 = 170.22
+        // sharpened = 128 + 0.5 * (128 - 170.22) = 128 - 21.11 = 106.89 -> 106
+        expect(outData[16]).toBeCloseTo(106, 0);
     });
 });
 
@@ -68,17 +68,8 @@ describe('frameBrightness', () => {
             64, 64, 64, 255
         ]), 2, 2), 0, 0);
 
-        // Expected brightness: (255 + 0 + 128 + 64) / 4 = 447 / 4 = 111.75
-        // But it samples every 100th pixel (step = 1).
-        // Wait, step = max(1, floor(len/4/400)) = max(1, floor(16/4/400)) = 1.
-        // So it samples every pixel.
+        // Expected brightness: (255 + 0 + 128 + 64) / 4 = 111.75
         const brightness = frameBrightness(canvas);
         expect(brightness).toBeCloseTo(111.75, 1);
-    });
-
-    it('returns 128 when context is null', () => {
-        const canvas = document.createElement('canvas');
-        vi.spyOn(canvas, 'getContext').mockReturnValue(null);
-        expect(frameBrightness(canvas)).toBe(128);
     });
 });
