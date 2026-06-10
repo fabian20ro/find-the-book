@@ -62,7 +62,6 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
 
     // Lightweight unsharp mask: sharpen = original + strength * (original - blurred)
     // Uses a simple 3x3 box blur approximation for speed
-    const STRENGTH = 0.5;
     const sharpened = new Uint8Array(pixelCount);
     for (let y = 0; y < height; y++) {
         // ⚡ Bolt Optimization: Precalculate row offsets
