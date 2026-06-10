@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import 'vitest-canvas-mock';
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
