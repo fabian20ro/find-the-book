@@ -20,7 +20,7 @@ class MockCanvasContext {
             height: h
         };
     }
-    putImageData = vi.fn(function(imageData: any) {
+    putImageData = vi.fn((imageData: ImageData) => {
         this.data = imageData.data;
     });
 }

@@ -13,18 +13,18 @@ class MockCanvasContext {
     createImageData(w: number, h: number) {
         return { data: new Uint8ClampedArray(w * h * 4), width: w, height: h };
     }
-    putImageData(imageData: any) {
-        this.data.set(imageData.data);
-    }
+    putImageData = vi.fn((imageData: ImageData) => {
+        this.data = new Uint8ClampedArray(imageData.data);
+    });
 }
-
-const mockCtx = new MockCanvasContext();
 
 describe('ocr utilities', () => {
     let canvas: HTMLCanvasElement;
+    let mockCtx: MockCanvasContext;
 
     beforeEach(() => {
         canvas = document.createElement('canvas');
+        mockCtx = new MockCanvasContext();
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCtx as any);
     });
 
@@ -66,7 +66,7 @@ describe('ocr utilities', () => {
                 64, 64, 64, 255
             ]), 2, 2), 0, 0);
             const brightness = frameBrightness(canvas);
-            expect(brightness).toBeCloseTo(141.31, 1);
+            expect(brightness).toBeCloseTo(147.56, 1);
         });
     });
 });
