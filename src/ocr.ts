@@ -16,7 +16,7 @@ const LANG_WHITELISTS: Record<string, string> = {
     spa: COMMON_CHARS + 'áéíóúüñÁÉÍÓÚÜÑ¿¡',
     por: COMMON_CHARS + 'àáâãçéêíóôõúÀÁÂÃÇÉÊÍÓÔÕÚ',
     nld: COMMON_CHARS + 'àáâäèéêëïíîòóôöùúûü',
-    pol: COMMON_CHARS + 'ąćęłńóśźżĄĆĘŁŃÓŚŹŻ',
+    pol: COMMON_CHARS + 'ąćęłńóśźżĄĆĘŁŃÓŚŻ',
     hun: COMMON_CHARS + 'áéíóöőúüűÁÉÍÓÖŐÚÜŰ',
     ces: COMMON_CHARS + 'áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ',
     tur: COMMON_CHARS + 'çğıöşüÇĞİÖŞÜ',
@@ -26,6 +26,7 @@ const LANG_WHITELISTS: Record<string, string> = {
 /**
  * Convert to grayscale, apply linear contrast stretch, and sharpen.
  * Falls back to the original canvas if 2D context is unavailable.
+ *
  */
 export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0.5): HTMLCanvasElement {
     const ctx = canvas.getContext('2d');
@@ -118,7 +119,7 @@ export function frameBrightness(canvas: HTMLCanvasElement): number {
     let sum = 0;
     let count = 0;
     for (let i = 0; i < data.length; i += step) {
-        sum += (data[i] + data[i + 1] + data[i + 2]) / 3;
+        sum += (data[i] + data[i+1] + data[i+2] + data[i+3]) / 4;
         count++;
     }
     return count > 0 ? sum / count : 128;
