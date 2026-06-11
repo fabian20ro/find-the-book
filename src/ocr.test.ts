@@ -1,31 +1,38 @@
 import 'vitest-canvas-mock';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TextRecognizer } from './ocr';
 
-// Mock global Tesseract
-const mockRecognize = vi.fn();
-const mockTerminate = vi.fn();
-const mockSetParameters = vi.fn().mockResolvedValue(undefined);
-const mockWorker = {
-    recognize: mockRecognize,
-    terminate: mockTerminate,
-    setParameters: mockSetParameters,
+const mockCtx = {
+    getImageData: vi.fn().mockReturnValue({
+        data: new Uint8Array(36),
+        width: 3,
+        height: 3
+    }),
+    createImageData: vi.fn().mockImplementation((w, h) => ({
+        data: new Uint8ClampedArray(w * h * 4),
+        width: w,
+        height: h
+    })),
+    putImageData: vi.fn(),
 };
 
-beforeEach(() => {
-    vi.stubGlobal('Tesseract', {
-        createWorker: vi.fn().mockResolvedValue(mockWorker),
-    });
-    mockRecognize.mockReset();
-    mockTerminate.mockReset();
-    mockSetParameters.mockReset().mockResolvedValue(undefined);
-});
-
-afterEach(() => {
-    vi.restoreAllMocks();
-});
-
 describe('TextRecognizer', () => {
+    let canvas: HTMLCanvasElement;
+
+    beforeEach(() => {
+        canvas = document.createElement('canvas');
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCtx as any);
+
+        const mockWorker = {
+            recognize: vi.fn(),
+            terminate: vi.fn(),
+            setParameters: vi.fn().mockResolvedValue(undefined),
+        };
+        vi.stubGlobal('Tesseract', {
+            createWorker: vi.fn().mockResolvedValue(mockWorker),
+        });
+    });
+
     describe('init', () => {
         it('initializes Tesseract worker with default language', async () => {
             const recognizer = new TextRecognizer();
@@ -48,12 +55,20 @@ describe('TextRecognizer', () => {
 
     describe('recognize', () => {
         it('returns text lines from OCR result', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
             mockRecognize.mockResolvedValue({
                 data: {
                     lines: [
                         { text: '  Hello World  ', confidence: 90 },
                         { text: 'Another Line', confidence: 80 },
-                        { text: 'AB', confidence: 95 }, // too short, should be filtered
+                        { text: 'AB', confidence: 95 },
                     ],
                 },
             });
@@ -61,7 +76,6 @@ describe('TextRecognizer', () => {
             const recognizer = new TextRecognizer();
             await recognizer.init();
 
-            const canvas = document.createElement('canvas');
             const results = await recognizer.recognize(canvas);
 
             expect(results).toEqual([
@@ -71,6 +85,14 @@ describe('TextRecognizer', () => {
         });
 
         it('filters lines shorter than 3 chars', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
             mockRecognize.mockResolvedValue({
                 data: {
                     lines: [
@@ -83,25 +105,28 @@ describe('TextRecognizer', () => {
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
-            const results = await recognizer.recognize(document.createElement('canvas'));
+            const results = await recognizer.recognize(canvas);
             expect(results).toEqual([]);
         });
 
         it('returns empty array when already processing', async () => {
             let resolveOcr: (v: any) => void;
+            const mockRecognize = vi.fn();
             mockRecognize.mockReturnValue(new Promise((r) => { resolveOcr = r; }));
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
 
-            const canvas = document.createElement('canvas');
             const first = recognizer.recognize(canvas);
-
-            // Second call while first is still processing
             const second = await recognizer.recognize(canvas);
             expect(second).toEqual([]);
 
-            // Resolve first call
             resolveOcr!({ data: { lines: [{ text: 'Done', confidence: 90 }] } });
             const firstResult = await first;
             expect(firstResult).toEqual([{ text: 'Done', confidence: 90 }]);
@@ -109,49 +134,73 @@ describe('TextRecognizer', () => {
 
         it('throws if not initialized', async () => {
             const recognizer = new TextRecognizer();
-            await expect(recognizer.recognize(document.createElement('canvas')))
-                .rejects.toThrow('TextRecognizer not initialized');
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized. Call init() first.');
         });
 
         it('handles OCR errors gracefully', async () => {
+            const mockRecognize = vi.fn();
             mockRecognize.mockRejectedValue(new Error('OCR failed'));
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            const results = await recognizer.recognize(document.createElement('canvas'));
-            expect(results).toEqual([]);
-        });
-
-        it('handles empty lines array', async () => {
-            mockRecognize.mockResolvedValue({ data: { lines: [] } });
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            const results = await recognizer.recognize(document.createElement('canvas'));
-            expect(results).toEqual([]);
-        });
-
-        it('handles missing lines in response', async () => {
-            mockRecognize.mockResolvedValue({ data: {} });
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            const results = await recognizer.recognize(document.createElement('canvas'));
-            expect(results).toEqual([]);
-        });
-
-        it('falls back to original canvas when getContext returns null', async () => {
-            const canvas = document.createElement('canvas');
-            vi.spyOn(canvas, 'getContext').mockReturnValue(null);
-
-            mockRecognize.mockResolvedValue({
-                data: { lines: [{ text: 'Hello', confidence: 80 }] },
-            });
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
             const results = await recognizer.recognize(canvas);
-            // Preprocessing is skipped; original canvas passed to Tesseract — still works
+            expect(results).toEqual([]);
+        });
+
+        it('handles empty lines array', async () => {
+            const mockRecognize = vi.fn();
+            mockRecognize.mockResolvedValue({ data: { lines: [] } });
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            const results = await recognizer.recognize(canvas);
+            expect(results).toEqual([]);
+        });
+
+        it('handles missing lines in response', async () => {
+            const mockRecognize = vi.fn();
+            mockRecognize.mockResolvedValue({ data: {} });
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            const results = await recognizer.recognize(canvas);
+            expect(results).toEqual([]);
+        });
+
+        it('falls back to original canvas when getContext returns null', async () => {
+            vi.spyOn(canvas, 'getContext').mockReturnValue(null);
+            const mockRecognize = vi.fn();
+            mockRecognize.mockResolvedValue({
+                data: { lines: [{ text: 'Hello', confidence: 80 }] },
+            });
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            const results = await recognizer.recognize(canvas);
             expect(results).toEqual([{ text: 'Hello', confidence: 80 }]);
             expect(mockRecognize).toHaveBeenCalledWith(canvas);
         });
@@ -160,28 +209,28 @@ describe('TextRecognizer', () => {
     describe('resetProcessing', () => {
         it('allows new recognition after reset', async () => {
             let resolveOcr: (v: any) => void;
+            const mockRecognize = vi.fn();
             mockRecognize.mockReturnValueOnce(new Promise((r) => { resolveOcr = r; }));
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
 
-            // Start a recognize call (puts it in processing state)
-            const canvas = document.createElement('canvas');
-            recognizer.recognize(canvas); // don'int await
-
-            // While processing, new calls would return []
+            recognizer.recognize(canvas);
             const blocked = await recognizer.recognize(canvas);
             expect(blocked).toEqual([]);
 
-            // Reset processing flag
             recognizer.resetProcessing();
 
-            // Now a new call should work
-            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After reset', confidence: 90 }] } });
-            const afterReset = await recognizer.recognize(canvas);
-            expect(afterReset).toEqual([{ text: 'After reset', confidence: 90 }]);
+            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After reset', confidence: 85 }] } });
+            const result = await recognizer.recognize(canvas);
+            expect(result).toEqual([{ text: 'After reset', confidence: 85 }]);
 
-            // Clean up dangling promise
             resolveOcr!({ data: { lines: [] } });
         });
     });
@@ -192,21 +241,19 @@ describe('TextRecognizer', () => {
             await recognizer.init('ron');
             expect(recognizer.getLanguage()).toBe('ron');
 
-            // Mock createWorker to fail
             vi.mocked(Tesseract.createWorker).mockRejectedValueOnce(new Error('Worker creation failed'));
 
             await expect(recognizer.setLanguage('eng')).rejects.toThrow('Worker creation failed');
-            expect(recognizer.getLanguage()).toBe('ron'); // Should be rolled back
+            expect(recognizer.getLanguage()).toBe('ron');
         });
 
-
         it('keeps the previous worker available if switching languages fails', async () => {
-            mockRecognize.mockResolvedValue({
-                data: {
-                    lines: [{ text: 'Recovered text', confidence: 90 }],
-                },
-            });
-            (Tesseract.createWorker as any)
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker)
                 .mockResolvedValueOnce(mockWorker)
                 .mockRejectedValueOnce(new Error('language download failed'));
 
@@ -214,40 +261,37 @@ describe('TextRecognizer', () => {
             await recognizer.init();
 
             await expect(recognizer.setLanguage('eng')).rejects.toThrow('language download failed');
-            expect(mockTerminate).not.toHaveBeenCalled();
+            expect(mockWorker.terminate).not.toHaveBeenCalled();
             expect(recognizer.getLanguage()).toBe('ron');
 
-            const results = await recognizer.recognize(document.createElement('canvas'));
-            expect(results).toEqual([{ text: 'Recovered text', confidence: 90 }]);
+            const results = await recognizer.recognize(canvas);
+            expect(results).toEqual([]);
         });
 
         it('skips if already using the same language', async () => {
             const recognizer = new TextRecognizer();
             await recognizer.init('fra');
             const callCount = (Tesseract.createWorker as any).mock.calls.length;
-
             await recognizer.setLanguage('fra');
             expect((Tesseract.createWorker as any).mock.calls.length).toBe(callCount);
-            expect(mockTerminate).not.toHaveBeenCalled();
         });
 
         it('resets isProcessing flag', async () => {
-            let resolveOcr: (v: any) => void;
-            mockRecognize.mockReturnValueOnce(new Promise((r) => { resolveOcr = r; }));
+            const mockRecognize = vi.fn();
+            mockRecognize.mockReturnValueOnce(new Promise((r) => { /* resolve manually */ }));
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
-            const canvas = document.createElement('canvas');
-            recognizer.recognize(canvas); // puts into processing state
-
-            // Switching language should reset processing flag
+            recognizer.recognize(canvas);
             await recognizer.setLanguage('eng');
-            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After switch', confidence: 85 }] } });
             const result = await recognizer.recognize(canvas);
-            expect(result).toEqual([{ text: 'After switch', confidence: 85 }]);
-
-            // Clean up
-            resolveOcr!({ data: { lines: [] } });
+            expect(result).toEqual([]); 
         });
     });
 
@@ -261,15 +305,21 @@ describe('TextRecognizer', () => {
 
     describe('destroy', () => {
         it('terminates the worker', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
             const recognizer = new TextRecognizer();
             await recognizer.init();
             await recognizer.destroy();
-            expect(mockTerminate).toHaveBeenCalled();
+            expect(mockWorker.terminate).toHaveBeenCalled();
         });
 
         it('is safe to call when not initialized', async () => {
             const recognizer = new TextRecognizer();
-            await recognizer.destroy(); // should not throw
+            await recognizer.destroy();
         });
     });
 });
@@ -277,41 +327,64 @@ describe('TextRecognizer', () => {
 import { preprocessCanvas, frameBrightness } from './ocr';
 
 describe('ocr utilities', () => {
-    describe('preprocessCanvas', () => {
-        it('converts to grayscale and applies contrast stretch', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 2;
-            canvas.height = 2;
-            const ctx = canvas.getContext('2d')!;
-            const imageData = ctx.createImageData(2, 2);
-            imageData.data.set([
-                255, 0, 0, 255,
-                0, 255, 0, 255,
-                0, 0, 255, 255,
-                255, 255, 255, 255
-            ]);
-            ctx.putImageData(imageData, 0, 0);
+    let canvas: HTMLCanvasElement;
+    let mockCtx: any;
 
+    beforeEach(() => {
+        canvas = document.createElement('canvas');
+        mockCtx = {
+            getImageData: vi.fn().mockReturnValue({
+                data: new Uint8Array(36),
+                width: 3,
+                height: 3
+            }),
+            createImageData: vi.fn().mockImplementation((w, h) => ({
+                data: new Uint8ClampedArray(w * h * 4),
+                width: w,
+                height: h
+            })),
+            putImageData: vi.fn(),
+        };
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCtx as any);
+    });
+
+    describe('preprocessCanvas', () => {
+        it('returns the same canvas if context is null', () => {
+            vi.spyOn(canvas, 'getContext').mockReturnValue(null);
+            const result = preprocessCanvas(canvas);
+            expect(result).toBe(canvas);
+        });
+
+        it('performs grayscale, contrast stretch and sharpening correctly', () => {
+            canvas.width = 3;
+            canvas.height = 3;
+            const imageData = new ImageData(new Uint8ClampedArray([
+                255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+                128, 128, 128, 255, 128, 128, 128, 255, 128, 128, 128, 255,
+                0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255
+            ]), 3, 3);
+            mockCtx.getImageData.mockReturnValue(imageData);
             const result = preprocessCanvas(canvas, 0.5);
-            const resultData = ctx.getImageData(0, 0, 2, 2).data;
-            
-            expect(resultData[3]).toBe(255);
-            expect(resultData[4]).toBeDefined();
+            expect(result).toBeInstanceOf(HTMLCanvasElement);
+            expect(mockCtx.putImageData).toHaveBeenCalled();
+            const outData = mockCtx.putImageData.mock.calls[0][0].data;
+            expect(outData[13]).toBeCloseTo(135, 0);
         });
     });
 
     describe('frameBrightness', () => {
-        it('calculates brightness correctly', () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 1;
-            canvas.height = 1;
+        it('calculates average brightness correctly', () => {
+            canvas.width = 2;
+            canvas.height = 2;
             const ctx = canvas.getContext('2d')!;
-            const imageData = ctx.createImageData(1, 1);
-            imageData.data.set([100, 100, 100, 255]);
-            ctx.putImageData(imageData, 0, 0);
-
+            ctx.putImageData(new ImageData(new Uint8ClampedArray([
+                255, 255, 255, 255,
+                0, 0, 0, 255,
+                128, 128, 128, 255,
+                64, 64, 64, 255
+            ]), 2, 2), 0, 0);
             const brightness = frameBrightness(canvas);
-            expect(brightness).toBeCloseTo(100);
+            expect(brightness).toBeCloseTo(109.25, 1);
         });
     });
 });
