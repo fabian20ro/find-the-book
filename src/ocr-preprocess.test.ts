@@ -48,28 +48,20 @@ describe('preprocessCanvas', () => {
         
         const outData = mockCtx.putImageData.mock.calls[0][0].data;
         
-        // Center pixel (1,1) is index 13 in a 3x3 array (4*3 + 1 = 13)
-        // Wait, index 13 is row 4, col 1. Row index = 1, Col index = 1.
-        // Index = row * width + col = 1 * 3 + 1 = 4.
-        // But data is 1D array of 36 elements (3*3*4).
-        // Pixel (1,1) in 1D index (row*width + col) is 4.
-        // But in the RGBA data array it's 4*3 + 1 = 13.
-        // Let's check calculation:
-        // Neighbors sum (8 pixels):
-        // (0,0), (1,0), (2,0) -> 0, 3, 6
-        // (0,1), (2,1) -> 1, 5
-        // (0,2), (1,2), (2,2) -> 8, 11, 14 (Wait, 3x3)
-        // 3x3 indices:
-        // 0 1 2
-        // 3 4 5
-        // 6 7 8
-        // indices for neighbors: 0, 1, 2, 3, 5, 6, 7, 8.
-        // Neighbors values:
+        // Center pixel (1,1) is RGBA indices 16, 17, 18, 19
+        // Indices for 3x3:
+        // 0  1  2
+        // 3  4  5
+        // 6  7  8
+        // Neighbors of (1,1) are 0, 1, 2, 3, 5, 6, 7, 8
+        // Neighbors values (from imageData):
         // 0:255, 1:255, 2:255, 3:128, 5:128, 6:0, 7:0, 8:0.
-        // Sum = 3*255 + 2*128 + 3*0 = 765 + 256 = 1021.
+        // Sum = 3*255 + 2*128 + 3*0 = 1021.
         // blurred = 1021/9 = 113.44
-        // v = 128 + 0.5 * (128 - 113.44) = 128 + 7.28 = 135.28 -> 135.
-        expect(outData[13]).toBeCloseTo(135, 0);
+        // v = 128 + 0.5 * (128 - 113.44) = 135.28
+        expect(outData[16]).toBeCloseTo(135, 0); // Red
+        expect(outData[17]).toBeCloseTo(135, 0); // Green
+        expect(outData[18]).toBeCloseTo(135, 0); // Blue
     });
 });
 
@@ -86,8 +78,8 @@ describe('frameBrightness', () => {
             64, 64, 64, 255
         ]), 2, 2), 0, 0);
 
-        // Expected brightness: (255 + 0 + 128 + 64) / 4 = 109.25
+        // Expected brightness: (255 + 0 + 128 + 64) / 4 = 111.75
         const brightness = frameBrightness(canvas);
-        expect(brightness).toBeCloseTo(109.25, 1);
+        expect(brightness).toBeCloseTo(111.75, 1);
     });
 });
