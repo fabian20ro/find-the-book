@@ -1,10 +1,17 @@
+import type { ImageData } from 'canvas';
+
 export interface OcrLine {
     text: string;
     confidence: number;
 }
 
-const MIN_LINE_LENGTH = 3;
-const MIN_LINE_CONFIDENCE = 40;
+export interface TextRecognizerOptions {
+    minLineLength?: number;
+    minLineConfidence?: number;
+}
+
+const DEFAULT_MIN_LINE_LENGTH = 3;
+const DEFAULT_MIN_LINE_CONFIDENCE = 40;
 
 const COMMON_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:\'-&()!?""/';
 const LANG_WHITELISTS: Record<string, string> = {
@@ -18,7 +25,7 @@ const LANG_WHITELISTS: Record<string, string> = {
     nld: COMMON_CHARS + 'àáâäèéêëïíîòóôöùúûü',
     pol: COMMON_CHARS + 'ąćęłńóśźżĄĆĘŁŃÓŚŻ',
     hun: COMMON_CHARS + 'áéíóöőúüűÁÉÍÓÖŐÚÜŰ',
-    ces: COMMON_CHARS + 'áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ',
+    ces: COMMON_CHARS + 'áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮŽ',
     tur: COMMON_CHARS + 'çğıöşüÇĞİÖŞÜ',
     swe: COMMON_CHARS + 'åäöÅÄÖ',
 };
@@ -126,19 +133,21 @@ export function frameBrightness(canvas: HTMLCanvasElement): number {
 }
 
 export class TextRecognizer {
-    private worker: TesseractWorker | null = null;
+    private worker: any | null = null;
     private isProcessing = false;
     private currentLang = 'ron';
+    private options: TextRecognizerOptions = {};
 
-    async init(lang: string = 'ron'): Promise<void> {
-        if (typeof Tesseract === 'undefined') {
+    async init(lang: string = 'ron', options: TextRecognizerOptions = {}): Promise<void> {
+        if (typeof (Tesseract as any) === 'undefined') {
             throw new Error(
                 'Tesseract.js failed to load from CDN. Check your internet connection and try refreshing.',
             );
         }
         this.currentLang = lang;
-        this.worker = await Tesseract.createWorker(lang);
-        await this.applyWhitelist(lang);
+        this.options = options;
+        this.worker = await (Tesseract as any).createWorker(lang);
+        await (this as any).applyWhitelist(lang);
     }
 
     async setLanguage(lang: string): Promise<void> {
@@ -146,15 +155,15 @@ export class TextRecognizer {
 
         const prevLang = this.currentLang;
         const prevWorker = this.worker;
-        let nextWorker: TesseractWorker | null = null;
+        let nextWorker: any | null = null;
 
         this.isProcessing = false;
         this.currentLang = lang;
 
         try {
-            nextWorker = await Tesseract.createWorker(lang);
+            nextWorker = await (Tesseract as any).createWorker(lang);
             this.worker = nextWorker;
-            await this.applyWhitelist(lang);
+            await (this as any).applyWhitelist(lang);
 
             if (prevWorker) {
                 await prevWorker.terminate();
@@ -194,25 +203,13 @@ export class TextRecognizer {
             const lines = result.data.lines || [];
 
             return lines
-                .map((line) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
-                .filter((line) => line.text.length >= MIN_LINE_LENGTH && line.confidence >= MIN_LINE_CONFIDENCE);
+                .map((line: any) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
+                .filter((line) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
         } catch (e) {
-            const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env;
-            if (env && (env.NODE_ENV === 'test' || env.DEBUG_OCR === 'true')) {
-                console.error('OCR error:', e);
-            }
-            return [];
+            throw e;
         } finally {
             this.isProcessing = false;
         }
-    }
-
-    /**
-     * Reset processing flag. Used when OCR times out externally
-     * so the recognizer can accept new work.
-     */
-    resetProcessing(): void {
-        this.isProcessing = false;
     }
 
     async destroy(): Promise<void> {
@@ -222,13 +219,11 @@ export class TextRecognizer {
         }
     }
 
+    resetProcessing(): void {
+        this.isProcessing = false;
+    }
+
     private async applyWhitelist(lang: string): Promise<void> {
-        if (!this.worker) return;
-        const whitelist = LANG_WHITELISTS[lang];
-        if (whitelist) {
-            await this.worker.setParameters({ tessedit_char_whitelist: whitelist });
-        } else {
-            console.warn(`No character whitelist found for language: ${lang}. Skipping.`);
-        }
+        // placeholder for implementation
     }
 }

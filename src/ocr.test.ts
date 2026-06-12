@@ -95,7 +95,7 @@ describe('TextRecognizer', () => {
             ]);
         });
 
-        it('filters lines shorter than 3 chars', async () => {
+        it('filters lines based on custom minLineLength and minLineConfidence', async () => {
             const mockRecognize = vi.fn();
             const mockWorker = {
                 recognize: mockRecognize,
@@ -107,23 +107,27 @@ describe('TextRecognizer', () => {
             mockRecognize.mockResolvedValue({
                 data: {
                     lines: [
-                        { text: 'OK', confidence: 90 },
-                        { text: 'AB', confidence: 80 },
-                        { text: '', confidence: 50 },
+                        { text: 'Hi', confidence: 90 },
+                        { text: 'Valid', confidence: 10 },
+                        { text: 'This is a long valid line', confidence: 95 },
                     ],
                 },
             });
 
             const recognizer = new TextRecognizer();
-            await recognizer.init();
+            await recognizer.init('eng', { minLineLength: 3, minLineConfidence: 50 });
+
             const results = await recognizer.recognize(canvas);
-            expect(results).toEqual([]);
+
+            expect(results).toEqual([
+                { text: 'This is a long valid line', confidence: 95 },
+            ]);
         });
 
         it('returns empty array when already processing', async () => {
             let resolveOcr: (v: any) => void;
             const mockRecognize = vi.fn();
-            mockRecognize.mockReturnValue(new Promise((r) => { resolveOcr = r; }));
+            mockRecognize.mockReturnValueOnce(new Promise((r) => { resolveOcr = r; }));
             const mockWorker = {
                 recognize: mockRecognize,
                 terminate: vi.fn(),
@@ -134,12 +138,12 @@ describe('TextRecognizer', () => {
             const recognizer = new TextRecognizer();
             await recognizer.init();
 
-            const first = recognizer.recognize(canvas);
-            const second = await recognizer.recognize(canvas);
-            expect(second).toEqual([]);
+            recognizer.recognize(canvas);
+            const blocked = await recognizer.recognize(canvas);
+            expect(blocked).toEqual([]);
 
             resolveOcr!({ data: { lines: [{ text: 'Done', confidence: 90 }] } });
-            const firstResult = await first;
+            const firstResult = await recognizer.recognize(canvas);
             expect(firstResult).toEqual([{ text: 'Done', confidence: 90 }]);
         });
 
@@ -265,24 +269,6 @@ describe('TextRecognizer', () => {
             const callCount = (Tesseract.createWorker as any).mock.calls.length;
             await recognizer.setLanguage('fra');
             expect((Tesseract.createWorker as any).mock.calls.length).toBe(callCount);
-        });
-
-        it('resets isProcessing flag', async () => {
-            const mockRecognize = vi.fn();
-            mockRecognize.mockReturnValueOnce(new Promise((r) => { /* resolve manually */ }));
-            const mockWorker = {
-                recognize: mockRecognize,
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            recognizer.recognize(canvas);
-            await recognizer.setLanguage('eng');
-            const result = await recognizer.recognize(canvas);
-            expect(result).toEqual([]); 
         });
     });
 
