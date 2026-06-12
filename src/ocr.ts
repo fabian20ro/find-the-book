@@ -188,6 +188,9 @@ export class TextRecognizer {
         try {
             const processedCanvas = preprocessCanvas(canvas);
             const result = await this.worker.recognize(processedCanvas);
+            if (!result || !result.data) {
+                throw new Error('Tesseract recognition returned invalid result');
+            }
             const lines = result.data.lines || [];
 
             return lines
