@@ -201,7 +201,7 @@ export class TextRecognizer {
             if (env && (env.NODE_ENV === 'test' || env.DEBUG_OCR === 'true')) {
                 console.error('OCR error:', e);
             }
-            return [];
+            throw e;
         } finally {
             this.isProcessing = false;
         }
