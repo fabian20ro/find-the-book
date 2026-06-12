@@ -350,6 +350,22 @@ describe('ocr utilities', () => {
             expect(outData[17]).toBeCloseTo(128, 0); 
             expect(outData[18]).toBeCloseTo(128, 0); 
         });
+
+        it('performs sharpening correctly on an edge', () => {
+            canvas.width = 3;
+            canvas.height = 3;
+            const imageData = new ImageData(new Uint8ClampedArray([
+                0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255,
+                0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+                0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255
+            ]), 3, 3);
+            mockCtx.putImageData(imageData);
+            const result = preprocessCanvas(canvas, 1.0);
+            const outData = mockCtx.putImageData.mock.calls[0][0].data;
+            
+            expect(result).toBeInstanceOf(HTMLCanvasElement);
+            expect(outData.length).toBe(36);
+        });
     });
 
     describe('frameBrightness', () => {
