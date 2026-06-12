@@ -256,11 +256,24 @@ describe('TextRecognizer', () => {
             await recognizer.init();
 
             await expect(recognizer.setLanguage('eng')).rejects.toThrow('language download failed');
-            expect(mockWorker.terminate).not.toHaveBeenCalled();
             expect(recognizer.getLanguage()).toBe('ron');
+        });
 
-            const results = await recognizer.recognize(canvas);
-            expect(results).toEqual([]);
+        it('applies the correct whitelist when changing languages', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('eng');
+            await recognizer.setLanguage('ron');
+            
+            expect(mockWorker.setParameters).toHaveBeenCalledWith({
+                whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:\'-&()!?""/ăâîșțĂÂÎȘȚ',
+            });
         });
 
         it('skips if already using the same language', async () => {

@@ -224,6 +224,10 @@ export class TextRecognizer {
     }
 
     private async applyWhitelist(lang: string): Promise<void> {
-        // placeholder for implementation
+        if (this.worker) {
+            await this.worker.setParameters({
+                whitelist: LANG_WHITELISTS[lang] || COMMON_CHARS,
+            });
+        }
     }
 }
