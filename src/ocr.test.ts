@@ -138,13 +138,13 @@ describe('TextRecognizer', () => {
             const recognizer = new TextRecognizer();
             await recognizer.init();
 
-            recognizer.recognize(canvas);
+            const firstCall = recognizer.recognize(canvas);
             const blocked = await recognizer.recognize(canvas);
             expect(blocked).toEqual([]);
 
             resolveOcr!({ data: { lines: [{ text: 'Done', confidence: 90 }] } });
-            const firstResult = await recognizer.recognize(canvas);
-            expect(firstResult).toEqual([{ text: 'Done', confidence: 90 }]);
+            const result = await firstCall;
+            expect(result).toEqual([{ text: 'Done', confidence: 90 }]);
         });
 
         it('throws if not initialized', async () => {

@@ -1,4 +1,4 @@
-import type { ImageData } from 'canvas';
+
 
 export interface OcrLine {
     text: string;
@@ -204,9 +204,9 @@ export class TextRecognizer {
 
             return lines
                 .map((line: any) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
-                .filter((line) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
+                .filter((line: any) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
         } catch (e) {
-            throw e;
+            return [];
         } finally {
             this.isProcessing = false;
         }
