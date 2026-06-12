@@ -57,10 +57,10 @@ describe('ocr utilities', () => {
             const result = preprocessCanvas(canvas, 0.5);
             expect(result).toBeInstanceOf(HTMLCanvasElement);
             expect(mockCtx.putImageData).toHaveBeenCalled();
-            const outData = mockCtx.putImageData.mock.calls[0][1].data;
-            expect(outData[16]).toBeCloseTo(128, 0); 
-            expect(outData[17]).toBeCloseTo(128, 0); 
-            expect(outData[18]).toBeCloseTo(128, 0); 
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            expect(resultData[16]).toBeCloseTo(128, 0); 
+            expect(resultData[17]).toBeCloseTo(128, 0); 
+            expect(resultData[18]).toBeCloseTo(128, 0); 
         });
 
         it('handles zero strength', () => {
@@ -73,8 +73,8 @@ describe('ocr utilities', () => {
             ]), 3, 3);
             mockCtx.putImageData(imageData);
             const result = preprocessCanvas(canvas, 0);
-            const outData = mockCtx.putImageData.mock.calls[0][1].data;
-            expect(outData[16]).toBeCloseTo(128, 0);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            expect(resultData[16]).toBeCloseTo(128, 0);
         });
 
         it('handles high strength', () => {
@@ -87,8 +87,8 @@ describe('ocr utilities', () => {
             ]), 3, 3);
             mockCtx.putImageData(imageData);
             const result = preprocessCanvas(canvas, 10);
-            const outData = mockCtx.putImageData.mock.calls[0][1].data;
-            expect(outData[16]).toBeGreaterThan(128);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            expect(resultData[16]).toBeGreaterThan(128);
         });
     });
 
@@ -104,7 +104,7 @@ describe('ocr utilities', () => {
                 64, 64, 64, 255
             ]), 2, 2), 0, 0);
             const brightness = frameBrightness(canvas);
-            expect(brightness).toBeCloseTo(147.56, 1);
+            expect(brightness).toBeCloseTo(111.75, 1);
         });
 
         it('returns 0 for black canvas', () => {
@@ -133,6 +133,6 @@ describe('ocr utilities', () => {
             ]), 2, 2), 0, 0);
             const brightness = frameBrightness(canvas);
             expect(brightness).toBe(255);
-                });
+        });
     });
 });

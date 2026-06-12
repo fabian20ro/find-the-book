@@ -126,7 +126,7 @@ export function frameBrightness(canvas: HTMLCanvasElement): number {
     let sum = 0;
     let count = 0;
     for (let i = 0; i < data.length; i += step) {
-        sum += (data[i] + data[i+1] + data[i+2] + data[i+3]) / 4;
+        sum += (data[i] + data[i+1] + data[i+2]) / 3;
         count++;
     }
     return count > 0 ? sum / count : 128;

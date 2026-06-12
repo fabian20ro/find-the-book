@@ -364,7 +364,7 @@ describe('ocr utilities', () => {
                 64, 64, 64, 255
             ]), 2, 2), 0, 0);
             const brightness = frameBrightness(canvas);
-            expect(brightness).toBeCloseTo(147.56, 1);
+            expect(brightness).toBeCloseTo(111.75, 1);
         });
     });
 });
