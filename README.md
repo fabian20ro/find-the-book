@@ -27,6 +27,7 @@ against the Google Books database.
 - **Smart Results**: Book candidates sorted by confidence score.
 - **Management**: Filter results by title, author, or ISBN; remove individual books from the list.
 - **Data Portability**: Export found books to CSV; share list via native share sheet (with clipboard fallback).
+- **Persistent Storage**: Local storage for book collections and search preferences.
 - **Offline Ready**: PWA support for offline use after the first load.
 
 ## Tech Stack
