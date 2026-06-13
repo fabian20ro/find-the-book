@@ -381,5 +381,32 @@ describe('ocr utilities', () => {
             const brightness = frameBrightness(canvas);
             expect(brightness).toBeCloseTo(111.75, 1);
         });
+
+        it('calculates average brightness correctly with a single pixel', () => {
+            canvas.width = 1;
+            canvas.height = 1;
+            const ctx = canvas.getContext('2d')!;
+            ctx.putImageData(new ImageData(new Uint8ClampedArray([100, 100, 100, 255]), 1, 1), 0, 0);
+            const brightness = frameBrightness(canvas);
+            expect(brightness).toBeCloseTo(100, 1);
+        });
+
+        it('calculates average brightness correctly with a black image', () => {
+            canvas.width = 2;
+            canvas.height = 2;
+            const ctx = canvas.getContext('2d')!;
+            ctx.putImageData(new ImageData(new Uint8ClampedArray([0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255]), 2, 2), 0, 0);
+            const brightness = frameBrightness(canvas);
+            expect(brightness).toBeCloseTo(0, 1);
+        });
+
+        it('calculates average brightness correctly with a white image', () => {
+            canvas.width = 2;
+            canvas.height = 2;
+            const ctx = canvas.getContext('2d')!;
+            ctx.putImageData(new ImageData(new Uint8ClampedArray([255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255]), 2, 2), 0, 0);
+            const brightness = frameBrightness(canvas);
+            expect(brightness).toBeCloseTo(255, 1);
+        });
     });
 });
