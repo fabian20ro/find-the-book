@@ -152,7 +152,7 @@ describe('TextRecognizer', () => {
             await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized. Call init() first.');
         });
 
-        it('handles OCR errors gracefully', async () => {
+        it('throws when OCR fails', async () => {
             const mockRecognize = vi.fn();
             mockRecognize.mockRejectedValue(new Error('OCR failed'));
             const mockWorker = {
@@ -164,8 +164,7 @@ describe('TextRecognizer', () => {
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
-            const results = await recognizer.recognize(canvas);
-            expect(results).toEqual([]);
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('OCR failed');
         });
 
         it('handles empty lines array', async () => {

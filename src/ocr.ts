@@ -205,8 +205,6 @@ export class TextRecognizer {
             return lines
                 .map((line: any) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
                 .filter((line: any) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
-        } catch (e) {
-            return [];
         } finally {
             this.isProcessing = false;
         }
