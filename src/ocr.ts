@@ -225,9 +225,10 @@ export class TextRecognizer {
 
     private async applyWhitelist(lang: string): Promise<void> {
         if (this.worker) {
-            await this.worker.setParameters({
-                whitelist: LANG_WHITELISTS[lang] || COMMON_CHARS,
-            });
+            const whitelist = LANG_WHITELISTS[lang];
+            if (whitelist) {
+                await this.worker.setParameters({ whitelist });
+            }
         }
     }
 }
