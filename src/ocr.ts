@@ -212,6 +212,15 @@ export class TextRecognizer {
         }
     }
 
+    async verifyReadiness(): Promise<void> {
+        if (!this.worker) {
+            throw new Error('TextRecognizer not initialized.');
+        }
+        if (this.isProcessing) {
+            throw new Error('TextRecognizer is busy.');
+        }
+    }
+
     async destroy(): Promise<void> {
         if (this.worker) {
             await this.worker.terminate();

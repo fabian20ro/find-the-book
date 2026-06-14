@@ -30,6 +30,7 @@ function createMockCamera(frame: HTMLCanvasElement | null = document.createEleme
         captureFrame: vi.fn().mockReturnValue(frame),
         start: vi.fn(),
         stop: vi.fn(),
+        verifyReadiness: vi.fn().mockResolvedValue(undefined),
     };
 }
 
@@ -39,6 +40,7 @@ function createMockOcr(lines: string[] = []) {
         resetProcessing: vi.fn(),
         init: vi.fn(),
         destroy: vi.fn(),
+        verifyReadiness: vi.fn().mockResolvedValue(undefined),
     };
 }
 
