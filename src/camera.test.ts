@@ -147,4 +147,31 @@ describe('CameraManager', () => {
             camera.stop(); // should not throw
         });
     });
+
+    describe('verifyReadiness', () => {
+        it('succeeds when stream is active and video is ready', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            await expect(camera.verifyReadiness()).resolves.not.toThrow();
+        });
+
+        it('throws when stream is not active', async () => {
+            const camera = new CameraManager(video, canvas);
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera stream is not active.');
+        });
+
+        it('throws when track is disabled', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            (mockStream.track as any).enabled = false;
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera track is disabled.');
+        });
+
+        it('throws when video is not ready', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            Object.defineProperty(video, 'readyState', { value: 1, configurable: true });
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera video is not ready.');
+        });
+    });
 });
