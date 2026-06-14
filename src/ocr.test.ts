@@ -10,15 +10,17 @@ class MockCanvasContext {
         return {
             data: this.data,
             width: w,
-            height: h
-        };
+            height: h,
+            colorSpace: 'srgb'
+        } as ImageData;
     }
     createImageData(w: number, h: number) {
         return {
             data: new Uint8ClampedArray(w * h * 4),
             width: w,
-            height: h
-        };
+            height: h,
+            colorSpace: 'srgb'
+        } as ImageData;
     }
     putImageData = vi.fn((imageData: ImageData) => {
         this.data = imageData.data;
@@ -118,7 +120,7 @@ describe('TextRecognizer', () => {
             });
 
             const recognizer = new TextRecognizer();
-            await recognizer.init({ minLineLength: 3, minLineConfidence: 50 });
+            await recognizer.init('ron', { minLineLength: 3, minLineConfidence: 50 });
 
             const results = await recognizer.recognize(canvas);
 
@@ -155,7 +157,7 @@ describe('preprocessCanvas', () => {
             170, 170, 170, 255,
             180, 180, 180, 255,
         ]);
-        ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3 }, 0, 0);
+        ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3, colorSpace: 'srgb' } as ImageData, 0, 0);
 
         const result = preprocessCanvas(canvas);
         const resultData = ctx.getImageData(0, 0, 3, 3).data;
@@ -187,7 +189,7 @@ describe('preprocessCanvas', () => {
         largeData[idx+1] = 200;
         largeData[idx+2] = 200;
         largeData[idx+3] = 255;
-        largeCtx.putImageData({ data: new Uint8ClampedArray(largeData), width: 5, height: 5 }, 0, 0);
+        largeCtx.putImageData({ data: new Uint8ClampedArray(largeData), width: 5, height: 5, colorSpace: 'srgb' } as ImageData, 0, 0);
 
         const result = preprocessCanvas(largeCanvas, 0.5);
         const resultData = largeCtx.getImageData(0, 0, 5, 5).data;
