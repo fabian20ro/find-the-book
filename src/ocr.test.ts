@@ -197,12 +197,10 @@ describe('preprocessCanvas', () => {
         expect(resultData[idx]).toBeGreaterThan(200);
     });
     
-    it('does not crash with empty/tiny canvas', () => {
-        const tinyCanvas = document.createElement('canvas');
-        tinyCanvas.width = 1;
-        tinyCanvas.height = 1;
-        const tinyCtx = tinyCanvas.getContext('2d')!;
-        tinyCtx.fillRect(0, 0, 1, 1);
-        expect(() => preprocessCanvas(tinyCanvas)).not.toThrow();
+    it('handles a single-color canvas without error', () => {
+        const data = new Uint8ClampedArray(36).fill(128);
+        ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3, colorSpace: 'srgb' } as ImageData, 0, 0);
+        const result = preprocessCanvas(canvas);
+        expect(result.getContext('2d')?.getImageData(0, 0, 3, 3).data[0]).toBe(128);
     });
 });
