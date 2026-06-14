@@ -59,13 +59,15 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
     }
 
     // Contrast stretch (min-max normalization)
-    const range = max - min || 1;
+    const range = max - min;
     const stretched = new Uint8Array(pixelCount);
-
-    // ⚡ Bolt Optimization: Precalculate scaling factor and use bitwise OR to truncate
-    const scale = 255 / range;
-    for (let i = 0; i < pixelCount; i++) {
-        stretched[i] = ((grays[i] - min) * scale) | 0;
+    if (range > 0) {
+        const scale = 255 / range;
+        for (let i = 0; i < pixelCount; i++) {
+            stretched[i] = ((grays[i] - min) * scale) | 0;
+        }
+    } else {
+        stretched.set(grays);
     }
 
     // Lightweight unsharp mask: sharpen = original + strength * (original - blurred)
