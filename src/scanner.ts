@@ -211,6 +211,7 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
             allNewBooks.push(...results);
         } catch (err) {
             console.error(`Search failed for query "${query}":`, err);
+            toast(`Search error: ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
     }
     return allNewBooks;
