@@ -13,10 +13,12 @@ vi.mock('./dom', () => {
     };
 });
 
+
 function createMockStream() {
     const track = {
         stop: vi.fn(),
         addEventListener: vi.fn(),
+        enabled: true,
     };
     return {
         stream: {
@@ -109,7 +111,7 @@ describe('CameraManager', () => {
 
         it('throws on general camera error', async () => {
             (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(
-                new Error('Device busy'),
+                new Error('Could not access camera. Ensure no other app is using it.'),
             );
 
             const camera = new CameraManager(video, canvas);
@@ -119,8 +121,8 @@ describe('CameraManager', () => {
 
     describe('captureFrame', () => {
         it('returns null when video has no width', () => {
-            Object.defineProperty(video, 'videoWidth', { value: 0, configurable: true });
             const camera = new CameraManager(video, canvas);
+            Object.defineProperty(video, 'videoWidth', { value: 0, configurable: true });
             expect(camera.captureFrame()).toBeNull();
         });
 
