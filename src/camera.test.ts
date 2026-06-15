@@ -58,6 +58,7 @@ describe('CameraManager', () => {
                 Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
                 // Delay to next microtask so onloadedmetadata handler is registered
                 Promise.resolve().then(() => {
+                    Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
                     video.dispatchEvent(new Event('loadedmetadata'));
                 });
             },
