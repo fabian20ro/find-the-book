@@ -64,7 +64,7 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
     if (range > 0) {
         const scale = 255 / range;
         for (let i = 0; i < pixelCount; i++) {
-            stretched[i] = ((grays[i] - min) * scale) | 0;
+            stretched[i] = Math.round((grays[i] - min) * scale);
         }
     } else {
         stretched.set(grays);
