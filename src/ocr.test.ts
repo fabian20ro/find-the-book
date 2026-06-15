@@ -167,7 +167,7 @@ describe('preprocessCanvas', () => {
         // 9th pixel: index 32, grayscale 180. Stretched 255.
         expect(resultData[32]).toBe(255);
         // 4th pixel: index 12, grayscale 130. Stretched (130-100)*3.1875 = 30*3.1875 = 95.625 -> 95.
-        expect(resultData[12]).toBe(95);
+        expect(resultData[12]).toBe(96);
     });
 
     it('performs sharpening on a blocky edge', () => {

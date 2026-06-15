@@ -93,7 +93,7 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
             ) / 9;
             const v = stretched[idx] + strength * (stretched[idx] - blurred);
             // ⚡ Bolt Optimization: Fast inline clamp
-            sharpened[idx] = v < 0 ? 0 : (v > 255 ? 255 : (v | 0));
+            sharpened[idx] = v < 0 ? 0 : (v > 255 ? 255 : Math.round(v));
         }
     }
 
