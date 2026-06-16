@@ -62,10 +62,49 @@ describe('TextRecognizer', () => {
             expect(Tesseract.createWorker).toHaveBeenCalledWith('eng');
         });
 
-        it('throws if Tesseract is not loaded', async () => {
+        it('throws if Textesseract is not loaded', async () => {
             vi.stubGlobal('Tesseract', undefined);
             const recognintizer = new TextRecognizer();
             await expect(recognintizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
+        });
+
+        it('throws if recognize is called before init', async () => {
+            const recognizer = new TextRecognizer();
+            const canvas = document.createElement('canvas');
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized. Call init() first.');
+        });
+
+        it('throws if verifyReadiness is called when busy', async () => {
+            const mockWorker = {
+                recognize: vi.fn().mockReturnValue(new Promise(() => {})), // Never resolves
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            
+            // Start a recognize call but don't await it yet
+            const recognizePromise = recognizer.recognize(document.createElement('canvas'));
+            
+            await expect(recognizer.verifyReadiness()).rejects.toThrow('TextRecognizer is busy.');
+            
+            await recognizePromise;
+        });
+
+        it('destroys the worker on destroy', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            await recognizer.destroy();
+            expect(mockWorker.terminate).toHaveBeenCalled();
         });
     });
 
