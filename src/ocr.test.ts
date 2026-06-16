@@ -76,7 +76,7 @@ describe('TextRecognizer', () => {
 
         it('throws if verifyReadiness is called when busy', async () => {
             const mockWorker = {
-                recognize: vi.fn().mockReturnValue(new Promise(() => {})), // Never resolves
+                recognize: vi.fn().mockReturnValue(new Promise((_, reject) => setTimeout(() => reject(new Error('mocked')), 10))),
                 terminate: vi.fn(),
                 setParameters: vi.fn().mockResolvedValue(undefined),
             };
@@ -90,7 +90,8 @@ describe('TextRecognizer', () => {
             
             await expect(recognizer.verifyReadiness()).rejects.toThrow('TextRecognizer is busy.');
             
-            await recognizePromise;
+            try { await recognizePromise; } catch {}
+            await recognizer.destroy();
         });
 
         it('destroys the worker on destroy', async () => {
