@@ -17,26 +17,18 @@ against the Google Books database.
 3. **Search** — Extracted text blocks are queried in parallel against Google Books API (free, no API key)
 4. **Display** — Matched books appear in a scrollable popup sorted by confidence, with cover, title, author, and ISBN
 
-## Core Features
-
-- **Google Books API integration**: No API key required (1k requests/day limit).
-- **OCR via Tesseract.js**: High-quality, in-browser OCR (loaded via CDN).
-- **Local storage persistence**: Your collections and search preferences are saved locally.
-- **Offline capabilities**: Service worker enabled for reliable offline use.
-
 ## Features
 
-- Real-time continuous scanning with auto-scan toggle (pause/resume)
-- Manual single-scan and image upload modes (`Capture and scan` appears when auto-scan is off; `Upload Image` scans a saved photo from the home screen)
-- OCR language selection — 16 languages with flag buttons and a More languages expander, usage-based ordering, persisted preference, fail-safe language switching
-- Book candidates sorted by confidence score (highest first)
-- Search filter in candidate popup — filter by title, author, or ISBN
-- Auto-deduplication (same book won't appear twice)
-- Export found books to CSV download
-- Share the current book list via the native share sheet, with clipboard fallback
-- Remove individual books from the list
-- In-browser OCR via WebAssembly (no server, no cloud costs, **fully private/on-device**)
-- PWA support (installable, works offline after first load)
+- **Real-time continuous scanning**: Auto-scan with pause/resume toggle.
+- **OCR Engine**: In-browser OCR via Tesseract.js (WebAssembly) — fully private, no cloud costs.
+- **Resilient Scanning**: Fail-safe language switching; keeps scanning with the previous language if a download fails.
+- **Search & Discovery**: Google Books API integration (no API key required, 1k requests/day limit) with auto-deduplication.
+- **Flexible Input**: Manual single-scan and image upload modes.
+- **Smart Results**: Book candidates sorted by confidence score.
+- **Management**: Filter results by title, author, or ISBN; remove individual books from the list.
+- **Data Portability**: Export found books to CSV; share list via native share sheet (with clipboard fallback).
+- **Persistent Storage**: Local storage for book collections and search preferences.
+- **Offline Ready**: PWA support for offline use after the first load.
 
 ## Tech Stack
 

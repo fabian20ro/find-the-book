@@ -65,6 +65,19 @@ export class CameraManager {
         return this.canvas;
     }
 
+    async verifyReadiness(): Promise<void> {
+        if (!this.stream) {
+            throw new Error('Camera stream is not active.');
+        }
+        const track = this.stream.getVideoTracks()[0];
+        if (!track || !track.enabled) {
+            throw new Error('Camera track is disabled.');
+        }
+        if (this.video.readyState < 2) {
+            throw new Error('Camera video is not ready.');
+        }
+    }
+
     stop(): void {
         if (this.stream) {
             this.stream.getTracks().forEach((track) => track.stop());

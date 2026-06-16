@@ -59,13 +59,15 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
     }
 
     // Contrast stretch (min-max normalization)
-    const range = max - min || 1;
+    const range = max - min;
     const stretched = new Uint8Array(pixelCount);
-
-    // ⚡ Bolt Optimization: Precalculate scaling factor and use bitwise OR to truncate
-    const scale = 255 / range;
-    for (let i = 0; i < pixelCount; i++) {
-        stretched[i] = ((grays[i] - min) * scale) | 0;
+    if (range > 0) {
+        const scale = 255 / range;
+        for (let i = 0; i < pixelCount; i++) {
+            stretched[i] = Math.round((grays[i] - min) * scale);
+        }
+    } else {
+        stretched.set(grays);
     }
 
     // Lightweight unsharp mask: sharpen = original + strength * (original - blurred)
@@ -91,7 +93,7 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
             ) / 9;
             const v = stretched[idx] + strength * (stretched[idx] - blurred);
             // ⚡ Bolt Optimization: Fast inline clamp
-            sharpened[idx] = v < 0 ? 0 : (v > 255 ? 255 : (v | 0));
+            sharpened[idx] = v < 0 ? 0 : (v > 255 ? 255 : Math.round(v));
         }
     }
 
@@ -126,7 +128,7 @@ export function frameBrightness(canvas: HTMLCanvasElement): number {
     let sum = 0;
     let count = 0;
     for (let i = 0; i < data.length; i += step) {
-        sum += (data[i] + data[i+1] + data[i+2] + data[i+3]) / 4;
+        sum += (data[i] + data[i+1] + data[i+2]) / 3;
         count++;
     }
     return count > 0 ? sum / count : 128;
@@ -205,10 +207,17 @@ export class TextRecognizer {
             return lines
                 .map((line: any) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
                 .filter((line: any) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
-        } catch (e) {
-            return [];
         } finally {
             this.isProcessing = false;
+        }
+    }
+
+    async verifyReadiness(): Promise<void> {
+        if (!this.worker) {
+            throw new Error('TextRecognizer not initialized.');
+        }
+        if (this.isProcessing) {
+            throw new Error('TextRecognizer is busy.');
         }
     }
 
@@ -225,9 +234,10 @@ export class TextRecognizer {
 
     private async applyWhitelist(lang: string): Promise<void> {
         if (this.worker) {
-            await this.worker.setParameters({
-                whitelist: LANG_WHITELISTS[lang] || COMMON_CHARS,
-            });
+            const whitelist = LANG_WHITELISTS[lang];
+            if (whitelist) {
+                await this.worker.setParameters({ whitelist });
+            }
         }
     }
 }

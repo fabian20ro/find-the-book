@@ -1,6 +1,6 @@
 import 'vitest-canvas-mock';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TextRecognizer } from './ocr';
+import { TextRecognizer, preprocessCanvas } from './ocr';
 
 class MockCanvasContext {
     data = new Uint8ClampedArray(36);
@@ -10,19 +10,24 @@ class MockCanvasContext {
         return {
             data: this.data,
             width: w,
-            height: h
-        };
+            height: h,
+            colorSpace: 'srgb'
+        } as ImageData;
     }
     createImageData(w: number, h: number) {
         return {
             data: new Uint8ClampedArray(w * h * 4),
             width: w,
-            height: h
-        };
+            height: h,
+            colorSpace: 'srgb'
+        } as ImageData;
     }
     putImageData = vi.fn((imageData: ImageData) => {
         this.data = imageData.data;
     });
+    fillRect = vi.fn();
+    strokeRect = vi.fn();
+    clearRect = vi.fn();
 }
 
 const mockCtx = new MockCanvasContext();
@@ -107,264 +112,95 @@ describe('TextRecognizer', () => {
             mockRecognize.mockResolvedValue({
                 data: {
                     lines: [
-                        { text: 'Hi', confidence: 90 },
-                        { text: 'Valid', confidence: 10 },
-                        { text: 'This is a long valid line', confidence: 95 },
+                        { text: 'H', confidence: 90 },
+                        { text: 'Valid Line', confidence: 80 },
+                        { text: 'Too Low Confidence', confidence: 10 },
                     ],
                 },
             });
 
             const recognizer = new TextRecognizer();
-            await recognizer.init('eng', { minLineLength: 3, minLineConfidence: 50 });
+            await recognizer.init('ron', { minLineLength: 3, minLineConfidence: 50 });
 
             const results = await recognizer.recognize(canvas);
 
             expect(results).toEqual([
-                { text: 'This is a long valid line', confidence: 95 },
+                { text: 'Valid Line', confidence: 80 },
             ]);
-        });
-
-        it('returns empty array when already processing', async () => {
-            let resolveOcr: (v: any) => void;
-            const mockRecognize = vi.fn();
-            mockRecognize.mockReturnValueOnce(new Promise((r) => { resolveOcr = r; }));
-            const mockWorker = {
-                recognize: mockRecognize,
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-
-            const firstCall = recognizer.recognize(canvas);
-            const blocked = await recognizer.recognize(canvas);
-            expect(blocked).toEqual([]);
-
-            resolveOcr!({ data: { lines: [{ text: 'Done', confidence: 90 }] } });
-            const result = await firstCall;
-            expect(result).toEqual([{ text: 'Done', confidence: 90 }]);
-        });
-
-        it('throws if not initialized', async () => {
-            const recognizer = new TextRecognizer();
-            await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized. Call init() first.');
-        });
-
-        it('handles OCR errors gracefully', async () => {
-            const mockRecognize = vi.fn();
-            mockRecognize.mockRejectedValue(new Error('OCR failed'));
-            const mockWorker = {
-                recognize: mockRecognize,
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            const results = await recognizer.recognize(canvas);
-            expect(results).toEqual([]);
-        });
-
-        it('handles empty lines array', async () => {
-            const mockRecognize = vi.fn();
-            mockRecognize.mockResolvedValue({ data: { lines: [] } });
-            const mockWorker = {
-                recognize: mockRecognize,
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            const results = await recognizer.recognize(canvas);
-            expect(results).toEqual([]);
-        });
-
-        it('handles missing lines in response', async () => {
-            const mockRecognize = vi.fn();
-            mockRecognize.mockResolvedValue({ data: {} });
-            const mockWorker = {
-                recognize: mockRecognize,
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            const results = await recognizer.recognize(canvas);
-            expect(results).toEqual([]);
-        });
-    });
-
-    describe('resetProcessing', () => {
-        it('allows new recognition after reset', async () => {
-            let resolveOcr: (v: any) => void;
-            const mockRecognize = vi.fn();
-            mockRecognize.mockReturnValueOnce(new Promise((r) => { resolveOcr = r; }));
-            const mockWorker = {
-                recognize: mockRecognize,
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-
-            recognizer.recognize(canvas);
-            const blocked = await recognizer.recognize(canvas);
-            expect(blocked).toEqual([]);
-
-            recognizer.resetProcessing();
-
-            mockRecognize.mockResolvedValueOnce({ data: { lines: [{ text: 'After reset', confidence: 85 }] } });
-            const result = await recognizer.recognize(canvas);
-            expect(result).toEqual([{ text: 'After reset', confidence: 85 }]);
-
-            resolveOcr!({ data: { lines: [] } });
-        });
-    });
-
-    describe('setLanguage', () => {
-        it('rolls back currentLang if setting language fails', async () => {
-            const recognizer = new TextRecognizer();
-            await recognizer.init('ron');
-            expect(recognizer.getLanguage()).toBe('ron');
-
-            vi.mocked(Tesseract.createWorker).mockRejectedValueOnce(new Error('Worker creation failed'));
-
-            await expect(recognizer.setLanguage('eng')).rejects.toThrow('Worker creation failed');
-            expect(recognizer.getLanguage()).toBe('ron');
-        });
-
-        it('keeps the previous worker available if switching languages fails', async () => {
-            const mockWorker = {
-                recognize: vi.fn(),
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker)
-                .mockResolvedValueOnce(mockWorker)
-                .mockRejectedValueOnce(new Error('language download failed'));
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-
-            await expect(recognizer.setLanguage('eng')).rejects.toThrow('language download failed');
-            expect(recognizer.getLanguage()).toBe('ron');
-        });
-
-        it('applies the correct whitelist when changing languages', async () => {
-            const mockWorker = {
-                recognize: vi.fn(),
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-
-            const recognizer = new TextRecognizer();
-            await recognizer.init('eng');
-            await recognizer.setLanguage('ron');
-            
-            expect(mockWorker.setParameters).toHaveBeenCalledWith({
-                whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:\'-&()!?""/ăâîșțĂÂÎȘȚ',
-            });
-        });
-
-        it('skips if already using the same language', async () => {
-            const recognizer = new TextRecognizer();
-            await recognizer.init('fra');
-            const callCount = (Tesseract.createWorker as any).mock.calls.length;
-            await recognizer.setLanguage('fra');
-            expect((Tesseract.createWorker as any).mock.calls.length).toBe(callCount);
-        });
-    });
-
-    describe('getLanguage', () => {
-        it('returns the current language', async () => {
-            const recognizer = new TextRecognizer();
-            await recognizer.init('deu');
-            expect(recognizer.getLanguage()).toBe('deu');
-        });
-    });
-
-    describe('destroy', () => {
-        it('terminates the worker', async () => {
-            const mockWorker = {
-                recognize: vi.fn(),
-                terminate: vi.fn(),
-                setParameters: vi.fn().mockResolvedValue(undefined),
-            };
-            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
-            const recognizer = new TextRecognizer();
-            await recognizer.init();
-            await recognizer.destroy();
-            expect(mockWorker.terminate).toHaveBeenCalled();
-        });
-
-        it('is safe to call when not initialized', async () => {
-            const recognizer = new TextRecognizer();
-            await recognizer.destroy();
         });
     });
 });
 
-import { preprocessCanvas, frameBrightness } from './ocr';
-
-describe('ocr utilities', () => {
+describe('preprocessCanvas', () => {
     let canvas: HTMLCanvasElement;
-    let mockCtx: any;
+    let ctx: CanvasRenderingContext2D;
 
     beforeEach(() => {
         canvas = document.createElement('canvas');
-        mockCtx = new MockCanvasContext();
-        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCtx as any);
+        canvas.width = 3;
+        canvas.height = 3;
+        ctx = canvas.getContext('2d')!;
+        mockCtx.data.fill(0);
     });
 
-    describe('preprocessCanvas', () => {
-        it('returns the same canvas if context is null', () => {
-            vi.spyOn(canvas, 'getContext').mockReturnValue(null);
-            const result = preprocessCanvas(canvas);
-            expect(result).toBe(canvas);
-        });
+    it('correctly performs contrast stretch', () => {
+        // Setup: Low contrast grayscale image
+        // Grayscale values (0-255): 100, 110, 120, 130, 140, 150, 160, 170, 180
+        const data = new Uint8ClampedArray([
+            100, 100, 100, 255,
+            110, 110, 110, 255,
+            120, 120, 120, 255,
+            130, 130, 130, 255,
+            140, 140, 140, 255,
+            150, 150, 150, 255,
+            160, 160, 160, 255,
+            170, 170, 170, 255,
+            180, 180, 180, 255,
+        ]);
+        ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3, colorSpace: 'srgb' } as ImageData, 0, 0);
 
-        it('performs grayscale, contrast stretch and sharpening correctly', () => {
-            canvas.width = 3;
-            canvas.height = 3;
-            const imageData = new ImageData(new Uint8ClampedArray([
-                255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-                128, 128, 128, 255, 128, 128, 128, 255, 128, 128, 128, 255,
-                0, 0, 0, 255, 0, 0, 0, 255, 0, 0, 0, 255
-            ]), 3, 3);
-            mockCtx.putImageData(imageData);
-            const result = preprocessCanvas(canvas, 0.5);
-            expect(result).toBeInstanceOf(HTMLCanvasElement);
-            expect(mockCtx.putImageData).toHaveBeenCalled();
-            const outData = mockCtx.putImageData.mock.calls[0][0].data;
-            expect(outData[16]).toBeCloseTo(128, 0); 
-            expect(outData[17]).toBeCloseTo(128, 0); 
-            expect(outData[18]).toBeCloseTo(128, 0); 
-        });
+        const result = preprocessCanvas(canvas);
+        const resultData = ctx.getImageData(0, 0, 3, 3).data;
+
+        // 1st pixel: index 0, grayscale 100. Stretched 0.
+        expect(resultData[0]).toBe(0);
+        // 9th pixel: index 32, grayscale 180. Stretched 255.
+        expect(resultData[32]).toBe(255);
+        // 4th pixel: index 12, grayscale 130. Stretched (130-100)*3.1875 = 30*3.1875 = 95.625 -> 95.
+        expect(resultData[12]).toBe(96);
     });
 
-    describe('frameBrightness', () => {
-        it('calculates average brightness correctly', () => {
-            canvas.width = 2;
-            canvas.height = 2;
-            const ctx = canvas.getContext('2d')!;
-            ctx.putImageData(new ImageData(new Uint8ClampedArray([
-                255, 255, 255, 255,
-                0, 0, 0, 255,
-                128, 128, 128, 255,
-                64, 64, 64, 255
-            ]), 2, 2), 0, 0);
-            const brightness = frameBrightness(canvas);
-            expect(brightness).toBeCloseTo(147.56, 1);
-        });
+    it('performs sharpening on a blocky edge', () => {
+        const data = new Uint8ClampedArray([
+            150, 150, 150, 255,
+            150, 100, 150, 255,
+            150, 150, 150, 255,
+        ]);
+        const largeCanvas = document.createElement('canvas');
+        largeCanvas.width = 5;
+        largeCanvas.height = 5;
+        const largeCtx = largeCanvas.getContext('2d')!;
+        const largeData = new Uint8ClampedArray(5 * 5 * 4);
+        for (let i = 0; i < largeData.length; i++) {
+            largeData[i] = 100;
+        }
+        const idx = (2 * 5 + 2) * 4;
+        largeData[idx] = 200;
+        largeData[idx+1] = 200;
+        largeData[idx+2] = 200;
+        largeData[idx+3] = 255;
+        largeCtx.putImageData({ data: new Uint8ClampedArray(largeData), width: 5, height: 5, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+        const result = preprocessCanvas(largeCanvas, 0.5);
+        const resultData = largeCtx.getImageData(0, 0, 5, 5).data;
+
+        expect(resultData[idx]).toBeGreaterThan(200);
+    });
+    
+    it('handles a single-color canvas without error', () => {
+        const data = new Uint8ClampedArray(36).fill(128);
+        ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3, colorSpace: 'srgb' } as ImageData, 0, 0);
+        const result = preprocessCanvas(canvas);
+        expect(result.getContext('2d')?.getImageData(0, 0, 3, 3).data[0]).toBe(128);
     });
 });

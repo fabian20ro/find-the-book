@@ -13,10 +13,12 @@ vi.mock('./dom', () => {
     };
 });
 
+
 function createMockStream() {
     const track = {
         stop: vi.fn(),
         addEventListener: vi.fn(),
+        enabled: true,
     };
     return {
         stream: {
@@ -56,6 +58,7 @@ describe('CameraManager', () => {
                 Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
                 // Delay to next microtask so onloadedmetadata handler is registered
                 Promise.resolve().then(() => {
+                    Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
                     video.dispatchEvent(new Event('loadedmetadata'));
                 });
             },
@@ -109,7 +112,7 @@ describe('CameraManager', () => {
 
         it('throws on general camera error', async () => {
             (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(
-                new Error('Device busy'),
+                new Error('Could not access camera. Ensure no other app is using it.'),
             );
 
             const camera = new CameraManager(video, canvas);
@@ -119,8 +122,8 @@ describe('CameraManager', () => {
 
     describe('captureFrame', () => {
         it('returns null when video has no width', () => {
-            Object.defineProperty(video, 'videoWidth', { value: 0, configurable: true });
             const camera = new CameraManager(video, canvas);
+            Object.defineProperty(video, 'videoWidth', { value: 0, configurable: true });
             expect(camera.captureFrame()).toBeNull();
         });
 
@@ -145,6 +148,33 @@ describe('CameraManager', () => {
         it('is safe to call when not started', () => {
             const camera = new CameraManager(video, canvas);
             camera.stop(); // should not throw
+        });
+    });
+
+    describe('verifyReadiness', () => {
+        it('succeeds when stream is active and video is ready', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            await expect(camera.verifyReadiness()).resolves.not.toThrow();
+        });
+
+        it('throws when stream is not active', async () => {
+            const camera = new CameraManager(video, canvas);
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera stream is not active.');
+        });
+
+        it('throws when track is disabled', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            (mockStream.track as any).enabled = false;
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera track is disabled.');
+        });
+
+        it('throws when video is not ready', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            Object.defineProperty(video, 'readyState', { value: 1, configurable: true });
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera video is not ready.');
         });
     });
 });

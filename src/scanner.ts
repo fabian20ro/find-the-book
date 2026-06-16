@@ -127,6 +127,9 @@ async function scanFrame(
     ocr: TextRecognizer,
     bookSearcher: BookSearcher,
 ): Promise<void> {
+    await camera.verifyReadiness();
+    await ocr.verifyReadiness();
+
     if (!getState().isScanning || isPaused || !getState().autoScan || getState().candidateBooks.length > 0) {
         scheduleNext(camera, ocr, bookSearcher);
         return;
@@ -211,6 +214,7 @@ export async function searchTextBlocks(ocrLines: OcrLine[], bookSearcher: BookSe
             allNewBooks.push(...results);
         } catch (err) {
             console.error(`Search failed for query "${query}":`, err);
+            toast(`Search error for "${query}": ${err instanceof Error ? err.message : 'Unknown error'}`);
         }
     }
     return allNewBooks;

@@ -365,3 +365,40 @@ describe('queryMatchRatio', () => {
         expect(queryMatchRatio(makeBookData({ title: 'The Great Gatsby!' }), 'Great, Gatsby?')).toBe(1);
     });
 });
+
+describe('queryMatchRatio', () => {
+  const mockBook = {
+    id: "1",
+    title: "The Great Gatsby",
+    authors: ["F. Scott Fitzgerald"],
+    publisher: "Scribner",
+    publishedDate: "1925",
+    description: "A story of wealth and love",
+    isbn: "1234567890",
+    pageCount: 180,
+    thumbnailUrl: "url",
+    infoLink: "url",
+    confidence: 100
+  } as any;
+
+  it('returns 0 for empty query', () => {
+    expect(queryMatchRatio(mockBook, '')).toBe(0);
+    expect(queryMatchRatio(mockBook, '   ')).toBe(0);
+  });
+
+  it('returns 0 for query with only short words', () => {
+    expect(queryMatchRatio(mockBook, 'is a a a')).toBe(0);
+  });
+
+  it('returns 1 for perfect match', () => {
+    expect(queryMatchRatio(mockBook, 'The Great Gatsby')).toBe(1);
+  });
+
+  it('handles case insensitivity and normalization', () => {
+    expect(queryMatchRatio(mockBook, 'great gatsby')).toBe(1);
+  });
+
+  it('handles partial matches', () => {
+    expect(queryMatchRatio(mockBook, 'Gatsby')).toBe(1);
+  });
+});
