@@ -116,9 +116,9 @@ export function pauseAutoScan(): void {
 function scheduleNext(
     camera: CameraManager,
     ocr: TextRecognizer,
-    bookSearcher: BookSearcher,
+    bookSearcher: BookSearcher
 ): void {
-    if (!getState().isScanning || !getState().autoScan) return;
+    if (!getState().isScanning || !getState().autoScan || isPaused) return;
     scanTimer = setTimeout(() => scanFrame(camera, ocr, bookSearcher), SCAN_INTERVAL_MS);
 }
 

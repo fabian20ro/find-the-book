@@ -83,5 +83,6 @@ export class CameraManager {
             this.stream.getTracks().forEach((track) => track.stop());
             this.stream = null;
         }
+        this.video.srcObject = null;
     }
 }
