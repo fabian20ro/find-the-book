@@ -1,9 +1,4 @@
-
-
-export interface OcrLine {
-    text: string;
-    confidence: number;
-}
+import type { OcrLine } from './ocr';
 
 export interface TextRecognizerOptions {
     minLineLength?: number;
@@ -21,7 +16,7 @@ const LANG_WHITELISTS: Record<string, string> = {
     deu: COMMON_CHARS + 'äöüßÄÖÜ',
     ita: COMMON_CHARS + 'àèéìòùÀÈÉÌÒÙ',
     spa: COMMON_CHARS + 'áéíóúüñÁÉÍÓÚÜÑ¿¡',
-    por: COMMON_CHARS + 'àáâãçéêíóôõúÀÁÂÃÇÉÊÍÓÔÕÚ',
+    por: COMMON_CHARS + 'àáâãçéêíóôõúÀÁÂÃÇÉÊÍÓÚÜÑ',
     nld: COMMON_CHARS + 'àáâäèéêëïíîòóôöùúûü',
     pol: COMMON_CHARS + 'ąćęłńóśźżĄĆĘŁŃÓŚŻ',
     hun: COMMON_CHARS + 'áéíóöőúüűÁÉÍÓÖŐÚÜŰ',
@@ -33,6 +28,7 @@ const LANG_WHITELISTS: Record<string, string> = {
 /**
  * Convert to grayscale, apply linear contrast stretch, and sharpen.
  * Falls back to the original canvas if 2D context is unavailable.
+ *
  *
  */
 export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0.5): HTMLCanvasElement {
@@ -117,6 +113,7 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
 /**
  * Check if a canvas frame is too dark for useful OCR.
  * Samples pixels and returns average brightness (0-255).
+ *
  */
 export function frameBrightness(canvas: HTMLCanvasElement): number {
     const ctx = canvas.getContext('2d');
@@ -197,8 +194,8 @@ export class TextRecognizer {
         this.isProcessing = true;
 
         try {
-            const processedCanvas = preprocessCanvas(canvas);
-            const result = await this.worker.recognize(processedCanvas);
+            const processed = preprocessCanvas(canvas);
+            const result = await this.worker.recognize(processed);
             if (!result || !result.data) {
                 throw new Error('Tesseract recognition returned invalid result');
             }
