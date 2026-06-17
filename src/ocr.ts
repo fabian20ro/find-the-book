@@ -12,7 +12,7 @@ const DEFAULT_MIN_LINE_LENGTH = 3;
 const DEFAULT_MIN_LINE_CONFIDENCE = 40;
 
 const COMMON_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:\'-&()!?""/';
-const LANG_WHITELISTS: Record<string, string> = {
+export const LANG_WHITELISTS: Record<string, string> = {
     eng: COMMON_CHARS,
     ron: COMMON_CHARS + 'ăâîșțĂÂÎȘȚ',
     fra: COMMON_CHARS + 'àâäèéêëîïôùûüœæçñÀÂÈÉÊËÎÏÔÙÛÜŒÆÇÑ',
@@ -154,6 +154,9 @@ export class TextRecognizer {
 
     async setLanguage(lang: string): Promise<void> {
         if (lang === this.currentLang && this.worker) return;
+        if (!(lang in LANG_WHITELISTS)) {
+            throw new Error(`Unsupported language: ${lang}`);
+        }
 
         const prevLang = this.currentLang;
         const prevWorker = this.worker;
