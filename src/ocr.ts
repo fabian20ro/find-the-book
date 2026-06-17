@@ -52,7 +52,7 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
     // 0.299 * 256 ≈ 77, 0.587 * 256 ≈ 150, 0.114 * 256 ≈ 29
     for (let i = 0; i < pixelCount; i++) {
         const i4 = i * 4;
-        const gray = (77 * src[i4] + 150 * src[i4 + 1] + 29 * src[i4 + 2]) >> 8;
+        const gray = Math.round((77 * src[i4] + 150 * src[i4 + 1] + 29 * src[i4 + 2]) / 256);
         grays[i] = gray;
         if (gray < min) min = gray;
         if (gray > max) max = gray;
