@@ -1,4 +1,7 @@
-import type { OcrLine } from './ocr';
+export interface OcrLine {
+    text: string;
+    confidence: number;
+}
 
 export interface TextRecognizerOptions {
     minLineLength?: number;
