@@ -143,6 +143,7 @@ describe('CameraManager', () => {
             camera.stop();
 
             expect(mockStream.track.stop).toHaveBeenCalled();
+            expect(video.srcObject).toBeNull();
         });
 
         it('is safe to call when not started', () => {
