@@ -158,6 +158,44 @@ describe('scanner', () => {
             expect(state.getState().candidateBooks).toHaveLength(1);
             expect(state.getState().candidateBooks[0].title).toBe('Found Book');
         });
+
+    describe('scanOnce', () => {
+        it('successfully scans and finds books', async () => {
+            state.update({ autoScan: false });
+            const book = makeBook('v1', 'Found Book');
+            const canvas = document.createElement('canvas');
+            const camera = createMockCamera(canvas);
+            const ocr = createMockOcr(['Book Title']);
+            const books = createMockBookSearcher([book]);
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.getState().scanCount).toBe(1);
+            expect(state.getState().candidateBooks).toHaveLength(1);
+        });
+
+        it('fails when camera fails to capture frame', async () => {
+            const camera = createMockCamera(null);
+            const ocr = createMockOcr();
+            const books = createMockBookSearcher();
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.getState().scanCount).toBe(0);
+        });
+
+        it('handles OCR error', async () => {
+            const canvas = document.createElement('canvas');
+            const camera = createMockCamera(canvas);
+            const ocr = createMockOcr(['Title']);
+            (ocr.recognize as any).mockRejectedValueOnce(new Error('OCR failed'));
+            const books = createMockBookSearcher();
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.getState().scanCount).toBe(0);
+        });
+    });
     });
 
     describe('stopScanning', () => {
