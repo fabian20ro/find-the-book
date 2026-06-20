@@ -114,7 +114,7 @@ export function moveBook(fromIndex: number, toIndex: number): void {
 }
 
 export function clearBooks(): void {
-    state.books = [];
+    state.books.length = 0;
     state.candidateFilter = '';
     emit('change');
 }
@@ -138,12 +138,21 @@ export function addCandidates(books: Book[]): void {
 
 export function removeCandidateById(bookId: string): void {
     const trimmedId = bookId.trim();
-    state.candidateBooks = state.candidateBooks.filter((c) => c.id !== trimmedId);
-    emit('change');
+    let index = -1;
+    for (let i = 0; i < state.candidateBooks.length; i++) {
+        if (state.candidateBooks[i].id === trimmedId) {
+            index = i;
+            break;
+        }
+    }
+    if (index !== -1) {
+        state.candidateBooks.splice(index, 1);
+        emit('change');
+    }
 }
 
 export function clearCandidates(): void {
-    state.candidateBooks = [];
+    state.candidateBooks.length = 0;
     state.candidateFilter = '';
     emit('change');
 }
