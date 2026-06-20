@@ -1,5 +1,3 @@
-
-
 export interface OcrLine {
     text: string;
     confidence: number;
@@ -14,14 +12,14 @@ const DEFAULT_MIN_LINE_LENGTH = 3;
 const DEFAULT_MIN_LINE_CONFIDENCE = 40;
 
 const COMMON_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,;:\'-&()!?""/';
-const LANG_WHITELISTS: Record<string, string> = {
+export const LANG_WHITELISTS: Record<string, string> = {
     eng: COMMON_CHARS,
     ron: COMMON_CHARS + 'ăâîșțĂÂÎȘȚ',
     fra: COMMON_CHARS + 'àâäèéêëîïôùûüœæçñÀÂÈÉÊËÎÏÔÙÛÜŒÆÇÑ',
     deu: COMMON_CHARS + 'äöüßÄÖÜ',
     ita: COMMON_CHARS + 'àèéìòùÀÈÉÌÒÙ',
     spa: COMMON_CHARS + 'áéíóúüñÁÉÍÓÚÜÑ¿¡',
-    por: COMMON_CHARS + 'àáâãçéêíóôõúÀÁÂÃÇÉÊÍÓÔÕÚ',
+    por: COMMON_CHARS + 'àáâãçéêíóôõúÀÁÂÃÇÉÊÍÓÚÜÑ',
     nld: COMMON_CHARS + 'àáâäèéêëïíîòóôöùúûü',
     pol: COMMON_CHARS + 'ąćęłńóśźżĄĆĘŁŃÓŚŻ',
     hun: COMMON_CHARS + 'áéíóöőúüűÁÉÍÓÖŐÚÜŰ',
@@ -33,6 +31,7 @@ const LANG_WHITELISTS: Record<string, string> = {
 /**
  * Convert to grayscale, apply linear contrast stretch, and sharpen.
  * Falls back to the original canvas if 2D context is unavailable.
+ *
  *
  */
 export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0.5): HTMLCanvasElement {
@@ -117,6 +116,7 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
 /**
  * Check if a canvas frame is too dark for useful OCR.
  * Samples pixels and returns average brightness (0-255).
+ *
  */
 export function frameBrightness(canvas: HTMLCanvasElement): number {
     const ctx = canvas.getContext('2d');
@@ -154,6 +154,9 @@ export class TextRecognizer {
 
     async setLanguage(lang: string): Promise<void> {
         if (lang === this.currentLang && this.worker) return;
+        if (!(lang in LANG_WHITELISTS)) {
+            throw new Error(`Unsupported language: ${lang}`);
+        }
 
         const prevLang = this.currentLang;
         const prevWorker = this.worker;
@@ -197,8 +200,8 @@ export class TextRecognizer {
         this.isProcessing = true;
 
         try {
-            const processedCanvas = preprocessCanvas(canvas);
-            const result = await this.worker.recognize(processedCanvas);
+            const processed = preprocessCanvas(canvas);
+            const result = await this.worker.recognize(processed);
             if (!result || !result.data) {
                 throw new Error('Tesseract recognition returned invalid result');
             }

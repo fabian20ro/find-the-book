@@ -1,6 +1,6 @@
 import 'vitest-canvas-mock';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TextRecognizer, preprocessCanvas } from './ocr';
+import { TextRecognizer, preprocessCanvas, LANG_WHITELISTS } from './ocr';
 
 class MockCanvasContext {
     data = new Uint8ClampedArray(36);
@@ -85,7 +85,6 @@ describe('TextRecognizer', () => {
             const recognizer = new TextRecognizer();
             await recognizer.init();
             
-            // Start a recognize call but don't await it yet
             const recognizePromise = recognizer.recognize(document.createElement('canvas'));
             
             await expect(recognizer.verifyReadiness()).rejects.toThrow('TextRecognizer is busy.');
@@ -106,6 +105,31 @@ describe('TextRecognizer', () => {
             await recognizer.init();
             await recognizer.destroy();
             expect(mockWorker.terminate).toHaveBeenCalled();
+        });
+    });
+
+    describe('setLanguage', () => {
+        it('throws if an invalid language is provided', async () => {
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            await expect(recognizer.setLanguage('invalid-lang')).rejects.toThrow('Unsupported language: invalid-lang');
+        });
+
+        it('successfully sets language to an existing one', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            const mockRecognize = vi.fn();
+            mockWorker.recognize = mockRecognize;
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            await recognizer.setLanguage('eng');
+            expect(recognizer.getLanguage()).toBe('eng');
+            expect(mockWorker.setParameters).toHaveBeenCalledWith({ whitelist: LANG_WHITELISTS['eng'] });
         });
     });
 

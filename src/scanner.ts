@@ -111,6 +111,7 @@ export function pauseAutoScan(): void {
         clearTimeout(scanTimer);
         scanTimer = null;
     }
+    isPaused = true;
 }
 
 function scheduleNext(
