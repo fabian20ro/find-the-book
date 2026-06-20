@@ -65,8 +65,17 @@ export function getState(): Readonly<AppState> {
 }
 
 export function update(patch: Partial<AppState>): void {
-    Object.assign(state, patch);
-    emit('change');
+    let changed = false;
+    for (const key of Object.keys(patch)) {
+        const k = key as keyof AppState;
+        if (patch[k] !== state[k]) {
+            (state as any)[k] = patch[k];
+            changed = true;
+        }
+    }
+    if (changed) {
+        emit('change');
+    }
 }
 
 /**
