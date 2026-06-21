@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { getState } from './state';
+import { resumeAutoScan, pauseAutoScan } from './scanner';
 
 // Mock style import
 vi.mock('./style.css', () => ({}));
