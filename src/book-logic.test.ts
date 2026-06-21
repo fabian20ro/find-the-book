@@ -41,6 +41,12 @@ describe('Book logic', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
         });
+
+        it('handles hyphenated words by treating them as single words (current limitation)', () => {
+            // This test documents current behavior: "Full-time" -> "fulltime"
+            const book = { id: '1', title: 'Full-time job', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'full time')).toBe(0);
+        });
     });
 
     describe('computeConfidence', () => {
