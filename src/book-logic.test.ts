@@ -31,6 +31,16 @@ describe('Book logic', () => {
             // ratio: 2/3
             expect(queryMatchRatio(book, 'Great Gatsby Unknown')).toBe(2/3);
         });
+
+        it('handles query with special characters by stripping them', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Great! Gatsby?')).toBe(1);
+        });
+
+        it('handles multiple spaces in query', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
+        });
     });
 
     describe('computeConfidence', () => {
@@ -52,6 +62,16 @@ describe('Book logic', () => {
 
         it('caps confidence at 100 even with very high ratings', () => {
             expect(computeConfidence(baseBook, 10, 200, 'The Great Gatsby')).toBe(100);
+        });
+
+        it('handles low ratings correctly', () => {
+            const fullBook = { ...baseBook, title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query match: 30
+            // Rating: round(0.5 * 12) = 6
+            // Count: round(50/100 * 8) = 4
+            // Total: 50 + 30 + 6 + 4 = 90
+            expect(computeConfidence(fullBook, 2.5, 50, 'The Great Gatsby')).toBe(90);
         });
     });
 });
