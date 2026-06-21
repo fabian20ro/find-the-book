@@ -14,9 +14,22 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'Moby Dick')).toBe(0);
         });
 
-        it('handles short query words (less than 3)', () => {
+        it('handles short query words (less than 3) by filtering them out', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott. Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'The Great F. Scott')).toBe(1);
+        });
+
+        it('handles query with single-letter words by ignoring them', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'A B C D')).toBe(0);
+        });
+
+        it('calculates correct ratio for partial word matches and mixed case', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            // queryWords: ['great', 'gatsby', 'unknown']
+            // matches: 'great', 'gatsby'
+            // ratio: 2/3
+            expect(queryMatchRatio(book, 'Great Gatsby Unknown')).toBe(2/3);
         });
     });
 
@@ -24,7 +37,7 @@ describe('Book logic', () => {
         const baseBook = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
 
         it('returns 0 for minimal book', () => {
-            const minimalBook = { ...baseBook, title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            const minimalBook = { ...baseBook, title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, confidence: 0 } as Book;
             expect(computeConfidence(minimalBook)).toBe(0);
         });
 
@@ -35,6 +48,10 @@ describe('Book logic', () => {
         it('handles partial matches and ratings', () => {
             const partialBook = { ...baseBook, title: 'Gatsby', authors: ['Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: '123', pageCount: null, thumbnailUrl: 'http://img.jpg', infoLink: null, confidence: 0 } as Book;
             expect(computeConfidence(partialBook, 0, 0, 'Gatsby')).toBe(65);
+        });
+
+        it('caps confidence at 100 even with very high ratings', () => {
+            expect(computeConfidence(baseBook, 10, 200, 'The Great Gatsby')).toBe(100);
         });
     });
 });
