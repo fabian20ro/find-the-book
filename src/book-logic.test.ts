@@ -79,5 +79,16 @@ describe('Book logic', () => {
             // Total: 50 + 30 + 6 + 4 = 90
             expect(computeConfidence(fullBook, 2.5, 50, 'The Great Gatsby')).toBe(90);
         });
+
+        it('clamps averageRating contribution to 12 even if rating is > 5', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query match: 0
+            // Rating: round(10/5 * 12) = 24 (WITHOUT CLAMP)
+            // Count: 0
+            // Expected: 50 + 12 + 0 = 62.
+            expect(computeConfidence(book, 10, 0, '')).toBe(62);
+        });
+
     });
 });
