@@ -88,6 +88,16 @@ describe('Book logic', () => {
             expect(computeConfidence(fullBook, 2.5, 50, 'The Great Gatsby')).toBe(90);
         });
 
+        it('handles undefined ratings correctly', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query: 'The Great Gatsby' -> 30
+            // Rating: undefined -> 0
+            // Count: undefined -> 0
+            // Total: 80
+            expect(computeConfidence(book, undefined, undefined, 'The Great Gatsby')).toBe(80);
+        });
+
         it('clamps averageRating contribution to 12 even if rating is > 5', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
             // Metadata: 50
