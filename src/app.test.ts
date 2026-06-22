@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getState } from './state';
+import { getState, addCandidates } from './state';
 import { resumeAutoScan, pauseAutoScan } from './scanner';
 
 // Mock style import
