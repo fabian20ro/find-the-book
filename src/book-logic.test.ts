@@ -37,15 +37,63 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'Great! Gatsby?')).toBe(1);
         });
 
+        it('handles query with punctuation and non-ASCII characters', () => {
+            const book = { id: '1', title: 'Café de Paris', authors: ['Jean-Luc'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            // queryWords: ['cafe', 'de', 'paris'] (after clean)
+            // bookWords: {'cafe', 'de', 'paris', 'jean', 'luc'}
+            // matches: 'cafe', 'de', 'paris'
+            // ratio: 3/3 = 1
+            expect(queryMatchRatio(book, 'Café de Paris')).toBe(1);
+        });
+
+        it('handles duplicate words in query', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Great Great')).toBe(1);
+        });
+
         it('handles multiple spaces in query', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
         });
 
-        it('handles hyphenated words by treating them as single words (current limitation)', () => {
-            // This test documents current behavior: "Full-time" -> "fulltime"
+        it('handles numbers in query', () => {
+            const book = { id: '1', title: 'The Great Gatsby 1925', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Gatsby 1925')).toBe(1);
+        });
+
+        it('caps contribution from ratingsCount at 8 even if ratingsCount > 100', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query match: 30
+            // Rating (5): 12
+            // Count (200): 8
+            // Total: 50 + 30 + 12 + 8 = 100
+            expect(computeConfidence(book, 5, 200, 'The Great Gatsby')).toBe(100);
+        });
+
+        it('handles hyphenated words by treating them as separate words', () => {
             const book = { id: '1', title: 'Full-time job', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
-            expect(queryMatchRatio(book, 'full time')).toBe(0);
+            expect(queryMatchRatio(book, 'full time')).toBe(1);
+        });
+
+        it('handles unicode normalization (accents)', () => {
+            const book = { id: '1', title: 'Cafe', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Café')).toBe(1);
+        });
+
+        it('does not match substrings (only whole words)', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Gats')).toBe(0);
+        });
+
+        it('handles multiple authors', () => {
+            const book = { id: '1', title: 'Title', authors: ['Author One', 'Author Two'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Author Two')).toBe(1);
+        });
+
+        it('matches query against author names', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Scott')).toBe(1);
         });
     });
 
@@ -78,6 +126,44 @@ describe('Book logic', () => {
             // Count: round(50/100 * 8) = 4
             // Total: 50 + 30 + 6 + 4 = 90
             expect(computeConfidence(fullBook, 2.5, 50, 'The Great Gatsby')).toBe(90);
+        });
+
+        it('handles undefined ratings correctly', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query: 'The Great Gatsby' -> 30
+            // Rating: undefined -> 0
+            // Count: undefined -> 0
+            // Total: 80
+            expect(computeConfidence(book, undefined, undefined, 'The Great Gatsby')).toBe(80);
+        });
+
+        it('clamps averageRating contribution to 12 even if rating is > 5', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query match: 0
+            // Rating: round(10/5 * 12) = 24 (WITHOUT CLAMP)
+            // Count: 0
+            // Expected: 50 + 12 + 0 = 62.
+            expect(computeConfidence(book, 10, 0, '')).toBe(62);
+        });
+
+        it('handles max ratings correctly', () => {
+            expect(computeConfidence(baseBook, 5, 100, 'The Great Gatsby')).toBe(100);
+        });
+
+        it('calculates correct confidence with partial match and full ratings', () => {
+            // Metadata: 50
+            // Query match: 0.5 * 30 = 15
+            // Rating: 5/5 * 12 = 12
+            // Count: 100/100 * 8 = 8
+            // Total: 50 + 15 + 12 + 8 = 85
+            expect(computeConfidence(baseBook, 5, 100, 'Great Unknown')).toBe(85);
+        });
+
+        it('handles query with a single letter by ignoring it', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            expect(computeConfidence(book, 5, 100, 'A')).toBe(70);
         });
     });
 });

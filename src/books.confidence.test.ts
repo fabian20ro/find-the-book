@@ -17,29 +17,25 @@ describe('Book scoring logic', () => {
 
   it('queryMatchRatio calculates correctly', () => {
     const ratio = queryMatchRatio(baseBook, 'Gatsby Fitzgerald');
-    // queryWords: ['gatsby', 'fitzgerald']
-    // bookText: 'the great gatsby f. scott fitzgerald'
-    // matches: 'gatsby', 'fitzgerald' -> 2 matches
-    // 2/2 = 1
     expect(ratio).toBe(1);
 
     const ratio2 = queryMatchRatio(baseBook, 'great scott');
-    // queryWords: ['great', 'scott']
-    // matches: 'great', 'scott' -> 2 matches
-    // 2/2 = 1
     expect(ratio2).toBe(1);
   });
 
+  it('queryMatchRatio handles edge cases', () => {
+    expect(queryMatchRatio(baseBook, '')).toBe(0);
+    expect(queryMatchRatio(baseBook, ' ')).toBe(0);
+    expect(queryMatchRatio(baseBook, 'a')).toBe(0);
+    expect(queryMatchRatio(baseBook, 'Gatsby!')).toBe(1);
+    expect(queryMatchRatio(baseBook, 'Gatsby & Fitzgerald')).toBe(1);
+  });
+
   it('computeConfidence calculates correctly', () => {
-    // Base score without query:
-    // title(10) + authors(10) + isbn(10) + thumb(5) + desc(5) + pub(5) + date(5) = 50
-    // With query 'Gatsby' (1 match) -> 50 + (1/2 * 30) = 50 + 15 = 65
-    // Ratings: avg(5) -> (5/5 * 12) = 12. count(100) -> (100/100 * 8) = 8.
-    // Total: 50 (metadata) + 30 (query match) + 12 (ratings) + 8 (count) = 100
     const confidence = computeConfidence(baseBook, 5, 100, 'Gatsby');
     expect(confidence).toBe(100);
 
-    // Test edge cases
     expect(computeConfidence({ ...baseBook, title: 'Unknown Title' }, 0, 0, '')).toBe(40);
+    expect(computeConfidence(baseBook, 10, 1000, 'Gatsby Fitzgerald')).toBe(100);
   });
 });
