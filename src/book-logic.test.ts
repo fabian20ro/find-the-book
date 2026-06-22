@@ -51,9 +51,24 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
         });
 
+        it('handles multiple spaces in query', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
+        });
+
         it('handles hyphenated words by treating them as separate words', () => {
             const book = { id: '1', title: 'Full-time job', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'full time')).toBe(1);
+        });
+
+        it('handles unicode normalization (accents)', () => {
+            const book = { id: '1', title: 'Cafe', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Café')).toBe(1);
+        });
+
+        it('does not match substrings (only whole words)', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Gats')).toBe(0);
         });
     });
 
