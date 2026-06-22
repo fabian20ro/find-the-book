@@ -51,9 +51,14 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
         });
 
-        it('handles multiple spaces in query', () => {
-            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
-            expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
+        it('caps contribution from ratingsCount at 8 even if ratingsCount > 100', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query match: 30
+            // Rating (5): 12
+            // Count (200): 8
+            // Total: 50 + 30 + 12 + 8 = 100
+            expect(computeConfidence(book, 5, 200, 'The Great Gatsby')).toBe(100);
         });
 
         it('handles hyphenated words by treating them as separate words', () => {
