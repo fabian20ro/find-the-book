@@ -46,6 +46,11 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'Café de Paris')).toBe(1);
         });
 
+        it('handles duplicate words in query', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Great Great')).toBe(1);
+        });
+
         it('handles multiple spaces in query', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'The   Great  Gatsby')).toBe(1);
