@@ -80,6 +80,16 @@ describe('Book logic', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'Gats')).toBe(0);
         });
+
+        it('handles multiple authors', () => {
+            const book = { id: '1', title: 'Title', authors: ['Author One', 'Author Two'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Author Two')).toBe(1);
+        });
+
+        it('matches query against author names', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'Scott')).toBe(1);
+        });
     });
 
     describe('computeConfidence', () => {
@@ -135,6 +145,11 @@ describe('Book logic', () => {
 
         it('handles max ratings correctly', () => {
             expect(computeConfidence(baseBook, 5, 100, 'The Great Gatsby')).toBe(100);
+        });
+
+        it('handles query with a single letter by ignoring it', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            expect(computeConfidence(book, 5, 100, 'A')).toBe(70);
         });
     });
 });
