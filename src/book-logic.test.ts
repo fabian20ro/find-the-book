@@ -152,6 +152,15 @@ describe('Book logic', () => {
             expect(computeConfidence(baseBook, 5, 100, 'The Great Gatsby')).toBe(100);
         });
 
+        it('calculates correct confidence with partial match and full ratings', () => {
+            // Metadata: 50
+            // Query match: 0.5 * 30 = 15
+            // Rating: 5/5 * 12 = 12
+            // Count: 100/100 * 8 = 8
+            // Total: 50 + 15 + 12 + 8 = 85
+            expect(computeConfidence(baseBook, 5, 100, 'Great Unknown')).toBe(85);
+        });
+
         it('handles query with a single letter by ignoring it', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
             expect(computeConfidence(book, 5, 100, 'A')).toBe(70);
