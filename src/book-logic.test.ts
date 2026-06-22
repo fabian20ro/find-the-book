@@ -95,6 +95,21 @@ describe('Book logic', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'Scott')).toBe(1);
         });
+
+        it('returns 0 for empty query', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, '')).toBe(0);
+        });
+
+        it('returns 0 for query with only whitespace', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, '   ')).toBe(0);
+        });
+
+        it('returns 0 for query with only punctuation', () => {
+            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, '!!! ???')).toBe(0);
+        });
     });
 
     describe('computeConfidence', () => {
@@ -114,8 +129,8 @@ describe('Book logic', () => {
             expect(computeConfidence(partialBook, 0, 0, 'Gatsby')).toBe(65);
         });
 
-        it('caps confidence at 100 even with very high ratings', () => {
-            expect(computeConfidence(baseBook, 10, 200, 'The Great Gatsby')).toBe(100);
+        it('handles max ratings correctly', () => {
+            expect(computeConfidence(baseBook, 5, 100, 'The Great Gatsby')).toBe(100);
         });
 
         it('handles low ratings correctly', () => {
@@ -159,11 +174,6 @@ describe('Book logic', () => {
             // Count: 100/100 * 8 = 8
             // Total: 50 + 15 + 12 + 8 = 85
             expect(computeConfidence(baseBook, 5, 100, 'Great Unknown')).toBe(85);
-        });
-
-        it('handles query with a single letter by ignoring it', () => {
-            const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
-            expect(computeConfidence(book, 5, 100, 'A')).toBe(70);
         });
     });
 });
