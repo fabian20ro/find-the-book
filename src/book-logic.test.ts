@@ -203,5 +203,31 @@ describe('Book logic', () => {
             // Total: 50 + 30 + 0 + 8 = 88
             expect(computeConfidence(book, 0, 100, 'The Great Gatsby')).toBe(88);
         });
+        it('handles undefined query correctly', () => {
+            const fullBook = { ...baseBook, title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query: undefined -> 0
+            // Rating: 5 -> 12
+            // Count: 100 -> 8
+            // Total: 50 + 12 + 8 = 70
+            expect(computeConfidence(fullBook, 5, 100, undefined)).toBe(70);
+        });
+
+        it('handles "Unknown Title" as a zero-point title even if other metadata is present', () => {
+            const book = { ...baseBook, title: 'Unknown Title', authors: ['Author'], publisher: 'Publisher', publishedDate: '2024', description: 'Desc', isbn: '123', pageCount: 100, thumbnailUrl: 'url', infoLink: 'link', confidence: 0 } as Book;
+            // Metadata: title (0) + authors (10) + isbn (10) + thumbnail (5) + desc (5) + pub (5) + date (5) = 40
+            // Query: 'Author' -> 10 (assuming authors match)
+            // Rating: 5 -> 12
+            // Count: 100 -> 8
+            // Total: 40 + 10 + 12 + 8 = 70. Wait, Query match: 10 (if authors match).
+            // Actually, queryMatchRatio(book, 'Author') where book.authors = ['Author'].
+            // queryWords = ['author']. bookWords = {'the', 'great', 'gatsby', 'author', ...}.
+            // match = 1. ratio = 1. score += 30.
+            // Metadata: 40.
+            // Rating: 12.
+            // Count: 8.
+            // Total: 40 + 30 + 12 + 8 = 90.
+            expect(computeConfidence(book, 5, 100, 'Author')).toBe(90);
+        });
     });
 });
