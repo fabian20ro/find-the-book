@@ -46,6 +46,14 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'Café de Paris')).toBe(1);
         });
 
+        it('handles unicode normalization (NFC vs NFD)', () => {
+            const book = { id: '1', title: 'Café', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            const queryNFC = 'Café';
+            const queryNFD = 'Cafe\u0301';
+            expect(queryMatchRatio(book, queryNFC)).toBe(1);
+            expect(queryMatchRatio(book, queryNFD)).toBe(1);
+        });
+
         it('handles duplicate words in query', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'Great Great')).toBe(1);
