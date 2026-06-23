@@ -175,5 +175,25 @@ describe('Book logic', () => {
             // Total: 50 + 15 + 12 + 8 = 85
             expect(computeConfidence(baseBook, 5, 100, 'Great Unknown')).toBe(85);
         });
+
+        it('does not award points for "Unknown Title"', () => {
+            const book = { ...baseBook, title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, confidence: 0 } as Book;
+            // Metadata: 0 + 0 (title) + 0 (authors) + 0 (isbn) + 0 (thumb) + 0 (desc) + 0 (pub) + 0 (date) = 0
+            // Query: 'The Great Gatsby' -> 0 (no match with 'Unknown Title')
+            // Rating: 5/5 * 12 = 12
+            // Count: 100/100 * 8 = 8
+            // Total: 12 + 8 = 20
+            expect(computeConfidence(book, 5, 100, 'The Great Gatsby')).toBe(20);
+        });
+
+        it('handles averageRating of 0 correctly', () => {
+            const book = { ...baseBook, title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+            // Metadata: 50
+            // Query: 'The Great Gatsby' -> 30
+            // Rating: 0 -> 0
+            // Count: 100/100 * 8 = 8
+            // Total: 50 + 30 + 0 + 8 = 88
+            expect(computeConfidence(book, 0, 100, 'The Great Gatsby')).toBe(88);
+        });
     });
 });
