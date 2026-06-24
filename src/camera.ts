@@ -85,4 +85,8 @@ export class CameraManager {
         }
         this.video.srcObject = null;
     }
+
+    get isActive(): boolean {
+        return !!this.stream && this.video.readyState >= 2;
+    }
 }
