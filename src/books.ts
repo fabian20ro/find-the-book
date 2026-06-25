@@ -47,7 +47,7 @@ export function queryMatchRatio(
   const queryWords = clean(query).split(/\s+/).filter((w) => w.length >= 2);
   if (queryWords.length === 0) return 0;
 
-  const bookText = clean([book.title, ...book.authors, book.publisher].filter(Boolean).join(" "));
+  const bookText = clean([book.title, ...book.authors, book.publisher, book.isbn].filter(Boolean).join(" "));
 
   let matched = 0;
   const bookWords = new Set(bookText.split(/\s+/));
@@ -62,9 +62,9 @@ export function queryMatchRatio(
  * and how well the book matches the original search query.
  *
  * Scoring breakdown:
- *   Metadata (up to 50): title 10, authors 10, ISBN 10, thumbnail 5,
+ * Metadata (up to 50): title 10, authors 10, ISBN 10, thumbnail 5,
  *     description 5, publisher 5, publishedDate 5
- *   Query match (up to 30): ratio of query words found in title+authors
+ *   Query match (up to 30): ratio of query words found in title+authors+isbn
  *   Ratings (up to 20): averageRating contributes up to 12,
  *     ratingsCount contributes up to 8
  * */
