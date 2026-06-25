@@ -44,13 +44,20 @@ export function queryMatchRatio(
   if (!query || query.trim().length === 0) return 0;
 
   const clean = (text: string) => text.normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}]/gu, " ");
-  const queryWords = clean(query).split(/\s+/).filter((w) => w.length >= 2);
+  const queryWords = [...new Set(clean(query).split(/\s+/).filter((w) => w.length >= 2))];
   if (queryWords.length === 0) return 0;
 
-  const bookText = clean([book.title, ...book.authors, book.publisher, book.isbn, book.description].filter(Boolean).join(" "));
+  const bookText = clean([
+    book.title,
+    ...book.authors,
+    book.publisher,
+    book.isbn,
+    book.description,
+    book.pageCount?.toString(),
+  ].filter(Boolean).join(" "));
 
-  let matched = 0;
   const bookWords = new Set(bookText.split(/\s+/));
+  let matched = 0;
   for (const word of queryWords) {
     if (bookWords.has(word)) matched++;
   }
