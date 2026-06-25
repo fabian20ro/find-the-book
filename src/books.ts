@@ -47,7 +47,7 @@ export function queryMatchRatio(
   const queryWords = clean(query).split(/\s+/).filter((w) => w.length >= 2);
   if (queryWords.length === 0) return 0;
 
-  const bookText = clean([book.title, ...book.authors, book.publisher, book.isbn].filter(Boolean).join(" "));
+  const bookText = clean([book.title, ...book.authors, book.publisher, book.isbn, book.description].filter(Boolean).join(" "));
 
   let matched = 0;
   const bookWords = new Set(bookText.split(/\s+/));
