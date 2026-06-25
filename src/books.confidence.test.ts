@@ -21,6 +21,9 @@ describe('Book scoring logic', () => {
 
     const ratio2 = queryMatchRatio(baseBook, 'great scott');
     expect(ratio2).toBe(1);
+
+    const ratio3 = queryMatchRatio(baseBook, 'story of wealth');
+    expect(ratio3).toBe(1);
   });
 
   it('queryMatchRatio handles edge cases', () => {
