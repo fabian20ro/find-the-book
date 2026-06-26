@@ -108,6 +108,13 @@ export function computeConfidence(
   return Math.min(score, 100);
 }
 
+/**
+ * Checks if a book's confidence score is considered high (>= 80).
+ */
+export function isHighConfidence(book: Book): boolean {
+  return book.confidence >= 80;
+}
+
 const MAX_CACHE_SIZE = 200;
 
 export class BookSearcher {
