@@ -56,7 +56,7 @@ export function queryMatchRatio(
     book.pageCount?.toString(),
   ].filter(Boolean).join(" "));
 
-  const bookWords = new Set(bookText.split(/\s+/));
+  const bookWords = new Set(bookText.split(/\s+/).filter(w => w.length > 0));
   let matched = 0;
   for (const word of queryWords) {
     if (bookWords.has(word)) matched++;
