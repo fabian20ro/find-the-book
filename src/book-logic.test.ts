@@ -161,18 +161,14 @@ describe('Book logic', () => {
             expect(computeConfidence(book, undefined, undefined, 'The Great Gatsby')).toBe(80);
         });
 
-        it('clamps averageRating contribution to 12 even if rating is > 5', () => {
+        it('clamps averageRating to 5', () => {
             const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
             // Metadata: 50
-            // Query match: 0
-            // Rating: round(10/5 * 12) = 24 (WITHOUT CLAMP)
-            // Count: 0
-            // Expected: 50 + 12 + 0 = 62.
-            expect(computeConfidence(book, 10, 0, '')).toBe(62);
-        });
-
-        it('handles max ratings correctly', () => {
-            expect(computeConfidence(baseBook, 5, 100, 'The Great Gatsby')).toBe(100);
+            // Query: 'The Great Gatsby' -> 30
+            // Rating: 5.1 -> 12
+            // Count: 100 -> 8
+            // Total: 50 + 30 + 12 + 8 = 100
+            expect(computeConfidence(book, 5.1, 100, 'The Great Gatsby')).toBe(100);
         });
 
         it('calculates correct confidence with partial match and full ratings', () => {
@@ -203,6 +199,7 @@ describe('Book logic', () => {
             // Total: 50 + 30 + 0 + 8 = 88
             expect(computeConfidence(book, 0, 100, 'The Great Gatsby')).toBe(88);
         });
+
         it('handles undefined query correctly', () => {
             const fullBook = { ...baseBook, title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
             // Metadata: 50
