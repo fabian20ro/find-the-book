@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeConfidence, queryMatchRatio } from './books';
+import { computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
 import type { Book } from './books';
 
 describe('Book logic', () => {
@@ -228,6 +228,14 @@ describe('Book logic', () => {
             // Count: 8.
             // Total: 40 + 30 + 12 + 8 = 90.
             expect(computeConfidence(book, 5, 100, 'Author')).toBe(90);
+        });
+
+        it('returns correct confidence levels', () => {
+            expect(getConfidenceLevel(100)).toBe('High');
+            expect(getConfidenceLevel(80)).toBe('High');
+            expect(getConfidenceLevel(40)).toBe('Medium');
+            expect(getConfidenceLevel(10)).toBe('Low');
+            expect(getConfidenceLevel(0)).toBe('None');
         });
     });
 });
