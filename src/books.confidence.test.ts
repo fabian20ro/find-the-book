@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeConfidence, queryMatchRatio } from './books';
+import { computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
 
 describe('Book scoring logic', () => {
   const baseBook: any = {
@@ -37,8 +37,19 @@ describe('Book scoring logic', () => {
   it('computeConfidence calculates correctly', () => {
     const confidence = computeConfidence(baseBook, 5, 100, 'Gatsby');
     expect(confidence).toBe(100);
+    expect(getConfidenceLevel(confidence)).toBe('High');
 
-    expect(computeConfidence({ ...baseBook, title: 'Unknown Title' }, 0, 0, '')).toBe(40);
+    const midConfidence = computeConfidence({ ...baseBook, title: 'Unknown Title' }, 0, 0, '');
+    expect(midConfidence).toBe(40);
+    expect(getConfidenceLevel(midConfidence)).toBe('Medium');
+
     expect(computeConfidence(baseBook, 10, 1000, 'Gatsby Fitzgerald')).toBe(100);
+  });
+
+  it('getConfidenceLevel classifies correctly', () => {
+    expect(getConfidenceLevel(90)).toBe('High');
+    expect(getConfidenceLevel(40)).toBe('Medium');
+    expect(getConfidenceLevel(10)).toBe('Low');
+    expect(getConfidenceLevel(0)).toBe('None');
   });
 });

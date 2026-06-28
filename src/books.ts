@@ -56,7 +56,7 @@ export function queryMatchRatio(
     book.pageCount?.toString(),
   ].filter(Boolean).join(" "));
 
-  const bookWords = new Set(bookText.split(/\s+/));
+  const bookWords = new Set(bookText.split(/\s+/).filter(w => w.length > 0));
   let matched = 0;
   for (const word of queryWords) {
     if (bookWords.has(word)) matched++;
@@ -108,8 +108,21 @@ export function computeConfidence(
   return Math.min(score, 100);
 }
 
+export type ConfidenceLevel = 'High' | 'Medium' | 'Low' | 'None';
+
+/**
+ * Returns a human-readable label for a confidence score.
+ */
+export function getConfidenceLevel(score: number): ConfidenceLevel {
+  if (score >= 80) return 'High';
+  if (score >= 40) return 'Medium';
+  if (score > 0) return 'Low';
+  return 'None';
+}
+
 /**
  * Checks if a book's confidence score is considered high (>= 80).
+ * @deprecated Use getConfidenceLevel(book.confidence) === 'High' instead.
  */
 export function isHighConfidence(book: Book): boolean {
   return book.confidence >= 80;
