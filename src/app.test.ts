@@ -125,6 +125,20 @@ describe('app', () => {
         }
     });
 
+    it('calls scanOnce when onManualScan is triggered (if camera is active)', async () => {
+        const { scanOnce } = await import('./scanner');
+        await capturedHandlers.onStartCamera();
+        await capturedHandlers.onManualScan();
+        expect(scanOnce).toHaveBeenCalled();
+    });
+
+    it('calls stopScanning when onStopCamera is triggered', async () => {
+        const { stopScanning } = await import('./scanner');
+        await capturedHandlers.onStartCamera();
+        await capturedHandlers.onStopCamera();
+        expect(stopScanning).toHaveBeenCalled();
+    });
+
     it('loads saved autoScan preference from localStorage', async () => {
         localStorage.setItem('ftb-autoscan', 'false');
 
