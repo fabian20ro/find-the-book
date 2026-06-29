@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BookSearcher, computeConfidence, queryMatchRatio } from './books';
+import { BookSearcher, computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
 import type { Book } from './books';
 
 function mockFetchResponse(data: object, status = 200) {
@@ -366,39 +366,23 @@ describe('queryMatchRatio', () => {
     });
 });
 
-describe('queryMatchRatio', () => {
-  const mockBook = {
-    id: "1",
-    title: "The Great Gatsby",
-    authors: ["F. Scott Fitzgerald"],
-    publisher: "Scribner",
-    publishedDate: "1925",
-    description: "A story of wealth and love",
-    isbn: "1234567890",
-    pageCount: 180,
-    thumbnailUrl: "url",
-    infoLink: "url",
-    confidence: 100
-  } as any;
-
-  it('returns 0 for empty query', () => {
-    expect(queryMatchRatio(mockBook, '')).toBe(0);
-    expect(queryMatchRatio(mockBook, '   ')).toBe(0);
+describe('getConfidenceLevel', () => {
+  it('returns High for score >= 80', () => {
+    expect(getConfidenceLevel(80)).toBe('High');
+    expect(getConfidenceLevel(100)).toBe('High');
   });
 
-  it('returns 0 for query with only short words', () => {
-    expect(queryMatchRatio(mockBook, 'is a a a')).toBe(0);
+  it('returns Medium for score between 40 and 79', () => {
+    expect(getConfidenceLevel(40)).toBe('Medium');
+    expect(getConfidenceLevel(79)).toBe('Medium');
   });
 
-  it('returns 1 for perfect match', () => {
-    expect(queryMatchRatio(mockBook, 'The Great Gatsby')).toBe(1);
+  it('returns Low for score between 1 and 39', () => {
+    expect(getConfidenceLevel(1)).toBe('Low');
+    expect(getConfidenceLevel(39)).toBe('Low');
   });
 
-  it('handles case insensitivity and normalization', () => {
-    expect(queryMatchRatio(mockBook, 'great gatsby')).toBe(1);
-  });
-
-  it('handles partial matches', () => {
-    expect(queryMatchRatio(mockBook, 'Gatsby')).toBe(1);
+  it('returns None for score 0', () => {
+    expect(getConfidenceLevel(0)).toBe('None');
   });
 });
