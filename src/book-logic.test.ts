@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
+import { describe, it, expect, vi } from 'vitest';
+import { computeConfidence, queryMatchRatio, getConfidenceLevel, BookSearcher } from './books';
 import type { Book } from './books';
 
 describe('Book logic', () => {
