@@ -274,7 +274,7 @@ describe('computeConfidence', () => {
     it('adds rating points for averageRating', () => {
         const withoutRating = computeConfidence(makeBookData());
         const withRating = computeConfidence(makeBookData(), 4.0);
-        expect(withRating).toBeGreaterThan(withoutRating);
+        expect(withRating).toBe(60);
     });
 
     it('adds rating points for ratingsCount', () => {
