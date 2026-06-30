@@ -121,9 +121,16 @@ export function getConfidenceLevel(score: number): ConfidenceLevel {
 }
 
 /**
- * Checks if a book's confidence score is considered high (>= 80).
- * @deprecated Use getConfidenceLevel(book.confidence) === 'High' instead.
+ * Returns a color for a given confidence level.
  */
+export function getConfidenceColor(level: ConfidenceLevel): string {
+  switch (level) {
+    case 'High': return '#22c55e';
+    case 'Medium': return '#f59e0b';
+    case 'Low': return '#ef4444';
+    case 'None': return '#6b7280';
+  }
+}
 export function isHighConfidence(book: Book): boolean {
   return book.confidence >= 80;
 }
