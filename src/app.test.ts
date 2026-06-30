@@ -325,4 +325,21 @@ describe('app', () => {
             infoLink: null,
         });
     });
+
+    it('adds book from candidates when onAddCandidate is triggered', async () => {
+        const { getState: getTestState, addCandidates } = await import('./state');
+        const candidateBook = {
+            id: 'candidate-1',
+            title: 'Candidate Book',
+            authors: ['Author'],
+            confidence: 90,
+        };
+        addCandidates([candidateBook as any]);
+        expect(getTestState().candidateBooks.length).toBe(1);
+
+        capturedHandlers.onAddCandidate('candidate-1');
+
+        expect(getTestState().books.some(b => b.id === 'candidate-1')).toBe(true);
+        expect(getTestState().candidateBooks.length).toBe(0);
+    });
 });
