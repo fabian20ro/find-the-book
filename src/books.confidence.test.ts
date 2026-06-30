@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
+import { computeConfidence, queryMatchRatio, getConfidenceLevel, getConfidenceColor, isHighConfidence } from './books';
 
 describe('Book scoring logic', () => {
   const baseBook: any = {
@@ -51,5 +51,17 @@ describe('Book scoring logic', () => {
     expect(getConfidenceLevel(40)).toBe('Medium');
     expect(getConfidenceLevel(10)).toBe('Low');
     expect(getConfidenceLevel(0)).toBe('None');
+  });
+
+  it('getConfidenceColor returns correct colors', () => {
+    expect(getConfidenceColor('High')).toBe('#22c55e');
+    expect(getConfidenceColor('Medium')).toBe('#f59e0b');
+    expect(getConfidenceColor('Low')).toBe('#ef4444');
+    expect(getConfidenceColor('None')).toBe('#6b7280');
+  });
+
+  it('isHighConfidence works correctly', () => {
+    expect(isHighConfidence({ ...baseBook, confidence: 80 } as any)).toBe(true);
+    expect(isHighConfidence({ ...baseBook, confidence: 79 } as any)).toBe(false);
   });
 });
