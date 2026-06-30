@@ -14,14 +14,17 @@ vi.mock('./camera', () => ({
     },
 }));
 
-const mockOcrInit = vi.fn().mockResolvedValue(undefined);
-const mockSetLanguage = vi.fn().mockResolvedValue(undefined);
+const { mockOcrInit, mockSetLanguage, mockRecognize } = vi.hoisted(() => ({
+    mockOcrInit: vi.fn().mockResolvedValue(undefined),
+    mockSetLanguage: vi.fn().mockResolvedValue(undefined),
+    mockRecognize: vi.fn().mockResolvedValue(['Test text']),
+}));
 
 vi.mock('./ocr', () => ({
     TextRecognizer: class {
         init = mockOcrInit;
         setLanguage = mockSetLanguage;
-        recognize = vi.fn().mockResolvedValue(['Test text']);
+        recognize = mockRecognize;
         resetProcessing = vi.fn();
         destroy = vi.fn();
     },
