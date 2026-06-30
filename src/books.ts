@@ -171,7 +171,10 @@ export class BookSearcher {
         return [];
       }
 
-      if (!response.ok) return [];
+      if (!response.ok) {
+        this.notify(`API error: ${response.status}`);
+        return [];
+      }
       const data: GoogleBooksResponse = await response.json();
 
       return (data.items || [])
