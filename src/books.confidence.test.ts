@@ -96,6 +96,11 @@ describe('Book scoring logic', () => {
     expect(getConfidenceColor('None')).toBe('#6b7280');
   });
 
+  it('queryMatchRatio returns 0 when all book fields are null or empty', () => {
+    const book = { id: '1', title: '', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+    expect(queryMatchRatio(book, 'any query here')).toBe(0);
+  });
+
   it('queryMatchRatio matches query words against ISBN', () => {
     const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: '9780743276540', pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
     // ISBN is a single whitespace token, so the whole string must match as one query word (>= 2 chars)
