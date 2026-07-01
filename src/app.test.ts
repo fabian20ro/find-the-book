@@ -329,6 +329,15 @@ describe('app', () => {
         });
     });
 
+    it('returns an empty array when parseStoredBooks receives invalid JSON', () => {
+        expect(appModule.parseStoredBooks('{not json}')).toEqual([]);
+    });
+
+    it('returns an empty array for non-array stored books payload', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify({ id: 'x', title: 'Y' }));
+        expect(restored).toEqual([]);
+    });
+
     it('adds book from candidates when onAddCandidate is triggered', async () => {
         const { getState: getTestState, addCandidates } = await import('./state');
         const candidateBook = {
