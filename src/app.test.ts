@@ -372,4 +372,19 @@ describe('app', () => {
         // The handler gracefully returns without calling scanner functions
         // (cameraManager is null, so the if (!cameraManager) guard fires).
     });
+
+    it('persists auto-scan preference to localStorage when toggled on', async () => {
+        await capturedHandlers.onStartCamera();
+        capturedHandlers.onAutoScanToggle();
+
+        expect(localStorage.getItem('ftb-autoscan')).toBe('true');
+    });
+
+    it('persists auto-scan preference to localStorage when toggled off', async () => {
+        await capturedHandlers.onStartCamera();
+        capturedHandlers.onAutoScanToggle(); // turn on
+        capturedHandlers.onAutoScanToggle(); // turn off
+
+        expect(localStorage.getItem('ftb-autoscan')).toBe('false');
+    });
 });
