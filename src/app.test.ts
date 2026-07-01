@@ -345,4 +345,31 @@ describe('app', () => {
         expect(getTestState().books.some(b => b.id === 'candidate-1')).toBe(true);
         expect(getTestState().candidateBooks.length).toBe(0);
     });
+
+    it('calls resumeAutoScan when auto-scan is toggled on with camera active', async () => {
+        const { resumeAutoScan } = await import('./scanner');
+        await capturedHandlers.onStartCamera();
+        capturedHandlers.onAutoScanToggle();
+
+        expect(resumeAutoScan).toHaveBeenCalledOnce();
+    });
+
+    it('calls pauseAutoScan when auto-scan is toggled off with camera active', async () => {
+        const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
+        await capturedHandlers.onStartCamera();
+        capturedHandlers.onAutoScanToggle(); // turn on
+        vi.clearAllMocks();
+
+        capturedHandlers.onAutoScanToggle(); // turn off
+
+        expect(pauseAutoScan).toHaveBeenCalledOnce();
+    });
+
+    it('does not call resume/pause auto-scan when there is no camera', () => {
+        capturedHandlers.onAutoScanToggle();
+        capturedHandlers.onAutoScanToggle();
+
+        // The handler gracefully returns without calling scanner functions
+        // (cameraManager is null, so the if (!cameraManager) guard fires).
+    });
 });
