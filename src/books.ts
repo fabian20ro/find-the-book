@@ -147,7 +147,10 @@ export class BookSearcher {
   }
 
   async search(query: string): Promise<Book[]> {
-    const normalized = query.toLowerCase().trim();
+    if (typeof query !== 'string') return [];
+
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return [];
     if (normalized.length < 2 || this.queryCache.has(normalized)) {
       return [];
     }
