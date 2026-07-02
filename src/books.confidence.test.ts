@@ -133,4 +133,16 @@ describe('Book scoring logic', () => {
     // Metadata: 50, Query match full query: 30, Rating 0 -> 0, Count 100: 8
     expect(computeConfidence(book, 0, 100, 'The Great Gatsby')).toBe(88);
   });
+
+  it('queryMatchRatio does not search publishedDate field', () => {
+    const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: '2024', description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+    // Only publishedDate has searchable content; queryMatchRatio should ignore it
+    expect(queryMatchRatio(book, '2024')).toBe(0);
+  });
+
+  it('queryMatchRatio searches pageCount but not other non-included fields', () => {
+    const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: 256, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+    // pageCount IS in search space (line 56 of books.ts)
+    expect(queryMatchRatio(book, '256')).toBe(1);
+  });
 });
