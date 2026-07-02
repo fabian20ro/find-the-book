@@ -145,4 +145,12 @@ describe('Book scoring logic', () => {
     // pageCount IS in search space (line 56 of books.ts)
     expect(queryMatchRatio(book, '256')).toBe(1);
   });
+
+  it('BookSearcher.search returns empty array for non-string query input', async () => {
+    const searcher = new BookSearcher(() => {});
+    // Line 150 of books.ts guards: if (typeof query !== 'string') return [];
+    expect(await searcher.search(123 as any)).toEqual([]);
+    expect(await searcher.search(null as any)).toEqual([]);
+    expect(await searcher.search(undefined as any)).toEqual([]);
+  });
 });
