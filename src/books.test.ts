@@ -172,6 +172,13 @@ describe('BookSearcher', () => {
             expect(results[0].confidence).toBeGreaterThan(50);
         });
 
+        it('returns empty for null, undefined, or non-string input', async () => {
+            expect(await searcher.search(null as any)).toEqual([]);
+            expect(await searcher.search(undefined as any)).toEqual([]);
+            expect(await searcher.search(42 as any)).toEqual([]);
+            expect(fetch).not.toHaveBeenCalled();
+        });
+
         it('upgrades http thumbnail to https', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
                 {

@@ -254,7 +254,10 @@ function handleAutoScanToggle(): void {
 }
 
 async function handleManualScan(): Promise<void> {
-    if (!cameraManager) return;
+    if (!cameraManager) {
+        toast('Start the camera first to scan');
+        return;
+    }
     await scanOnce(cameraManager, textRecognizer, bookSearcher);
 }
 
