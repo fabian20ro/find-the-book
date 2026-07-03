@@ -374,12 +374,16 @@ describe('app', () => {
         expect(pauseAutoScan).toHaveBeenCalledOnce();
     });
 
-    it('does not call resume/pause auto-scan when there is no camera', () => {
-        capturedHandlers.onAutoScanToggle();
-        capturedHandlers.onAutoScanToggle();
+    it('does not call resume/pause auto-scan when there is no camera', async () => {
+        const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
 
-        // The handler gracefully returns without calling scanner functions
-        // (cameraManager is null, so the if (!cameraManager) guard fires).
+        vi.clearAllMocks();
+
+        capturedHandlers.onAutoScanToggle(); // turns on — no camera
+        capturedHandlers.onAutoScanToggle(); // turns off — no camera
+
+        expect(resumeAutoScan).not.toHaveBeenCalled();
+        expect(pauseAutoScan).not.toHaveBeenCalled();
     });
 
     it('persists auto-scan preference to localStorage when toggled on', async () => {
