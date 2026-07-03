@@ -333,4 +333,39 @@ describe('Book scoring logic', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('BookSearcher notifies and returns empty on HTTP 429, removing query from cache', async () => {
+    // Line 169-175 of books.ts: on status 429 the searcher notifies the user,
+    // awaits a backoff, removes the query from cache so it can be retried later, and returns [].
+    vi.useFakeTimers();
+    const notify = vi.fn();
+    const originalFetch = globalThis.fetch;
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return { ok: false, status: 429 };
+      }
+      // Second call (after cache retry): succeed with an empty result set to confirm the query was re-issued.
+      return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(notify);
+      // Kick off search and advance timers past the backoff so it resolves without waiting real 5s.
+      const firstPromise = searcher.search('rate-limit-test');
+      await vi.advanceTimersByTimeAsync(6000);
+      const firstResult = await firstPromise;
+      expect(firstResult).toEqual([]);
+      // The notify callback should have been called with the rate-limit message.
+      expect(notify).toHaveBeenCalledWith("Google Books API rate limit reached. Pausing briefly...");
+      // After 429 handling, the query is removed from cache so a subsequent call re-issues it.
+      const secondResult = await searcher.search('rate-limit-test');
+      expect(secondResult).toEqual([]);
+      expect(callCount).toBe(2);
+    } finally {
+      vi.useRealTimers();
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
