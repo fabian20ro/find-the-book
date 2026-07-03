@@ -193,6 +193,19 @@ describe('BookSearcher', () => {
             const results = await searcher.search('http thumbnail');
             expect(results[0].thumbnailUrl).toBe('https://books.google.com/thumb.jpg');
         });
+
+        it('rejects volumes with missing or empty id', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
+                { volumeInfo: { title: 'No ID Book' } }, // no id field
+                { id: '', volumeInfo: { title: 'Empty ID Book' } },
+                { id: '   ', volumeInfo: { title: 'Whitespace ID Book' } },
+                { id: 'valid-id', volumeInfo: { title: 'Valid Book' } },
+            ])));
+
+            const results = await searcher.search('id validation');
+            expect(results).toHaveLength(1);
+            expect(results[0].id).toBe('valid-id');
+        });
     });
 
     describe('preloadBookId', () => {

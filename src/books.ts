@@ -182,7 +182,8 @@ export class BookSearcher {
 
       return (data.items || [])
         .map((item) => this.parseBook(item, query))
-        .filter((book) => {
+        .filter((book): book is Book => {
+          if (!book) return false; // null entries from rejected volumes
           if (this.foundBookIds.has(book.id)) return false;
           this.foundBookIds.add(book.id);
           return true;
@@ -193,7 +194,10 @@ export class BookSearcher {
     }
   }
 
-  private parseBook(item: GoogleBooksVolume, query?: string): Book {
+  private parseBook(item: GoogleBooksVolume, query?: string): Book | null {
+    // Reject volumes with missing or empty IDs — they break deduplication and UI targeting.
+    if (!item.id || typeof item.id !== 'string' || !item.id.trim()) return null;
+
     const info = item.volumeInfo || {};
     const identifiers = info.industryIdentifiers || [];
     const isbn13 = identifiers.find((id) => id.type === "ISBN_13");
