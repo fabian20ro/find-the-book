@@ -400,4 +400,14 @@ describe('app', () => {
 
         expect(localStorage.getItem('ftb-autoscan')).toBe('false');
     });
+
+    it('rejects oversized uploads with a toast and no processing', async () => {
+        const largeFile = new File(['x'.repeat(1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+        // 11 MB, exceeds the 10 MB cap
+        Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 });
+
+        await capturedHandlers.onImageUpload(largeFile);
+
+        expect(mockRecognize).not.toHaveBeenCalled();
+    });
 });
