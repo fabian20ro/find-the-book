@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { computeConfidence, queryMatchRatio, getConfidenceLevel, getConfidenceColor, isHighConfidence, BookSearcher } from './books';
 import type { Book } from './books';
 
@@ -144,5 +144,141 @@ describe('Book scoring logic', () => {
     const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: 256, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
     // pageCount IS in search space (line 56 of books.ts)
     expect(queryMatchRatio(book, '256')).toBe(1);
+  });
+
+  it('BookSearcher.search returns empty array for non-string query input', async () => {
+    const searcher = new BookSearcher(() => {});
+    // Line 150 of books.ts guards: if (typeof query !== 'string') return [];
+    expect(await searcher.search(123 as any)).toEqual([]);
+    expect(await searcher.search(null as any)).toEqual([]);
+    expect(await searcher.search(undefined as any)).toEqual([]);
+  });
+
+  it('BookSearcher.parseBook prefers ISBN_13 over ISBN_10', async () => {
+    // Mock fetch to return a volume with both ISBN types.
+    const mockResponse = {
+      items: [
+        {
+          id: 'isbn-pref-test',
+          volumeInfo: {
+            title: 'ISBN Pref Test Book',
+            authors: ['Test Author'],
+            industryIdentifiers: [
+              { type: 'ISBN_10', identifier: '0743276540' },
+              { type: 'ISBN_13', identifier: '9780743276540' },
+            ],
+          },
+        },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('ISBN Pref Test');
+      expect(results.length).toBe(1);
+      // ISBN_13 should be preferred (line 201 of books.ts: isbn13?.identifier || isbn10...)
+      expect(results[0].isbn).toBe('9780743276540');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('BookSearcher.parseBook falls back to first identifier when no ISBN_10/13', async () => {
+    const mockResponse = {
+      items: [
+        {
+          id: 'fallback-isbn',
+          volumeInfo: {
+            title: 'Fallback ISBN Book',
+            authors: ['Test Author'],
+            industryIdentifiers: [{ type: 'OTHER', identifier: 'OTHER-ID-123' }],
+          },
+        },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('Fallback ISBN');
+      expect(results.length).toBe(1);
+      // Falls through to identifiers[0]?.identifier (line 201 of books.ts)
+      expect(results[0].isbn).toBe('OTHER-ID-123');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('BookSearcher.parseBook converts http thumbnails to https', async () => {
+    const mockResponse = {
+      items: [
+        {
+          id: 'thumb-test',
+          volumeInfo: {
+            title: 'Thumbnail Test Book',
+            authors: ['Test Author'],
+            imageLinks: { thumbnail: 'http://img.example.com/cover.jpg' },
+          },
+        },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('Thumbnail Test');
+      expect(results.length).toBe(1);
+      // Line 203 of books.ts replaces "http://" with "https://" in thumbnail URLs
+      expect(results[0].thumbnailUrl).toBe('https://img.example.com/cover.jpg');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('BookSearcher.parseBook uses "Unknown Title" when title is missing', async () => {
+    const mockResponse = {
+      items: [
+        {
+          id: 'no-title-book',
+          volumeInfo: {},
+        },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('no-title');
+      expect(results.length).toBe(1);
+      // Line 207 of books.ts: info.title || "Unknown Title"
+      expect(results[0].title).toBe('Unknown Title');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });
