@@ -119,6 +119,24 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher.search returns empty array when fetch throws an exception', async () => {
+    // Line 191-194 of books.ts: the try/catch around fetch() must return [] on any
+    // thrown error (network failure, JSON parse error, etc.) — never let exceptions
+    // propagate to the caller. A spy confirms no crash, and the returned array is empty.
+    const notify = vi.fn();
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network down')) as any;
+
+    try {
+      const searcher = new BookSearcher(notify);
+      const results = await searcher.search('anything');
+      expect(results).toEqual([]);
+      // The notify callback must NOT be called for thrown exceptions — only for HTTP 429 / non-ok responses.
+      expect(notify).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = vi.fn() as any;
+    }
+  });
+
   it('BookSearcher deduplicates duplicate ids within a single search call', async () => {
     const mockResponse = {
       items: [
