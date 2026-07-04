@@ -401,4 +401,52 @@ describe('Book scoring logic', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('BookSearcher caches the normalized query and skips fetch on repeat calls', async () => {
+    // Line 154 of books.ts: if (normalized.length < 2 || this.queryCache.has(normalized)) return [].
+    // Calling search with an already-normalized query a second time must short-circuit at the cache check —
+    // no additional fetch() call should be made, and the result is still [].
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      fetchCalls++;
+      return { ok: false, status: 500 }; // will be ignored because items === undefined → []
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      await searcher.search('repeat-query');
+      expect(fetchCalls).toBe(1); // first call hit the network
+      await searcher.search('repeat-query');
+      expect(fetchCalls).toBe(1); // second call was served from cache — no extra fetch
+      // The second call still returns [] (the API returned ok=false last time too)
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('BookSearcher caches a query after first use and serves repeated calls without re-fetching', async () => {
+    // A more end-to-end check: the same normalized query returns results on first call (fetched),
+    // then an empty array on repeat — but only one fetch() was made.
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      fetchCalls++;
+      return { ok: true, status: 200, json: async () => ({ items: [{ id: 'cached-id', volumeInfo: { title: 'Cached Book', authors: ['A'] } }] }) };
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const first = await searcher.search('cached-query');
+      expect(first.length).toBe(1);
+      expect(fetchCalls).toBe(1);
+      // Repeated call returns [] — book id is in foundBookIds dedup set, but the cache also short-circuits.
+      const second = await searcher.search('cached-query');
+      expect(second.length).toBe(0);
+      expect(fetchCalls).toBe(1); // still only one fetch
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
