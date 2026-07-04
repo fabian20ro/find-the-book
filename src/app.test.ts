@@ -49,6 +49,7 @@ vi.mock('./scanner', () => ({
 
 vi.mock('./export', () => ({
     exportToCsv: vi.fn(),
+    shareBooks: vi.fn().mockResolvedValue(undefined),
 }));
 
 let capturedHandlers: any = null;
@@ -429,5 +430,13 @@ describe('app', () => {
         await capturedHandlers.onManualScan();
 
         expect(scanOnce).not.toHaveBeenCalled();
+    });
+
+    it('shows a toast and does not call shareBooks when there are no books', async () => {
+        const { shareBooks } = await import('./export');
+
+        capturedHandlers.onShare();
+
+        expect(shareBooks).not.toHaveBeenCalled();
     });
 });
