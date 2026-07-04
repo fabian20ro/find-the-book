@@ -247,9 +247,11 @@ function handleAutoScanToggle(): void {
     if (newVal) {
         // Turning auto-scan ON — resume the loop
         resumeAutoScan(cameraManager, textRecognizer, bookSearcher);
+        toast('Auto-scan enabled');
     } else {
         // Turning auto-scan OFF — stop the loop but keep camera active
         pauseAutoScan();
+        toast('Auto-scan paused');
     }
 }
 
