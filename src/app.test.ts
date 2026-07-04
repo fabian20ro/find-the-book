@@ -387,6 +387,20 @@ describe('app', () => {
         expect(pauseAutoScan).not.toHaveBeenCalled();
     });
 
+    it('persists auto-scan preference to localStorage without camera active', async () => {
+        const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
+
+        vi.clearAllMocks();
+
+        capturedHandlers.onAutoScanToggle(); // turns on — no camera started
+        expect(resumeAutoScan).not.toHaveBeenCalled();
+        expect(localStorage.getItem('ftb-autoscan')).toBe('true');
+
+        capturedHandlers.onAutoScanToggle(); // turns off
+        expect(pauseAutoScan).not.toHaveBeenCalled();
+        expect(localStorage.getItem('ftb-autoscan')).toBe('false');
+    });
+
     it('persists auto-scan preference to localStorage when toggled on', async () => {
         await capturedHandlers.onStartCamera();
         capturedHandlers.onAutoScanToggle();
