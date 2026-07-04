@@ -306,6 +306,14 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('queryMatchRatio matches accented query words against decomposed book text via NFKD normalization', () => {
+    // clean() in books.ts applies .normalize("NFKD") which decomposes accented chars
+    // (e.g. "é" → "e" + combining accent), then strips non-letter/digit characters,
+    // so accented and plain forms produce identical word sets.
+    const book = { id: '1', title: 'Resume', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null } satisfies Omit<Book, "confidence">;
+    expect(queryMatchRatio(book, 'résumé')).toBe(1);
+  });
+
   it('BookSearcher.parseBook uses "Unknown Title" when title is missing', async () => {
     const mockResponse = {
       items: [

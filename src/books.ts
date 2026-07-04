@@ -43,7 +43,7 @@ export function queryMatchRatio(
 ): number {
   if (!query || query.trim().length === 0) return 0;
 
-  const clean = (text: string) => text.normalize("NFKD").toLowerCase().replace(/[^\p{L}\p{N}]/gu, " ");
+  const clean = (text: string) => text.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]/gu, " ");
   const queryWords = [...new Set(clean(query).split(/\s+/).filter((w) => w.length >= 2))];
   if (queryWords.length === 0) return 0;
 
