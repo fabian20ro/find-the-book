@@ -449,4 +449,30 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher filters out volumes with missing, empty, or non-string IDs', async () => {
+    // parseBook (line 197-199 of books.ts) rejects volumes whose id is falsy, not a string,
+    // or trims to empty — returning null so search() silently drops them. This guards against
+    // malformed API responses that would otherwise inject broken book objects into the UI.
+    const mockResponse = {
+      items: [
+        { volumeInfo: { title: 'No ID Book', authors: ['A'] } },                    // id === undefined → rejected
+        { id: '', volumeInfo: { title: 'Empty ID Book', authors: ['B'] } },          // id === '' → rejected
+        { id: '   ', volumeInfo: { title: 'Whitespace ID Book', authors: ['C'] } },  // id trims to empty → rejected
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('test');
+      expect(results.length).toBe(0);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
