@@ -376,4 +376,29 @@ describe('Book scoring logic', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('BookSearcher deduplicates book ids across separate search calls', async () => {
+    // foundBookIds must persist between independent .search() calls so a book already returned
+    // to the user is not surfaced again later (e.g. after a rate-limit backoff and retry).
+    const originalFetch = globalThis.fetch;
+    let callNum = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      callNum++;
+      if (callNum === 1) {
+        return { ok: true, status: 200, json: async () => ({ items: [{ id: 'cross-dedup-a', volumeInfo: { title: 'First A', authors: ['A'] } }] }) };
+      }
+      // Second call returns the same id — it must be filtered out.
+      return { ok: true, status: 200, json: async () => ({ items: [{ id: 'cross-dedup-a', volumeInfo: { title: 'Second A', authors: ['A-Clone'] } }, { id: 'new-id', volumeInfo: { title: 'New B', authors: ['B'] } }] }) };
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      await searcher.search('first-query');
+      const secondResults = await searcher.search('second-query');
+      expect(secondResults.length).toBe(1);
+      expect(secondResults[0].id).toBe('new-id');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
 });
