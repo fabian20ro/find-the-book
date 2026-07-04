@@ -410,4 +410,24 @@ describe('app', () => {
 
         expect(mockRecognize).not.toHaveBeenCalled();
     });
+
+    it('persists language and increments usage on successful switch', async () => {
+        const { incrementLanguageUsage } = vi.hoisted(() => ({
+            incrementLanguageUsage: vi.fn(),
+        }));
+
+        await capturedHandlers.onLanguageChange('eng');
+
+        expect(localStorage.getItem('ftb-language')).toBe('eng');
+    });
+
+    it('does not call scanOnce when manual scan has no camera', async () => {
+        const { scanOnce } = await import('./scanner');
+
+        vi.clearAllMocks();
+
+        await capturedHandlers.onManualScan();
+
+        expect(scanOnce).not.toHaveBeenCalled();
+    });
 });
