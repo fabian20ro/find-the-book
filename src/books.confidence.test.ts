@@ -548,4 +548,39 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher evicts the oldest query from cache when MAX_CACHE_SIZE is reached', () => {
+    // When this.queryCache fills to MAX_CACHE_SIZE (200), search() must drop the oldest entry
+    // (first by insertion/iteration order) before adding a new one — keeping cache size bounded.
+    const searcher = new BookSearcher(() => {}) as any;
+
+    // Seed exactly 200 entries at known positions.
+    for (let i = 0; i < 200; i++) {
+      searcher.queryCache.add(`seed-query-${i}`);
+    }
+    expect(searcher.queryCache.size).toBe(200);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ items: [] }),
+    }) as any;
+
+    try {
+      // Trigger search — the cache-add path in books.ts runs synchronously up to the first await,
+      // so eviction and insertion happen before fetch() is actually awaited.
+      searcher.search('overflow-trigger');
+
+      // Cache size must stay at MAX_CACHE_SIZE, not grow.
+      expect(searcher.queryCache.size).toBe(200);
+      // The oldest entry (seed-query-0) must have been evicted.
+      expect(searcher.queryCache.has('seed-query-0')).toBe(false);
+      // A mid-range seed query that was inserted after the oldest must still be present.
+      expect(searcher.queryCache.has('seed-query-150')).toBe(true);
+      // The newest seeded entry plus the fresh one must both remain.
+      expect(searcher.queryCache.has('seed-query-199')).toBe(true);
+      expect(searcher.queryCache.has('overflow-trigger')).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
