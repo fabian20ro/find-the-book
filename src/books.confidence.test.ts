@@ -233,6 +233,13 @@ describe('Book scoring logic', () => {
     expect(queryMatchRatio(book, '2024')).toBe(0);
   });
 
+  it('queryMatchRatio does not search thumbnailUrl or infoLink fields', () => {
+    const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: 'https://img.example.com/cover.jpg', infoLink: 'https://books.google.com/books?id=abc', confidence: 0 } as Book;
+    // Lines 60-67 of books.ts only search title, authors, publisher, isbn, description, pageCount — URLs are excluded.
+    expect(queryMatchRatio(book, 'img.example.com cover')).toBe(0);
+    expect(queryMatchRatio(book, 'books.google.com abc')).toBe(0);
+  });
+
   it('queryMatchRatio searches pageCount but not other non-included fields', () => {
     const book = { id: '1', title: 'Unknown Title', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: 256, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
     // pageCount IS in search space (line 56 of books.ts)
