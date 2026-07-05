@@ -493,4 +493,59 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher.preloadBookId adds an id to the dedup set before any search', () => {
+    // preloadBookId (line 234) lets callers seed foundBookIds without hitting fetch.
+    const searcher = new BookSearcher(() => {});
+    searcher.preloadBookId('preload-target');
+
+    const mockResponse = {
+      items: [
+        { id: 'preload-target', volumeInfo: { title: 'Preloaded Book', authors: ['A'] } },
+        { id: 'other-id', volumeInfo: { title: 'Other Book', authors: ['B'] } },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => mockResponse,
+    }) as any;
+
+    try {
+      return searcher.search('preload-test').then((results) => {
+        // preload-target is in foundBookIds → filtered out.
+        expect(results.map((r) => r.id)).toEqual(['other-id']);
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('BookSearcher.removeBookId allows a previously-removed id to be returned again', () => {
+    // removeBookId (line 237) deletes the id from foundBookIds, so subsequent searches can re-surface it.
+    const searcher = new BookSearcher(() => {});
+
+    const mockResponse = {
+      items: [
+        { id: 'remove-target', volumeInfo: { title: 'Remove Test Book', authors: ['A'] } },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => mockResponse,
+    }) as any;
+
+    try {
+      // preload then remove — id should not be in dedup set when search runs.
+      searcher.preloadBookId('remove-target');
+      searcher.removeBookId('remove-target');
+      return searcher.search('remove-test').then((results) => {
+        expect(results.length).toBe(1);
+        expect(results[0].id).toBe('remove-target');
+      });
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
