@@ -395,6 +395,24 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher notifies on non-429 HTTP errors and returns empty array', async () => {
+    // Lines 177-180 of books.ts: any non-ok response (other than 429) calls notify with the status,
+    // then returns []. A spy confirms notify receives a message containing the actual HTTP status.
+    const notify = vi.fn();
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false, status: 503, json: async () => ({}),
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(notify);
+      const results = await searcher.search('any');
+      expect(results).toEqual([]);
+      expect(notify).toHaveBeenCalledWith("API error: 503");
+    } finally {
+      globalThis.fetch = vi.fn() as any;
+    }
+  });
+
   it('BookSearcher deduplicates book ids across separate search calls', async () => {
     // foundBookIds must persist between independent .search() calls so a book already returned
     // to the user is not surfaced again later (e.g. after a rate-limit backoff and retry).
