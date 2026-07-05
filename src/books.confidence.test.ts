@@ -72,6 +72,29 @@ describe('Book scoring logic', () => {
     expect(result).toEqual([]);
   });
 
+  it('BookSearcher returns empty array when query normalizes to an empty string', async () => {
+    // Line 162-163 of books.ts: after trim().toLowerCase(), a whitespace-only query
+    // produces normalized === '' which is falsy, so search() must return [] without
+    // touching the cache or making any fetch calls. A spy confirms no network activity.
+    const notify = vi.fn();
+    let fetchCalls = 0;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      fetchCalls++;
+      return { ok: true, status: 200, json: async () => ({ items: [] }) };
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(notify);
+      const result = await searcher.search('   ');
+      expect(result).toEqual([]);
+      expect(fetchCalls).toBe(0); // no fetch made — short-circuited at cache guard
+      expect(notify).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('BookSearcher deduplicates results by book id within a single search call', async () => {
     const searcher = new BookSearcher(() => {});
     // preload an id so that parseBook's filter rejects it on next search
