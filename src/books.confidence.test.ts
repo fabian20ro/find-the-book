@@ -548,7 +548,33 @@ describe('Book scoring logic', () => {
     }
   });
 
-  it('BookSearcher evicts the oldest query from cache when MAX_CACHE_SIZE is reached', () => {
+  it('BookSearcher.parseBook converts falsy numeric fields to null (e.g. pageCount:0)', async () => {
+    // parseBook (line 217 of books.ts) uses `|| null` for metadata like pageCount, so an API response
+    // with `{ pageCount: 0 }` must resolve to null — not the number zero which would otherwise be
+    // semantically broken. The same applies to any falsy value in these fields.
+    const mockResponse = {
+      items: [
+        { id: 'zero-fields', volumeInfo: { title: 'Zero Page Book', authors: ['A'], pageCount: 0 } },
+      ],
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => mockResponse,
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const results = await searcher.search('zero-page');
+      expect(results.length).toBe(1);
+      // pageCount === 0 is falsy in JS, so `|| null` yields null — that's the contract.
+      expect(results[0].pageCount).toBe(null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('BookSearcher evicts the oldest query from cache when MAX_CACHE_SIZE is reached', async () => {
     // When this.queryCache fills to MAX_CACHE_SIZE (200), search() must drop the oldest entry
     // (first by insertion/iteration order) before adding a new one — keeping cache size bounded.
     const searcher = new BookSearcher(() => {}) as any;
