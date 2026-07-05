@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { computeConfidence, queryMatchRatio, getConfidenceLevel, getConfidenceColor, isHighConfidence, BookSearcher } from './books';
+import { computeConfidence, queryMatchRatio, getConfidenceLevel, getConfidenceColor, isHighConfidence, BookSearcher, isISBN } from './books';
 import type { Book } from './books';
 
 describe('Book scoring logic', () => {
@@ -625,6 +625,44 @@ describe('Book scoring logic', () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  describe('isISBN', () => {
+    it('recognises a 13-digit ISBN without separators', () => {
+      expect(isISBN('9780743276540')).toBe(true);
+    });
+
+    it('recognises a 10-digit ISBN without separators', () => {
+      expect(isISBN('0743276540')).toBe(true);
+    });
+
+    it('recognises an ISBN with hyphens and spaces', () => {
+      expect(isISBN('978-0-7432-7654-0')).toBe(true);
+      expect(isISBN('978 0 7432 7654 0')).toBe(true);
+    });
+
+    it('rejects strings with fewer than 10 digits', () => {
+      expect(isISBN('12345')).toBe(false);
+      expect(isISBN('978074327654')).toBe(false);
+    });
+
+    it('rejects non-digit, hyphen, or space characters', () => {
+      expect(isISBN('978x074327654a')).toBe(false);
+      expect(isISBN('978-0-XX-27654-0')).toBe(false);
+    });
+
+    it('rejects empty or null input', () => {
+      expect(isISBN('')).toBe(false);
+      // @ts-expect-error testing runtime behaviour
+      expect(isISBN(null)).toBe(false);
+      // @ts-expect-error testing runtime behaviour
+      expect(isISBN(undefined)).toBe(false);
+    });
+
+    it('rejects 12-digit and 14-digit digit strings', () => {
+      expect(isISBN('123456789012')).toBe(false); // 12 digits
+      expect(isISBN('12345678901234')).toBe(false); // 14 digits
+    });
   });
 
 });

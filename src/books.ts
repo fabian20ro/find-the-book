@@ -34,6 +34,16 @@ interface GoogleBooksResponse {
 }
 
 /**
+ * Detects whether a string looks like an ISBN (10 or 13 digits, optionally hyphenated).
+ * Useful for routing user queries to the dedicated ISBN lookup endpoint instead of a general search.
+ */
+export function isISBN(query: string): boolean {
+  if (!query) return false;
+  const digitsOnly = query.replace(/[\s\-]/g, "");
+  return /^\d{10}$/.test(digitsOnly) || /^\d{13}$/.test(digitsOnly);
+}
+
+/**
  * Count how many words from the query appear in the book's title and authors.
  * Returns a ratio 0–1 of matched words / total query words.
  */
