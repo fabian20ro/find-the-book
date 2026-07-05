@@ -665,4 +665,57 @@ describe('Book scoring logic', () => {
     });
   });
 
+  describe('BookSearcher.parseBook missing volumeInfo', () => {
+    it('returns empty array when an item has no volumeInfo', async () => {
+      // parseBook (line 197-208 of books.ts) destructures `item.volumeInfo || {}`,
+      // so a volume with no volumeInfo produces an "Unknown Title" book. The question is whether
+      // that book's confidence score is still computed correctly and the id is added to dedup set.
+      const mockResponse = {
+        items: [
+          { id: 'no-volume-info-book' },
+        ],
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: async () => mockResponse,
+      }) as any;
+
+      try {
+        const searcher = new BookSearcher(() => {});
+        const results = await searcher.search('no-volume-info');
+        // The volume has an id, so parseBook must not reject it — but volumeInfo is empty.
+        // Title defaults to "Unknown Title", confidence computed from what's available.
+        expect(results.length).toBe(1);
+        expect(results[0].id).toBe('no-volume-info-book');
+        expect(results[0].title).toBe('Unknown Title');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('returns empty array when all items have no id', async () => {
+      // parseBook (line 197-199) rejects volumes without an id — this guards the dedup mechanism.
+      const mockResponse = {
+        items: [
+          { volumeInfo: { title: 'No ID A' } },
+          { volumeInfo: { title: 'No ID B' } },
+        ],
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: async () => mockResponse,
+      }) as any;
+
+      try {
+        const searcher = new BookSearcher(() => {});
+        const results = await searcher.search('no-id-test');
+        expect(results.length).toBe(0);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+  });
+
 });
