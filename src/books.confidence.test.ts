@@ -515,6 +515,30 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher caches queries case-insensitively (normalize to lowercase on line 162)', async () => {
+    // search() normalizes the query with `query.trim().toLowerCase()` before cache lookup.
+    // A second call with only case differences must hit the same cache entry — no extra fetch.
+    const originalFetch = globalThis.fetch;
+    let fetchCalls = 0;
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      fetchCalls++;
+      return { ok: true, status: 200, json: async () => ({ items: [{ id: 'case-test', volumeInfo: { title: 'Case Test Book', authors: ['A'] } }] }) };
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(() => {});
+      const first = await searcher.search('THE GREAT GATSBY');
+      expect(first.length).toBe(1);
+      expect(fetchCalls).toBe(1);
+      // Same query, different case — must hit cache and return [] without extra fetch.
+      const second = await searcher.search('the great gatsby');
+      expect(second.length).toBe(0);
+      expect(fetchCalls).toBe(1); // still only one fetch
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('BookSearcher filters out volumes with missing, empty, or non-string IDs', async () => {
     // parseBook (line 197-199 of books.ts) rejects volumes whose id is falsy, not a string,
     // or trims to empty — returning null so search() silently drops them. This guards against
