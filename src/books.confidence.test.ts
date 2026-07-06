@@ -695,6 +695,63 @@ describe('Book scoring logic', () => {
     });
   });
 
+  describe('BookSearcher.parseBook coerces falsy string fields to null', () => {
+    it('converts empty strings in publisher, publishedDate, description, and infoLink to null via ||-null pattern', async () => {
+      // parseBook (lines 219-230 of books.ts) assigns every optional string metadata field with `|| null`,
+      // so an API response that returns "" (empty string) for these fields must resolve to null — not the empty
+      // string, which would otherwise leak into the UI and corrupt downstream normalization.
+      const mockResponse = {
+        items: [
+          { id: 'falsy-string-fields', volumeInfo: { title: 'Falsy Fields Book', authors: ['A'], publisher: '', publishedDate: '', description: '', infoLink: '' } },
+        ],
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: async () => mockResponse,
+      }) as any;
+
+      try {
+        const searcher = new BookSearcher(() => {});
+        const results = await searcher.search('falsy-string');
+        expect(results.length).toBe(1);
+        // Every falsy string field must collapse to null via `|| null`.
+        expect(results[0].publisher).toBe(null);
+        expect(results[0].publishedDate).toBe(null);
+        expect(results[0].description).toBe(null);
+        expect(results[0].infoLink).toBe(null);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it('preserves non-empty string values through the ||-null coercion', async () => {
+      // Same parseBook path: real values must survive — only falsy ones collapse to null.
+      const mockResponse = {
+        items: [
+          { id: 'real-string-fields', volumeInfo: { title: 'Real Fields Book', authors: ['A'], publisher: 'Penguin', publishedDate: '2020', description: 'A real desc', infoLink: 'https://books.google.com/abc' } },
+        ],
+      };
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: async () => mockResponse,
+      }) as any;
+
+      try {
+        const searcher = new BookSearcher(() => {});
+        const results = await searcher.search('real-string');
+        expect(results.length).toBe(1);
+        expect(results[0].publisher).toBe('Penguin');
+        expect(results[0].publishedDate).toBe('2020');
+        expect(results[0].description).toBe('A real desc');
+        expect(results[0].infoLink).toBe('https://books.google.com/abc');
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+  });
+
   describe('BookSearcher.parseBook missing volumeInfo', () => {
     it('returns empty array when an item has no volumeInfo', async () => {
       // parseBook (line 197-208 of books.ts) destructures `item.volumeInfo || {}`,

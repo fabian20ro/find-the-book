@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { computeConfidence, queryMatchRatio, getConfidenceLevel, BookSearcher } from './books';
+import { isISBN, computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
 import type { Book } from './books';
 
 describe('Book logic', () => {
@@ -233,6 +233,37 @@ describe('Book logic', () => {
             expect(getConfidenceLevel(40)).toBe('Medium');
             expect(getConfidenceLevel(10)).toBe('Low');
             expect(getConfidenceLevel(0)).toBe('None');
+        });
+    });
+
+    describe('isISBN', () => {
+        it('returns true for 13-digit ISBN without separators', () => {
+            expect(isISBN('9780743276540')).toBe(true);
+        });
+
+        it('returns true for 13-digit ISBN with hyphens and spaces', () => {
+            expect(isISBN('978-0-743-27654-0')).toBe(true);
+            expect(isISBN('978 0 743 27654 0')).toBe(true);
+        });
+
+        it('returns true for valid 10-digit ISBN', () => {
+            expect(isISBN('0743276540')).toBe(true);
+            expect(isISBN('0-743-27654-0')).toBe(true);
+        });
+
+        it('returns false for empty or whitespace-only strings', () => {
+            expect(isISBN('')).toBe(false);
+            expect(isISBN('   ')).toBe(false);
+        });
+
+        it('returns false when non-digit characters are mixed with digits', () => {
+            expect(isISBN('978-abc-27654-0')).toBe(false);
+            expect(isISBN('abcdefghij')).toBe(false);
+        });
+
+        it('returns false for strings shorter than 10 or longer than 13 digits', () => {
+            expect(isISBN('12345')).toBe(false);
+            expect(isISBN('12345678901234')).toBe(false);
         });
     });
 });
