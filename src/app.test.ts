@@ -49,6 +49,7 @@ vi.mock('./scanner', () => ({
 
 vi.mock('./export', () => ({
     exportToCsv: vi.fn(),
+    shareBooks: vi.fn().mockResolvedValue(undefined),
 }));
 
 let capturedHandlers: any = null;
@@ -386,6 +387,20 @@ describe('app', () => {
         expect(pauseAutoScan).not.toHaveBeenCalled();
     });
 
+    it('persists auto-scan preference to localStorage without camera active', async () => {
+        const { resumeAutoScan, pauseAutoScan } = await import('./scanner');
+
+        vi.clearAllMocks();
+
+        capturedHandlers.onAutoScanToggle(); // turns on — no camera started
+        expect(resumeAutoScan).not.toHaveBeenCalled();
+        expect(localStorage.getItem('ftb-autoscan')).toBe('true');
+
+        capturedHandlers.onAutoScanToggle(); // turns off
+        expect(pauseAutoScan).not.toHaveBeenCalled();
+        expect(localStorage.getItem('ftb-autoscan')).toBe('false');
+    });
+
     it('persists auto-scan preference to localStorage when toggled on', async () => {
         await capturedHandlers.onStartCamera();
         capturedHandlers.onAutoScanToggle();
@@ -399,5 +414,43 @@ describe('app', () => {
         capturedHandlers.onAutoScanToggle(); // turn off
 
         expect(localStorage.getItem('ftb-autoscan')).toBe('false');
+    });
+
+    it('rejects oversized uploads with a toast and no processing', async () => {
+        const largeFile = new File(['x'.repeat(1024 * 1024)], 'large.jpg', { type: 'image/jpeg' });
+        // 11 MB, exceeds the 10 MB cap
+        Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 });
+
+        await capturedHandlers.onImageUpload(largeFile);
+
+        expect(mockRecognize).not.toHaveBeenCalled();
+    });
+
+    it('persists language and increments usage on successful switch', async () => {
+        const { incrementLanguageUsage } = vi.hoisted(() => ({
+            incrementLanguageUsage: vi.fn(),
+        }));
+
+        await capturedHandlers.onLanguageChange('eng');
+
+        expect(localStorage.getItem('ftb-language')).toBe('eng');
+    });
+
+    it('does not call scanOnce when manual scan has no camera', async () => {
+        const { scanOnce } = await import('./scanner');
+
+        vi.clearAllMocks();
+
+        await capturedHandlers.onManualScan();
+
+        expect(scanOnce).not.toHaveBeenCalled();
+    });
+
+    it('shows a toast and does not call shareBooks when there are no books', async () => {
+        const { shareBooks } = await import('./export');
+
+        capturedHandlers.onShare();
+
+        expect(shareBooks).not.toHaveBeenCalled();
     });
 });

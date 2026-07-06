@@ -247,9 +247,11 @@ function handleAutoScanToggle(): void {
     if (newVal) {
         // Turning auto-scan ON — resume the loop
         resumeAutoScan(cameraManager, textRecognizer, bookSearcher);
+        toast('Auto-scan enabled');
     } else {
         // Turning auto-scan OFF — stop the loop but keep camera active
         pauseAutoScan();
+        toast('Auto-scan paused');
     }
 }
 
@@ -280,11 +282,17 @@ async function handleLanguageChange(langCode: string): Promise<void> {
 }
 
 const MAX_IMAGE_DIM = 1920;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 async function handleImageUpload(file: File): Promise<void> {
     update({ isProcessingImage: true });
 
     try {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+            toast(`File too large. Max size is ${MAX_FILE_SIZE_BYTES / (1024 * 1024)} MB.`);
+            return;
+        }
+
         if (!getState().ocrReady) {
             toast('Scanner is still loading, please wait...');
             await waitForOcrReady();
