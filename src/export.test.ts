@@ -82,11 +82,25 @@ describe('exportToCsv', () => {
         await expect(capturedBlob!.text()).resolves.toContain('"Line 1\rLine 2"');
     });
 
+    it('quotes fields that contain newlines', async () => {
+        exportToCsv([makeBook({ title: 'Line 1\nLine 2' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        await expect(capturedBlob!.text()).resolves.toContain('"Line 1\nLine 2"');
+    });
+
     it('quotes fields that contain double quotes', async () => {
         exportToCsv([makeBook({ title: 'A "famous" Book' })]);
 
         expect(capturedBlob).not.toBeNull();
         await expect(capturedBlob!.text()).resolves.toContain('"A ""famous"" Book"');
+    });
+
+    it('quotes fields that contain commas', async () => {
+        exportToCsv([makeBook({ title: 'Title, with comma' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        await expect(capturedBlob!.text()).resolves.toContain('"Title, with comma"');
     });
 
     it('revokes object URL after download', () => {
