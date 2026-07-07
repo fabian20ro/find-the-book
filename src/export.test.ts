@@ -182,4 +182,16 @@ describe('shareBooks', () => {
         await shareBooks([makeBook()], notify);
         expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
     });
+
+    it('does not fall back to clipboard when share throws plain Error AbortError', async () => {
+        const abortErr = new Error('Share canceled') as Error & { name: string };
+        abortErr.name = 'AbortError';
+        const shareFn = vi.fn().mockRejectedValue(abortErr);
+        const writeText = vi.fn();
+        vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
+
+        await shareBooks([makeBook()], notify);
+        expect(writeText).not.toHaveBeenCalled();
+        expect(notify).not.toHaveBeenCalled();
+    });
 });
