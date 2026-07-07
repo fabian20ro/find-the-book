@@ -82,6 +82,13 @@ describe('exportToCsv', () => {
         await expect(capturedBlob!.text()).resolves.toContain('"Line 1\rLine 2"');
     });
 
+    it('quotes fields that contain double quotes', async () => {
+        exportToCsv([makeBook({ title: 'A "famous" Book' })]);
+
+        expect(capturedBlob).not.toBeNull();
+        await expect(capturedBlob!.text()).resolves.toContain('"A ""famous"" Book"');
+    });
+
     it('revokes object URL after download', () => {
         exportToCsv([makeBook()]);
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
@@ -181,5 +188,17 @@ describe('shareBooks', () => {
 
         await shareBooks([makeBook()], notify);
         expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+    });
+
+    it('does not fall back to clipboard when share throws plain Error AbortError', async () => {
+        const abortErr = new Error('Share canceled') as Error & { name: string };
+        abortErr.name = 'AbortError';
+        const shareFn = vi.fn().mockRejectedValue(abortErr);
+        const writeText = vi.fn();
+        vi.stubGlobal('navigator', { ...navigator, share: shareFn, clipboard: { writeText } });
+
+        await shareBooks([makeBook()], notify);
+        expect(writeText).not.toHaveBeenCalled();
+        expect(notify).not.toHaveBeenCalled();
     });
 });

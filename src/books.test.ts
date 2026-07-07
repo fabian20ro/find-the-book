@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { BookSearcher, computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
+import { BookSearcher, computeConfidence, queryMatchRatio, getConfidenceLevel, isISBN, getConfidenceColor, isHighConfidence } from './books';
 import type { Book } from './books';
 
 function mockFetchResponse(data: object, status = 200) {
@@ -206,6 +206,25 @@ describe('BookSearcher', () => {
             expect(results).toHaveLength(1);
             expect(results[0].id).toBe('valid-id');
         });
+
+        it('uses direct lookup URL for ISBN queries', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-isbn', 'ISBN Book', ['Author'], '9781234567890')])));
+
+            await searcher.search('9781234567890');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            expect(url).toContain('/volumes/9781234567890');
+            expect(url).not.toContain('q=');
+        });
+
+        it('uses search URL for non-ISBN queries', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-search', 'Search Book')])));
+
+            await searcher.search('search book title');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            expect(url).toContain('q=');
+        });
     });
 
     describe('preloadBookId', () => {
@@ -404,5 +423,97 @@ describe('getConfidenceLevel', () => {
 
   it('returns None for score 0', () => {
     expect(getConfidenceLevel(0)).toBe('None');
+  });
+});
+
+describe('isISBN', () => {
+  it('recognizes valid ISBN-13 digits only', () => {
+    expect(isISBN('9781234567890')).toBe(true);
+  });
+
+  it('recognizes valid ISBN-10 digits only', () => {
+    expect(isISBN('1234567890')).toBe(true);
+  });
+
+  it('recognizes hyphenated ISBN-13', () => {
+    expect(isISBN('978-1-23-456789-0')).toBe(true);
+  });
+
+  it('recognizes space-separated ISBN-13', () => {
+    expect(isISBN('978 1 23 456 789 0')).toBe(true);
+  });
+
+  it('rejects strings with letters', () => {
+    expect(isISBN('9781234ABCD')).toBe(false);
+    expect(isISBN('ABCDEF1234567')).toBe(false);
+  });
+
+  it('rejects strings of wrong length', () => {
+    expect(isISBN('12345678')).toBe(false); // 8 digits
+    expect(isISBN('12345678901')).toBe(false); // 11 digits
+    expect(isISBN('123456789012345')).toBe(false); // 15 digits
+  });
+
+  it('rejects empty or null input', () => {
+    expect(isISBN('')).toBe(false);
+    expect(isISBN(null as any)).toBe(false);
+    expect(isISBN(undefined as any)).toBe(false);
+  });
+
+  it('handles mixed hyphens and spaces', () => {
+    expect(isISBN('978-1 234567890')).toBe(true);
+  });
+});
+
+describe('getConfidenceColor', () => {
+  it('returns green for High confidence', () => {
+    expect(getConfidenceColor('High')).toBe('#22c55e');
+  });
+
+  it('returns amber for Medium confidence', () => {
+    expect(getConfidenceColor('Medium')).toBe('#f59e0b');
+  });
+
+  it('returns red for Low confidence', () => {
+    expect(getConfidenceColor('Low')).toBe('#ef4444');
+  });
+
+  it('returns gray for None confidence', () => {
+    expect(getConfidenceColor('None')).toBe('#6b7280');
+  });
+});
+
+describe('isHighConfidence', () => {
+  function makeBook(overrides: Partial<Book> = {}): Book {
+    return {
+      id: 'test-id',
+      title: 'Test Book',
+      authors: ['Author'],
+      publisher: null,
+      publishedDate: null,
+      description: null,
+      isbn: null,
+      pageCount: null,
+      thumbnailUrl: null,
+      infoLink: null,
+      confidence: 0,
+      ...overrides,
+    };
+  }
+
+  it('returns true for books with confidence >= 80', () => {
+    expect(isHighConfidence(makeBook({ confidence: 80 }))).toBe(true);
+    expect(isHighConfidence(makeBook({ confidence: 95 }))).toBe(true);
+    expect(isHighConfidence(makeBook({ confidence: 100 }))).toBe(true);
+  });
+
+  it('returns false for books with confidence < 80', () => {
+    expect(isHighConfidence(makeBook({ confidence: 79 }))).toBe(false);
+    expect(isHighConfidence(makeBook({ confidence: 50 }))).toBe(false);
+    expect(isHighConfidence(makeBook({ confidence: 1 }))).toBe(false);
+  });
+
+  it('returns false for zero confidence', () => {
+    expect(isHighConfidence(makeBook({ confidence: 0 }))).toBe(false);
   });
 });
