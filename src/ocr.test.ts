@@ -1,6 +1,6 @@
 import 'vitest-canvas-mock';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TextRecognizer, preprocessCanvas, LANG_WHITELISTS } from './ocr';
+import { TextRecognizer, preprocessCanvas, frameBrightness, LANG_WHITELISTS } from './ocr';
 
 class MockCanvasContext {
     data = new Uint8ClampedArray(36);
@@ -267,4 +267,57 @@ describe('preprocessCanvas', () => {
         const result = preprocessCanvas(canvas);
         expect(result.getContext('2d')?.getImageData(0, 0, 3, 3).data[0]).toBe(128);
     });
-});
+
+    describe('frameBrightness', () => {
+        it('returns the brightness value for a constant grayscale canvas', () => {
+            const w = 10;
+            const h = 10;
+            const brightCanvas = document.createElement('canvas');
+            brightCanvas.width = w;
+            brightCanvas.height = h;
+            const bCtx = brightCanvas.getContext('2d')!;
+            const brightData = new Uint8ClampedArray(w * h * 4);
+            for (let i = 0; i < brightData.length; i += 4) {
+                brightData[i] = 150;
+                brightData[i + 1] = 150;
+                brightData[i + 2] = 150;
+                brightData[i + 3] = 255;
+            }
+            bCtx.putImageData({ data: new Uint8ClampedArray(brightData), width: w, height: h, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            const brightness = frameBrightness(brightCanvas);
+            expect(brightness).toBe(150);
+        });
+
+        it('returns 0 for a uniformly black canvas', () => {
+            const w = 5;
+            const h = 5;
+            const darkCanvas = document.createElement('canvas');
+            darkCanvas.width = w;
+            darkCanvas.height = h;
+            const dCtx = darkCanvas.getContext('2d')!;
+            const darkData = new Uint8ClampedArray(w * h * 4);
+            // All zeros already, but explicit for clarity
+            dCtx.putImageData({ data: new Uint8ClampedArray(darkData), width: w, height: h, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            const brightness = frameBrightness(darkCanvas);
+            expect(brightness).toBe(0);
+        });
+
+        it('returns 255 for a uniformly white canvas', () => {
+            const w = 5;
+            const h = 5;
+            const whiteCanvas = document.createElement('canvas');
+            whiteCanvas.width = w;
+            whiteCanvas.height = h;
+            const wCtx = whiteCanvas.getContext('2d')!;
+            const whiteData = new Uint8ClampedArray(w * h * 4);
+            for (let i = 0; i < whiteData.length; i++) {
+                whiteData[i] = 255;
+            }
+            wCtx.putImageData({ data: new Uint8ClampedArray(whiteData), width: w, height: h, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+            const brightness = frameBrightness(whiteCanvas);
+            expect(brightness).toBe(255);
+        });
+    });});
