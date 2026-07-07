@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { $, $as, getContext2D } from './dom';
+import { $, $$, $as, getContext2D } from './dom';
 
 describe('dom helpers', () => {
     beforeEach(() => {
@@ -28,6 +28,22 @@ describe('dom helpers', () => {
 
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
+        });
+    });
+
+    describe('$$', () => {
+        it('returns matching elements as array', () => {
+            document.body.innerHTML = '<div class="item">A</div><div class="item">B</div>';
+            const els = $$('.item');
+            expect(els).toHaveLength(2);
+            expect(els[0].textContent).toBe('A');
+            expect(els[1].textContent).toBe('B');
+        });
+
+        it('returns empty array for no matches', () => {
+            document.body.innerHTML = '<div id="other">X</div>';
+            const els = $$('.nonexistent');
+            expect(els).toEqual([]);
         });
     });
 
