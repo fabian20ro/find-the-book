@@ -102,6 +102,23 @@ describe('CameraManager', () => {
             expect(mockStream.track.addEventListener).toHaveBeenCalledWith('ended', expect.any(Function));
         });
 
+        it('invokes onDisconnect when the video track fires "ended"', async () => {
+            const onDisconnect = vi.fn();
+            const camera = new CameraManager(video, canvas);
+            await camera.start(onDisconnect);
+
+            // Extract the callback registered for 'ended' from addEventListener mock calls.
+            const endedCall = mockStream.track.addEventListener.mock.calls.find(
+                (call) => call[0] === 'ended',
+            );
+            expect(endedCall).toBeDefined();
+            const onEnded = endedCall![1];
+
+            onEnded();
+
+            expect(onDisconnect).toHaveBeenCalledTimes(1);
+        });
+
         it('throws on permission denied', async () => {
             const err = new DOMException('Not allowed', 'NotAllowedError');
             (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(err);
