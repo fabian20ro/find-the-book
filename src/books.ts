@@ -159,7 +159,8 @@ export class BookSearcher {
   async search(query: string): Promise<Book[]> {
     if (typeof query !== 'string') return [];
 
-    const normalized = query.trim().toLowerCase();
+    const trimmed = query.trim();
+    const normalized = trimmed.toLowerCase();
     if (!normalized) return [];
     if (normalized.length < 2 || this.queryCache.has(normalized)) {
       return [];
@@ -173,7 +174,11 @@ export class BookSearcher {
     this.queryCache.add(normalized);
 
     try {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`;
+      // Direct lookup when the query looks like an ISBN — faster and more accurate.
+      const isIsbn = isISBN(trimmed);
+      const url = isIsbn
+        ? `https://www.googleapis.com/books/v1/volumes/${encodeURIComponent(trimmed)}`
+        : `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`;
       const response = await fetch(url);
 
       if (response.status === 429) {

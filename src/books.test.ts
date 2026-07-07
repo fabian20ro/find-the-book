@@ -206,6 +206,25 @@ describe('BookSearcher', () => {
             expect(results).toHaveLength(1);
             expect(results[0].id).toBe('valid-id');
         });
+
+        it('uses direct lookup URL for ISBN queries', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-isbn', 'ISBN Book', ['Author'], '9781234567890')])));
+
+            await searcher.search('9781234567890');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            expect(url).toContain('/volumes/9781234567890');
+            expect(url).not.toContain('q=');
+        });
+
+        it('uses search URL for non-ISBN queries', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-search', 'Search Book')])));
+
+            await searcher.search('search book title');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            expect(url).toContain('q=');
+        });
     });
 
     describe('preloadBookId', () => {
