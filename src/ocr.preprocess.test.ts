@@ -71,4 +71,23 @@ describe('preprocessCanvas', () => {
         const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data;
         expect(data?.[0]).toBe(0);
     });
+
+    it('should preserve uniform grayscale with strength=0 (zero-range branch)', () => {
+        // Fill with uniform medium gray — exercises the range===0 branch in contrast stretch.
+        for (let i = 0; i < mockCtx.data.length; i += 4) {
+            mockCtx.data[i]     = 128;
+            mockCtx.data[i + 1] = 128;
+            mockCtx.data[i + 2] = 128;
+            mockCtx.data[i + 3] = 255;
+        }
+
+        const result = preprocessCanvas(canvas, 0);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data;
+
+        // With strength=0 the sharpening term cancels (v == stretched[idx]).
+        // With range===0 the stretch copies grays unchanged.
+        expect(data?.[0]).toBe(128); // R preserved
+        expect(data?.[1]).toBe(128); // G preserved
+        expect(data?.[2]).toBe(128); // B preserved
+    });
 });
