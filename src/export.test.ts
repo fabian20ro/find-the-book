@@ -239,4 +239,11 @@ describe('shareBooks', () => {
         expect(writeText).not.toHaveBeenCalled();
         expect(notify).not.toHaveBeenCalled();
     });
+
+    it('notifies when neither share nor clipboard is available', async () => {
+        vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: undefined });
+
+        await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
+        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+    });
 });
