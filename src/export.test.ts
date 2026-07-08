@@ -134,28 +134,39 @@ describe('exportToCsv', () => {
 });
 
 describe('formatBooksAsText', () => {
-    it('formats a single book as "authors - title"', () => {
+    it('formats a single book with title, authors, ISBN, and page count', () => {
         const result = formatBooksAsText([makeBook()]);
-        expect(result).toBe('Author A - Test Book');
+        expect(result).toBe('Author A - Test Book | ISBN: 9781234567890 | 300 pages');
     });
 
     it('joins multiple authors with comma', () => {
         const result = formatBooksAsText([makeBook({ authors: ['Alice', 'Bob'] })]);
-        expect(result).toBe('Alice, Bob - Test Book');
+        expect(result).toBe('Alice, Bob - Test Book | ISBN: 9781234567890 | 300 pages');
     });
 
     it('uses "Unknown" when no authors', () => {
         const result = formatBooksAsText([makeBook({ authors: [] })]);
-        expect(result).toBe('Unknown - Test Book');
+        expect(result).toBe('Unknown - Test Book | ISBN: 9781234567890 | 300 pages');
     });
 
-    it('puts each book on its own line', () => {
+    it('omits ISBN when missing', () => {
+        const result = formatBooksAsText([makeBook({ isbn: null })]);
+        expect(result).toBe('Author A - Test Book | 300 pages');
+    });
+
+    it('omits page count when zero or negative', () => {
+        const result = formatBooksAsText([makeBook({ pageCount: 0 })]);
+        expect(result).not.toContain('pages');
+    });
+
+    it('includes each book on its own line', () => {
         const books = [
             makeBook({ title: 'Book One' }),
             makeBook({ id: 'b2', title: 'Book Two', authors: ['Writer X'] }),
         ];
         const result = formatBooksAsText(books);
-        expect(result).toBe('Author A - Book One\nWriter X - Book Two');
+        expect(result).toContain('Author A - Book One');
+        expect(result).toContain('Writer X - Book Two');
     });
 
     it('returns empty string for empty array', () => {
@@ -186,7 +197,7 @@ describe('shareBooks', () => {
         await shareBooks([makeBook()], notify);
         expect(shareFn).toHaveBeenCalledWith({
             title: 'My Book Collection',
-            text: 'Author A - Test Book',
+            text: 'Author A - Test Book | ISBN: 9781234567890 | 300 pages',
         });
     });
 
@@ -195,7 +206,7 @@ describe('shareBooks', () => {
         vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: { writeText } });
 
         await shareBooks([makeBook()], notify);
-        expect(writeText).toHaveBeenCalledWith('Author A - Test Book');
+        expect(writeText).toHaveBeenCalledWith('Author A - Test Book | ISBN: 9781234567890 | 300 pages');
         expect(notify).toHaveBeenCalledWith('Book list copied to clipboard');
     });
 

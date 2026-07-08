@@ -12,7 +12,16 @@ function escapeCsv(field: string | number | null): string {
 export function formatBooksAsText(books: Book[]): string {
     return books.map((book) => {
         const authors = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown';
-        return `${authors} - ${book.title}`;
+        const parts: string[] = [`${authors} - ${book.title}`];
+
+        if (book.isbn) {
+            parts.push(`ISBN: ${book.isbn}`);
+        }
+        if (book.pageCount != null && book.pageCount > 0) {
+            parts.push(`${book.pageCount} pages`);
+        }
+
+        return parts.join(' | ');
     }).join('\n');
 }
 
