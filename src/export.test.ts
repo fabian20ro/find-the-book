@@ -107,6 +107,30 @@ describe('exportToCsv', () => {
         exportToCsv([makeBook()]);
         expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     });
+
+    it('produces CSV with correct header and field order for a normal book', async () => {
+        const book = makeBook({ title: 'The Great Book', isbn: '0-123456-78-9' });
+        exportToCsv([book]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        expect(text).toMatch(/^Title,Authors,ISBN,Publisher,Published Date,Page Count\r?\n/);
+        const lines = text.split(/\r?\n/);
+        expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300');
+    });
+
+    it('produces one row per book for multiple books', async () => {
+        const books = [makeBook({ title: 'Alpha' }), makeBook({ id: 'b2', title: 'Beta' })];
+        exportToCsv(books);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        const lines = text.split(/\r?\n/);
+        // header + 2 data rows = 3 lines
+        expect(lines.length).toBe(3);
+        expect(lines[1]).toContain('Alpha');
+        expect(lines[2]).toContain('Beta');
+    });
 });
 
 describe('formatBooksAsText', () => {
@@ -214,5 +238,12 @@ describe('shareBooks', () => {
         await shareBooks([makeBook()], notify);
         expect(writeText).not.toHaveBeenCalled();
         expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('notifies when neither share nor clipboard is available', async () => {
+        vi.stubGlobal('navigator', { ...navigator, share: undefined, clipboard: undefined });
+
+        await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
+        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
     });
 });
