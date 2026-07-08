@@ -242,6 +242,25 @@ describe('TextRecognizer', () => {
 
             expect(results).toEqual([]);
         });
+
+        it('returns empty array when Tesseract returns no lines', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can legitimately return results with no lines (blank/dark frames)
+            mockWorker.recognize.mockResolvedValue({ data: { lines: [] } });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([]);
+        });
     });
 });
 

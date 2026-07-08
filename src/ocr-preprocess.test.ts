@@ -90,6 +90,86 @@ describe('ocr utilities', () => {
             const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
             expect(resultData[16]).toBeGreaterThan(128);
         });
+
+        it('passes through uniform grayscale unchanged (range=0 branch)', () => {
+            // All pixels at the same luminance → min === max → range = 0.
+            // preprocessCanvas should skip contrast stretch and return the same value,
+            // confirming the `stretched.set(grays)` fallback branch works.
+            const uniform = new Uint8ClampedArray(36).fill(200);
+            for (let i = 0; i < uniform.length; i += 4) {
+                uniform[i + 3] = 255; // alpha channel
+            }
+            canvas.width = 3;
+            canvas.height = 3;
+            mockCtx.putImageData(new ImageData(uniform, 3, 3));
+            const result = preprocessCanvas(canvas);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            // Every pixel should remain at its original gray level (no stretch distortion)
+            for (let i = 0; i < 9; i++) {
+                expect(resultData[i * 4]).toBe(200);
+                expect(resultData[i * 4 + 1]).toBe(200);
+                expect(resultData[i * 4 + 2]).toBe(200);
+            }
+        });
+
+        it('handles edge case: pure-black canvas (min=0, max=0)', () => {
+            // Fully black image → range = 0. The stretch should still return black pixels.
+            const black = new Uint8ClampedArray(36).fill(0);
+            for (let i = 0; i < black.length; i += 4) {
+                black[i + 3] = 255;
+            }
+            canvas.width = 3;
+            canvas.height = 3;
+            mockCtx.putImageData(new ImageData(black, 3, 3));
+            const result = preprocessCanvas(canvas);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            for (let i = 0; i < 9; i++) {
+                expect(resultData[i * 4]).toBe(0);
+                expect(resultData[i * 4 + 1]).toBe(0);
+                expect(resultData[i * 4 + 2]).toBe(0);
+            }
+        });
+
+        it('handles edge case: pure-white canvas (min=255, max=255)', () => {
+            // Fully white image → range = 0. The stretch should return white pixels.
+            const white = new Uint8ClampedArray(36).fill(255);
+            canvas.width = 3;
+            canvas.height = 3;
+            mockCtx.putImageData(new ImageData(white, 3, 3));
+            const result = preprocessCanvas(canvas);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            for (let i = 0; i < 9; i++) {
+                expect(resultData[i * 4]).toBe(255);
+                expect(resultData[i * 4 + 1]).toBe(255);
+                expect(resultData[i * 4 + 2]).toBe(255);
+            }
+        });
+
+        it('handles edge case: single-pixel canvas', () => {
+            // A tiny image (single pixel) is an edge case that should not crash or produce NaN.
+            const pixel = new Uint8ClampedArray([100, 100, 100, 255]);
+            canvas.width = 1;
+            canvas.height = 1;
+            mockCtx.putImageData(new ImageData(pixel, 1, 1));
+            const result = preprocessCanvas(canvas);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 1, 1).data;
+            expect(resultData[0]).toBe(100);
+            expect(resultData[3]).toBe(255); // alpha preserved
+        });
+
+        it('handles edge case: very small canvas (1×2)', () => {
+            // A narrow image tests the sharpening loop's boundary handling where x===width-1 for every pixel.
+            const data = new Uint8ClampedArray([
+                50, 50, 50, 255,
+                200, 200, 200, 255
+            ]);
+            canvas.width = 1;
+            canvas.height = 2;
+            mockCtx.putImageData(new ImageData(data, 1, 2));
+            const result = preprocessCanvas(canvas);
+            expect(result).toBeInstanceOf(HTMLCanvasElement);
+            // The output should still be a valid canvas without errors.
+        });
     });
 
     describe('frameBrightness', () => {
