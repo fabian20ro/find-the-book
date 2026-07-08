@@ -62,6 +62,20 @@ describe('TextRecognizer', () => {
             expect(Tesseract.createWorker).toHaveBeenCalledWith('eng');
         });
 
+        it('applies the language whitelist during init for languages that have one', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+
+            expect(mockWorker.setParameters).toHaveBeenCalledWith({ whitelist: LANG_WHITELISTS['ron'] });
+        });
+
         it('throws if Textesseract is not loaded', async () => {
             vi.stubGlobal('Tesseract', undefined);
             const recognintizer = new TextRecognizer();
