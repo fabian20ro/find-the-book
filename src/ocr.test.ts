@@ -192,6 +192,42 @@ describe('TextRecognizer', () => {
                 { text: 'Valid Line', confidence: 80 },
             ]);
         });
+
+        it('returns empty array when already processing (busy-guard)', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // Simulate a scan in progress by flipping the private busy flag.
+            (recognizer as any).isProcessing = true;
+
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([]);
+            expect(mockWorker.recognize).not.toHaveBeenCalled();
+        });
+
+        it('returns empty array when canvas is null', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            const results = await recognizer.recognize(null as any);
+
+            expect(results).toEqual([]);
+        });
     });
 });
 
