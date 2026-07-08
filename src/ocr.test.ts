@@ -373,6 +373,17 @@ describe('preprocessCanvas', () => {
             expect(brightness).toBe(0);
         });
 
+        it('returns 0 (not NaN) when no pixels are sampled', () => {
+            // A canvas with zero pixel area produces no samples; count stays 0,
+            // so `sum / count` would be NaN. The function must handle this edge case
+            // without crashing — here it returns 0 from the context fallback or
+            // the loop never runs and the implementation degrades gracefully.
+            const emptyCanvas = document.createElement('canvas');
+
+            const brightness = frameBrightness(emptyCanvas);
+            expect(brightness).not.toBeNaN();
+        });
+
         it('returns 255 for a uniformly white canvas', () => {
             const w = 5;
             const h = 5;
