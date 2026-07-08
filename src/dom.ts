@@ -21,6 +21,14 @@ export function $as<T extends HTMLElement>(
 }
 
 /**
+ * Query all matching elements. Returns empty array if none found — never throws.
+ */
+export function $$(selector: string): HTMLElement[] {
+    const els = document.querySelectorAll(selector);
+    return Array.from(els) as HTMLElement[];
+}
+
+/**
  * Safe getContext('2d') that throws instead of returning null.
  */
 export function getContext2D(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
