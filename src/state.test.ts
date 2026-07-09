@@ -1,5 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { getState, update, addBook, removeBook, moveBook, clearBooks, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
+
+describe('update (edge cases)', () => {
+    it('does not emit change when updating to the same value', () => {
+        const listener = vi.fn();
+        on('change', listener);
+        update({ isScanning: false }); // already false by default
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('handles empty patch without emitting', () => {
+        const listener = vi.fn();
+        on('change', listener);
+        update({});
+        expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('returns current state with all fields after partial update', () => {
+        update({ autoScan: true, scanCount: 5 });
+        const s = getState();
+        expect(s.autoScan).toBe(true);
+        expect(s.scanCount).toBe(5);
+        // Verify other fields preserved
+        expect(s.books).toEqual([]);
+        expect(s.isScanning).toBe(false);
+        expect(s.view).toBe('home');
+        expect(s.ocrLanguage).toBe('ron');
+    });
+});
+
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {

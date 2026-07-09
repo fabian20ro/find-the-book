@@ -194,5 +194,21 @@ describe('CameraManager', () => {
             Object.defineProperty(video, 'readyState', { value: 1, configurable: true });
             await expect(camera.verifyReadiness()).rejects.toThrow('Camera video is not ready.');
         });
+
+        it('rejects when metadata never arrives (prevents infinite hang)', { timeout: 10_000 }, async () => {
+            const camera = new CameraManager(video, canvas);
+
+            // Block the mock's srcObject setter from firing its microtask that sets readyState=2.
+            // This simulates a stalled video stream where metadata never arrives.
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {},
+                configurable: true,
+            });
+            // Override addEventListener so the loadedmetadata listener is dropped on the floor.
+            video.addEventListener = (() => {}) as typeof video.addEventListener;
+
+            await expect(camera.start()).rejects.toThrow('Camera metadata not ready');
+        });
     });
 });

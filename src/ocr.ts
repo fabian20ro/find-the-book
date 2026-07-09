@@ -208,8 +208,9 @@ export class TextRecognizer {
             const lines = result.data.lines || [];
 
             return lines
-                .map((line: any) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
-                .filter((line: any) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
+                .filter((line: any): line is { text: string; confidence?: number } => typeof line.text === 'string')
+                .map((line: { text: string; confidence?: number }) => ({ text: line.text.trim(), confidence: line.confidence ?? 0 }))
+                .filter((line: OcrLine) => line.text.length >= (this.options.minLineLength ?? DEFAULT_MIN_LINE_LENGTH) && line.confidence >= (this.options.minLineConfidence ?? DEFAULT_MIN_LINE_CONFIDENCE));
         } finally {
             this.isProcessing = false;
         }
