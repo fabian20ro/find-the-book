@@ -53,4 +53,73 @@ describe('parsing stored books', () => {
         // @ts-ignore: testing runtime robustness
         expect(parseStoredBooks(undefined)).toEqual([]);
     });
+
+    it('parses valid books with all optional fields', () => {
+        const json = JSON.stringify([
+            {
+                id: 'abc123',
+                title: 'The Art of Programming',
+                authors: ['Donald Knuth'],
+                publisher: 'Addison-Wesley',
+                publishedDate: '1997-07-04',
+                description: 'A comprehensive guide to algorithms.',
+                isbn: '978-0201896831',
+                pageCount: 672,
+                thumbnailUrl: 'https://example.com/thumb.jpg',
+                infoLink: 'https://books.google.com/abc123',
+                confidence: 85,
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0]).toMatchObject({
+            id: 'abc123',
+            title: 'The Art of Programming',
+            authors: ['Donald Knuth'],
+            publisher: 'Addison-Wesley',
+            publishedDate: '1997-07-04',
+            description: 'A comprehensive guide to algorithms.',
+            isbn: '978-0201896831',
+            pageCount: 672,
+            thumbnailUrl: 'https://example.com/thumb.jpg',
+            infoLink: 'https://books.google.com/abc123',
+            confidence: 85,
+        });
+    });
+
+    it('filters out invalid entries but keeps valid ones in mixed arrays', () => {
+        const json = JSON.stringify([
+            // Valid entry
+            { id: 'valid-id', title: 'Real Book' },
+            // Invalid: missing title
+            { id: 'no-title' },
+            // Invalid: empty string title
+            { id: 'empty', title: '   ' },
+            // Invalid: non-string id
+            { id: 123, title: 'Number Id' },
+            // Valid entry with trimmed whitespace
+            { id: 'trimmed-id ', title: ' Trimmed Title ' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        const books = result as Array<{ id: string; title: string }>;
+        expect(result).toHaveLength(2);
+        expect(books.map((b) => b.id)).toEqual(['valid-id', 'trimmed-id']);
+        expect(result[1].title).toBe('Trimmed Title');
+    });
+
+    it('returns empty array for non-array JSON strings', () => {
+        expect(parseStoredBooks('{}')).toEqual([]);
+        expect(parseStoredBooks('"just a string"')).toEqual([]);
+        expect(parseStoredBooks('42')).toEqual([]);
+        expect(parseStoredBooks('[1, 2, "three"]')).toEqual([]);
+    });
+
+    it('returns empty array for corrupted JSON', () => {
+        const result = parseStoredBooks('{invalid json [[[');
+        expect(result).toEqual([]);
+    });
 });
