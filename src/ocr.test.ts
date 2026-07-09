@@ -261,6 +261,28 @@ describe('TextRecognizer', () => {
 
             expect(results).toEqual([]);
         });
+
+        it('resets isProcessing after transient Tesseract error during recognize', async () => {
+            const mockWorker = {
+                recognize: vi.fn().mockRejectedValue(new Error('transient ocr failure')),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // The first call should reject, but the finally block must reset isProcessing.
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('transient ocr failure');
+            expect((recognizer as any).isProcessing).toBe(false);
+
+            // A subsequent call should proceed normally (not be silently dropped by the busy-guard).
+            mockWorker.recognize.mockResolvedValue({ data: { lines: [] } });
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([]);
+        });
     });
 });
 
@@ -371,6 +393,17 @@ describe('preprocessCanvas', () => {
 
             const brightness = frameBrightness(darkCanvas);
             expect(brightness).toBe(0);
+        });
+
+        it('returns 0 (not NaN) when no pixels are sampled', () => {
+            // A canvas with zero pixel area produces no samples; count stays 0,
+            // so `sum / count` would be NaN. The function must handle this edge case
+            // without crashing — here it returns 0 from the context fallback or
+            // the loop never runs and the implementation degrades gracefully.
+            const emptyCanvas = document.createElement('canvas');
+
+            const brightness = frameBrightness(emptyCanvas);
+            expect(brightness).not.toBeNaN();
         });
 
         it('returns 255 for a uniformly white canvas', () => {

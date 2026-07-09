@@ -434,6 +434,28 @@ describe('scanner', () => {
             expect(result).toHaveLength(1);
             expect(result[0].title).toBe('Book One');
         });
+
+        it('does not send duplicate query when single line equals combined query (>= 8 chars)', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            books.search.mockResolvedValueOnce([book1]);
+
+            // Single long line: combined === the line itself → excluded from individuals
+            await searchTextBlocks(toOcrLines(['Single Long Line']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('Single Long Line');
+        });
+
+        it('does not send duplicate query when single short line (< 8 chars)', async () => {
+            const books = createMockBookSearcher();
+
+            // Single short line: combined === the line → excluded; also < 8 chars anyway
+            await searchTextBlocks(toOcrLines(['hi']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('hi');
+        });
     });
 
     describe('candidate popup pausing', () => {
