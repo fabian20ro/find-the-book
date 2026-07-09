@@ -262,6 +262,39 @@ describe('TextRecognizer', () => {
             expect(results).toEqual([]);
         });
 
+        it('filters out lines with non-string text (defensive against malformed Tesseract)', async () => {
+            const mockRecognize = vi.fn();
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can return lines where text is undefined, null, or missing — e.g. structural artifacts.
+            mockRecognize.mockResolvedValue({
+                data: {
+                    lines: [
+                        { text: '  Valid Line  ', confidence: 90 },
+                        { confidence: 50 },           // no text property at all
+                        { text: null, confidence: 70 },// explicit null
+                        { text: undefined, confidence: 60 },// explicit undefined
+                        { text: 'Another Valid', confidence: 85 },
+                    ],
+                },
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([
+                { text: 'Valid Line', confidence: 90 },
+                { text: 'Another Valid', confidence: 85 },
+            ]);
+        });
+
         it('resets isProcessing after transient Tesseract error during recognize', async () => {
             const mockWorker = {
                 recognize: vi.fn().mockRejectedValue(new Error('transient ocr failure')),
