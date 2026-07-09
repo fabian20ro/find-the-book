@@ -105,7 +105,7 @@ describe('parsing stored books', () => {
 
         const result = parseStoredBooks(json);
 
-        const books = result as Array<{ id: string; title: string }>;
+        const books = result as Array<{id: string; title: string}>;
         expect(result).toHaveLength(2);
         expect(books.map((b) => b.id)).toEqual(['valid-id', 'trimmed-id']);
         expect(result[1].title).toBe('Trimmed Title');
