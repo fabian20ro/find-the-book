@@ -296,6 +296,12 @@ describe('state', () => {
             expect(getState().candidateBooks[0].id).toBe('c2');
         });
 
+        it('trims whitespace from bookId before matching', () => {
+            addCandidates([makeBook({ id: '  trimmed-id  ' })]);
+            removeCandidateById('trimmed-id');
+            expect(getState().candidateBooks).toHaveLength(0);
+        });
+
         it('emits change event', () => {
             addCandidates([makeBook({ id: 'c1' })]);
             const listener = vi.fn();

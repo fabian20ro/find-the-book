@@ -101,8 +101,8 @@ function withMetadataTimeout<T>(factory: () => Promise<T>, ms: number): Promise<
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(`Camera metadata not ready within ${ms}ms`)), ms);
         promise.then(
-            (v) => { clearTimeout(timer); resolve(v); },
-            (e) => { clearTimeout(timer); reject(e); },
+            (v: T) => { clearTimeout(timer); resolve(v); },
+            (e: unknown) => { clearTimeout(timer); reject(e); },
         );
     });
 }
