@@ -34,8 +34,8 @@ export class CameraManager {
 
         this.video.srcObject = this.stream;
 
-        // Wait for video to be ready
-        await new Promise<void>((resolve) => {
+        // Wait for video to be ready — reject after a timeout so callers fail fast
+        await withMetadataTimeout(() => new Promise<void>((resolve) => {
             const onLoadedMetadata = () => {
                 this.canvas.width = this.video.videoWidth;
                 this.canvas.height = this.video.videoHeight;
@@ -47,7 +47,7 @@ export class CameraManager {
             } else {
                 this.video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
             }
-        });
+        }), 5_000);
 
         // Listen for camera disconnection
         const track = this.stream.getVideoTracks()[0];
@@ -89,4 +89,20 @@ export class CameraManager {
     get isActive(): boolean {
         return !!this.stream && this.video.readyState >= 2;
     }
+}
+
+/**
+ * Wraps a Promise factory with a timeout. Rejects with the provided error message if the
+ * promise does not settle within `ms` milliseconds. Used to prevent indefinite hangs
+ * when waiting for DOM events that may never fire (e.g., video metadata on stalled streams).
+ */
+function withMetadataTimeout<T>(factory: () => Promise<T>, ms: number): Promise<T> {
+    const promise = factory();
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`Camera metadata not ready within ${ms}ms`)), ms);
+        promise.then(
+            (v) => { clearTimeout(timer); resolve(v); },
+            (e) => { clearTimeout(timer); reject(e); },
+        );
+    });
 }
