@@ -161,6 +161,16 @@ describe('state', () => {
             addBook(makeBook());
             expect(listener).toHaveBeenCalled();
         });
+
+        it('trims thumbnailUrl and infoLink during addBook', () => {
+            addBook(makeBook({
+                thumbnailUrl: '  https://example.com/thumb.jpg  ',
+                infoLink: '  https://example.com/book  ',
+            }));
+            const [book] = getState().books;
+            expect(book.thumbnailUrl).toBe('https://example.com/thumb.jpg');
+            expect(book.infoLink).toBe('https://example.com/book');
+        });
     });
 
     describe('removeBook', () => {
