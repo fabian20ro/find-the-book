@@ -261,6 +261,28 @@ describe('TextRecognizer', () => {
 
             expect(results).toEqual([]);
         });
+
+        it('resets isProcessing after transient Tesseract error during recognize', async () => {
+            const mockWorker = {
+                recognize: vi.fn().mockRejectedValue(new Error('transient ocr failure')),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // The first call should reject, but the finally block must reset isProcessing.
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('transient ocr failure');
+            expect((recognizer as any).isProcessing).toBe(false);
+
+            // A subsequent call should proceed normally (not be silently dropped by the busy-guard).
+            mockWorker.recognize.mockResolvedValue({ data: { lines: [] } });
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([]);
+        });
     });
 });
 
