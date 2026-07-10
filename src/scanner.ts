@@ -161,6 +161,9 @@ async function scanFrame(
         const allNewBooks = await searchTextBlocks(ocrLines, bookSearcher);
         if (allNewBooks.length > 0) {
             addCandidates(allNewBooks);
+            toast(`Found ${allNewBooks.length} book(s)`);
+        } else if (ocrLines.length > 0) {
+            toast('No new books found');
         }
     } catch (err) {
         handleScanError(err, 'Scan frame error:', ocr);

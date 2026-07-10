@@ -276,6 +276,32 @@ describe('ui', () => {
             expect(link.href).toContain('example.com');
         });
 
+        it('does not render empty author div when authors array is empty', () => {
+            addBook(makeBook({ id: 'b1', title: 'No Authors Book', authors: [] }));
+
+            const list = document.getElementById('home-book-list')!;
+            const authorDivs = list.querySelectorAll('.book-authors');
+            expect(authorDivs).toHaveLength(0);
+        });
+
+        it('renders no-cover placeholder when thumbnailUrl is missing', () => {
+            addBook(makeBook({ id: 'b1', title: 'No Cover Book', thumbnailUrl: '' }));
+
+            const list = document.getElementById('home-book-list')!;
+            const coverImg = list.querySelector('.book-card img');
+            expect(coverImg).not.toBeNull();
+            expect((coverImg as HTMLImageElement).src).toContain('data:image/svg+xml');
+            expect((coverImg as HTMLImageElement).alt).toBe('No cover');
+        });
+
+        it('filters out unsafe infoLink values', () => {
+            addBook(makeBook({ id: 'b1', title: 'Unsafe Link Book', infoLink: 'javascript:void(0)' }));
+
+            const list = document.getElementById('home-book-list')!;
+            const link = list.querySelector('.book-link');
+            expect(link).toBeNull();
+        });
+
         it('updates book count text', () => {
             addBook(makeBook({ id: 'b1' }));
             expect(document.getElementById('home-book-count')!.textContent).toBe('1 book found');
