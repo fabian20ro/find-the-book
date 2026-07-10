@@ -343,10 +343,35 @@ describe('ui', () => {
             expect(document.getElementById('scan-status')!.textContent).toBe('Paused');
         });
 
-        it('shows last detected text (truncated)', () => {
+        it('shows truncated text at exact boundary', () => {
             update({ lastDetectedText: 'A'.repeat(100) });
             const text = document.getElementById('last-text')!.textContent!;
-            expect(text.length).toBeLessThanOrEqual(63);
+            // MAX_DISPLAY_TEXT_LENGTH (60) chars + "..." = 63 chars total
+            expect(text).toHaveLength(63);
+            expect(text.endsWith('...')).toBe(true);
+            expect(text.startsWith('A'.repeat(60))).toBe(true);
+        });
+
+        it('does not append "..." when text fits within boundary', () => {
+            update({ lastDetectedText: 'Short text' });
+            const text = document.getElementById('last-text')!.textContent!;
+            expect(text).toBe('Short text');
+            expect(text.endsWith('...')).toBe(false);
+        });
+
+        it('does not truncate text exactly at boundary length', () => {
+            update({ lastDetectedText: 'A'.repeat(60) });
+            const text = document.getElementById('last-text')!.textContent!;
+            expect(text).toHaveLength(60);
+            expect(text.endsWith('...')).toBe(false);
+        });
+
+        it('truncates at one-past boundary', () => {
+            update({ lastDetectedText: 'A'.repeat(61) });
+            const text = document.getElementById('last-text')!.textContent!;
+            // 60 chars + "..." = 63
+            expect(text).toHaveLength(63);
+            expect(text.endsWith('...')).toBe(true);
         });
     });
 
