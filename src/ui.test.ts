@@ -625,5 +625,23 @@ describe('ui', () => {
             const loading = document.querySelector('.lang-loading');
             expect(loading).not.toBeNull();
         });
+
+        it('sets aria-label on each language button', () => {
+            update({ view: 'home', ocrLanguage: 'ron' });
+            const buttons = Array.from(document.querySelectorAll<HTMLElement>('.lang-btn:not(.lang-more)'));
+            const expectedLabels = ['Romanian', 'English', 'French', 'German', 'Italian', 'Spanish'];
+            for (let i = 0; i < expectedLabels.length; i++) {
+                const btn = buttons[i];
+                expect(btn).not.toBeUndefined();
+                expect(btn!.getAttribute('aria-label')).toBe(`OCR language: ${expectedLabels[i]}`);
+            }
+        });
+
+        it('sets aria-label on the more button', () => {
+            update({ view: 'home' });
+            const moreBtn = document.querySelector('.lang-more') as HTMLElement;
+            expect(moreBtn).not.toBeNull();
+            expect(moreBtn.getAttribute('aria-label')).toBe('More languages');
+        });
     });
 });
