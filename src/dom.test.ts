@@ -17,6 +17,10 @@ describe('dom helpers', () => {
         it('throws for missing element', () => {
             expect(() => $('#nonexistent')).toThrow('Required DOM element not found: "#nonexistent"');
         });
+
+        it('throws descriptive error for invalid CSS selector', () => {
+            expect(() => $('[')).toThrow();
+        });
     });
 
     describe('$as', () => {
