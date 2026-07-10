@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
 import type { OcrLine } from './ocr';
 import * as state from './state';
+import * as ocrModule from './ocr';
+
+// Mock frameBrightness to always return bright enough
+vi.mock('./ocr', async () => {
+    const actual = await vi.importActual<typeof ocrModule>('./ocr');
+    return {
+        ...actual,
+        frameBrightness: vi.fn().mockReturnValue(128),
+    };
+});
 
 // Mock state module
 vi.mock('./state', async () => {
@@ -9,15 +19,6 @@ vi.mock('./state', async () => {
     return {
         ...actual,
         toast: vi.fn(),
-    };
-});
-
-// Mock frameBrightness to always return bright enough
-vi.mock('./ocr', async () => {
-    const actual = await vi.importActual('./ocr');
-    return {
-        ...actual,
-        frameBrightness: vi.fn().mockReturnValue(128),
     };
 });
 
@@ -455,6 +456,26 @@ describe('scanner', () => {
 
             expect(books.search).toHaveBeenCalledTimes(1);
             expect(books.search).toHaveBeenCalledWith('hi');
+        });
+    });
+
+    describe('dark-frame skip', () => {
+        it('does not run OCR when frame brightness is below MIN_BRIGHTNESS', async () => {
+            const spy = vi.spyOn(ocrModule, 'frameBrightness').mockReturnValue(0);
+
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(camera.captureFrame).toHaveBeenCalled();
+            expect(ocr.recognize).not.toHaveBeenCalled();
+
+            spy.mockRestore();
         });
     });
 
