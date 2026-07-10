@@ -343,10 +343,35 @@ describe('ui', () => {
             expect(document.getElementById('scan-status')!.textContent).toBe('Paused');
         });
 
-        it('shows last detected text (truncated)', () => {
+        it('shows truncated text at exact boundary', () => {
             update({ lastDetectedText: 'A'.repeat(100) });
             const text = document.getElementById('last-text')!.textContent!;
-            expect(text.length).toBeLessThanOrEqual(63);
+            // MAX_DISPLAY_TEXT_LENGTH (60) chars + "..." = 63 chars total
+            expect(text).toHaveLength(63);
+            expect(text.endsWith('...')).toBe(true);
+            expect(text.startsWith('A'.repeat(60))).toBe(true);
+        });
+
+        it('does not append "..." when text fits within boundary', () => {
+            update({ lastDetectedText: 'Short text' });
+            const text = document.getElementById('last-text')!.textContent!;
+            expect(text).toBe('Short text');
+            expect(text.endsWith('...')).toBe(false);
+        });
+
+        it('does not truncate text exactly at boundary length', () => {
+            update({ lastDetectedText: 'A'.repeat(60) });
+            const text = document.getElementById('last-text')!.textContent!;
+            expect(text).toHaveLength(60);
+            expect(text.endsWith('...')).toBe(false);
+        });
+
+        it('truncates at one-past boundary', () => {
+            update({ lastDetectedText: 'A'.repeat(61) });
+            const text = document.getElementById('last-text')!.textContent!;
+            // 60 chars + "..." = 63
+            expect(text).toHaveLength(63);
+            expect(text.endsWith('...')).toBe(true);
         });
     });
 
@@ -480,7 +505,7 @@ describe('ui', () => {
     });
 
     describe('candidate search filter', () => {
-        it('filters candidates by title', () => {
+        it('filters candidates by title (case-insensitive)', () => {
             addCandidates([
                 makeBook({ id: 'c1', title: 'Harry Potter' }),
                 makeBook({ id: 'c2', title: 'Lord of the Rings' }),
@@ -489,6 +514,18 @@ describe('ui', () => {
 
             const cards = document.querySelectorAll('.candidate-card');
             expect(cards).toHaveLength(1);
+        });
+
+        it('filters candidates by title case-insensitively with mixed-case input', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Harry Potter' }),
+                makeBook({ id: 'c2', title: 'Lord of the Rings' }),
+            ]);
+            update({ candidateFilter: 'HARRY' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(1);
+            expect((cards[0] as HTMLElement).textContent).toContain('Harry Potter');
         });
 
         it('filters candidates by author', () => {
@@ -587,6 +624,24 @@ describe('ui', () => {
             update({ view: 'home', isChangingLanguage: true });
             const loading = document.querySelector('.lang-loading');
             expect(loading).not.toBeNull();
+        });
+
+        it('sets aria-label on each language button', () => {
+            update({ view: 'home', ocrLanguage: 'ron' });
+            const buttons = Array.from(document.querySelectorAll<HTMLElement>('.lang-btn:not(.lang-more)'));
+            const expectedLabels = ['Romanian', 'English', 'French', 'German', 'Italian', 'Spanish'];
+            for (let i = 0; i < expectedLabels.length; i++) {
+                const btn = buttons[i];
+                expect(btn).not.toBeUndefined();
+                expect(btn!.getAttribute('aria-label')).toBe(`OCR language: ${expectedLabels[i]}`);
+            }
+        });
+
+        it('sets aria-label on the more button', () => {
+            update({ view: 'home' });
+            const moreBtn = document.querySelector('.lang-more') as HTMLElement;
+            expect(moreBtn).not.toBeNull();
+            expect(moreBtn.getAttribute('aria-label')).toBe('More languages');
         });
     });
 });

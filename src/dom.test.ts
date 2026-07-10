@@ -45,6 +45,13 @@ describe('dom helpers', () => {
             const els = $$('.nonexistent');
             expect(els).toEqual([]);
         });
+
+        it('returns real Array, not NodeList', () => {
+            document.body.innerHTML = '<span class="s">1</span><span class="s">2</span>';
+            const els = $$('.s');
+            expect(Array.isArray(els)).toBe(true);
+            expect(Object.prototype.toString.call(els)).not.toBe('[object NodeList]');
+        });
     });
 
     describe('getContext2D', () => {
