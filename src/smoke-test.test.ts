@@ -1,5 +1,5 @@
 import { expect, test, beforeEach } from 'vitest';
-import { getState, update, on } from './state';
+import { getState, update, on, type Book } from './state';
 
 beforeEach(() => {
   // reset state fields to defaults — module-level state persists across tests
@@ -49,4 +49,23 @@ test('update() does not emit when values are identical', () => {
   expect(emitted).toBe(false);
 
   off();
+});
+
+test('update() preserves unmodified fields (shallow merge)', () => {
+  const sampleBook = {
+    id: 'x', title: 'existing-book', authors: [], publisher: null,
+    publishedDate: null, description: null, isbn: null, pageCount: null,
+    thumbnailUrl: null, infoLink: null, confidence: 0,
+  };
+  update({ books: [sampleBook], ocrLanguage: 'eng', autoScan: true });
+
+  update({ isScanning: true, view: 'scan' });
+
+  const state = getState();
+  expect(state.isScanning).toBe(true);
+  expect(state.view).toBe('scan');
+  // unmodified fields must persist — confirms shallow merge behavior
+  expect(state.books).toEqual([sampleBook]);
+  expect(state.ocrLanguage).toBe('eng');
+  expect(state.autoScan).toBe(true);
 });
