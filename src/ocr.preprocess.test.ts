@@ -90,4 +90,31 @@ describe('preprocessCanvas', () => {
         expect(data?.[1]).toBe(128); // G preserved
         expect(data?.[2]).toBe(128); // B preserved
     });
+
+    it('should preserve relative luminance ordering for non-uniform grayscale input', () => {
+        // Set a 3x3 grid with increasing brightness left-to-right, top-to-bottom.
+        // Grayscale conversion is monotone, contrast stretch is monotone (range>0),
+        // and sharpening only amplifies local differences — so relative order must be preserved.
+        const expected: number[] = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                const idx = (y * 3 + x) * 4;
+                mockCtx.data[idx]     = expected[y * 3 + x];
+                mockCtx.data[idx + 1] = expected[y * 3 + x];
+                mockCtx.data[idx + 2] = expected[y * 3 + x];
+                mockCtx.data[idx + 3] = 255;
+            }
+        }
+
+        const result = preprocessCanvas(canvas);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+        const actual: number[] = [];
+        for (let i = 0; i < expected.length; i++) {
+            actual.push(data[i * 4]); // R channel == grayscale output
+        }
+
+        // Relative order must be preserved — sharpening can change magnitudes but not swap order.
+        const sortedActual = [...actual].sort((a, b) => a - b);
+        expect(actual).toEqual(sortedActual);
+    });
 });
