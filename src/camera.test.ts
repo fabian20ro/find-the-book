@@ -135,6 +135,28 @@ describe('CameraManager', () => {
             const camera = new CameraManager(video, canvas);
             await expect(camera.start()).rejects.toThrow('Could not access camera');
         });
+
+        it('resolves immediately when video readyState >= 2 without waiting for loadedmetadata event', async () => {
+            // Override the mock's srcObject setter to synchronously set readyState=2,
+            // triggering the immediate-resolution branch (line 45-46 in camera.ts).
+            let srcObjVal: any = null;
+            Object.defineProperty(video, 'srcObject', {
+                get() { return srcObjVal; },
+                set(val: any) {
+                    srcObjVal = val;
+                    Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true });
+                    Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
+                    Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
+                },
+                configurable: true,
+            });
+
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            // The loadedmetadata listener must NOT have been registered since readyState was already >=2.
+            expect(mockStream.track.addEventListener).not.toHaveBeenCalledWith('loadedmetadata', expect.any(Function));
+        });
     });
 
     describe('captureFrame', () => {
