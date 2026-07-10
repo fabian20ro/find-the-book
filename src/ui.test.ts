@@ -480,7 +480,7 @@ describe('ui', () => {
     });
 
     describe('candidate search filter', () => {
-        it('filters candidates by title', () => {
+        it('filters candidates by title (case-insensitive)', () => {
             addCandidates([
                 makeBook({ id: 'c1', title: 'Harry Potter' }),
                 makeBook({ id: 'c2', title: 'Lord of the Rings' }),
@@ -489,6 +489,18 @@ describe('ui', () => {
 
             const cards = document.querySelectorAll('.candidate-card');
             expect(cards).toHaveLength(1);
+        });
+
+        it('filters candidates by title case-insensitively with mixed-case input', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Harry Potter' }),
+                makeBook({ id: 'c2', title: 'Lord of the Rings' }),
+            ]);
+            update({ candidateFilter: 'HARRY' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(1);
+            expect((cards[0] as HTMLElement).textContent).toContain('Harry Potter');
         });
 
         it('filters candidates by author', () => {
