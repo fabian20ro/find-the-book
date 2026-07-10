@@ -91,6 +91,46 @@ describe('ocr utilities', () => {
             expect(resultData[16]).toBeGreaterThan(128);
         });
 
+        it('inverts sharpening into blur at negative strength (strength=-1 → box blur)', () => {
+            // At strength=-1 the sharpen formula reduces to: v = blurred neighbor average.
+            // Use a 3x3 canvas where center is bright and neighbors are dark, so
+            // blurring pulls the center pixel darker than its original grayscale value.
+            const data = new Uint8ClampedArray([
+                240, 240, 240, 255,  240, 240, 240, 255,  240, 240, 240, 255,
+                240, 240, 240, 255,                       240, 240, 240, 255,  100, 100, 100, 255,
+                240, 240, 240, 255,                       240, 240, 240, 255,  100, 100, 100, 255
+            ]);
+            canvas.width = 3;
+            canvas.height = 3;
+            mockCtx.putImageData(new ImageData(data, 3, 3));
+            const result = preprocessCanvas(canvas, -1);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            // Center pixel (idx 4) should be pulled toward the dark neighbor average (~183),
+            // which is strictly darker than its original grayscale value of 240.
+            const centerGray = resultData[16];
+            expect(centerGray).toBeLessThan(240);
+        });
+
+        it('clamps sharpening output to [0, 255] when strength overflows', () => {
+            // With very high positive strength and a sharp luminance edge, the formula
+            // v = stretched + strength * (stretched - blurred) can push values beyond
+            // 255 or below 0; the source clamps these to [0, 255]. Verify both bounds.
+            const data = new Uint8ClampedArray([
+                0,   0,   0,   255,  10,  10,  10,  255,  0,   0,   0,   255,
+                0,   0,   0,   255,  10,  10,  10,  255,  0,   0,   0,   255,
+                0,   0,   0,   255,  10,  10,  10,  255,  0,   0,   0,   255
+            ]);
+            canvas.width = 3;
+            canvas.height = 3;
+            mockCtx.putImageData(new ImageData(data, 3, 3));
+            const result = preprocessCanvas(canvas, 100);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            for (let i = 0; i < 9; i++) {
+                expect(resultData[i * 4]).toBeGreaterThanOrEqual(0);
+                expect(resultData[i * 4]).toBeLessThanOrEqual(255);
+            }
+        });
+
         it('passes through uniform grayscale unchanged (range=0 branch)', () => {
             // All pixels at the same luminance → min === max → range = 0.
             // preprocessCanvas should skip contrast stretch and return the same value,
