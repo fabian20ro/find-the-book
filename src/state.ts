@@ -128,6 +128,11 @@ export function clearBooks(): void {
     emit('change');
 }
 
+/** Switch the root view between 'home' and 'scan'. */
+export function setView(mode: ViewMode): void {
+    update({ view: mode });
+}
+
 export function addCandidates(books: Book[]): void {
     let added = false;
     for (const book of books) {
