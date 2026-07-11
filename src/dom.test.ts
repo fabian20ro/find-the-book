@@ -59,6 +59,15 @@ describe('dom helpers', () => {
             const texts = els.map(s => s.textContent);
             expect(texts).toEqual(['1', '2']);
         });
+
+        it('returns elements in document order', () => {
+            document.body.innerHTML = '<div class="d">third</div><div class="d">first</div><div class="d">second</div>';
+            const els = $$('.d');
+            expect(els).toHaveLength(3);
+            expect(els[0].textContent).toBe('third');
+            expect(els[1].textContent).toBe('first');
+            expect(els[2].textContent).toBe('second');
+        });
     });
 
     describe('getContext2D', () => {
