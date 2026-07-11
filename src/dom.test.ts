@@ -17,6 +17,10 @@ describe('dom helpers', () => {
         it('throws for missing element', () => {
             expect(() => $('#nonexistent')).toThrow('Required DOM element not found: "#nonexistent"');
         });
+
+        it('throws descriptive error for invalid CSS selector', () => {
+            expect(() => $('[')).toThrow();
+        });
     });
 
     describe('$as', () => {
@@ -43,6 +47,7 @@ describe('dom helpers', () => {
         it('returns empty array for no matches', () => {
             document.body.innerHTML = '<div id="other">X</div>';
             const els = $$('.nonexistent');
+            expect(Array.isArray(els)).toBe(true);
             expect(els).toEqual([]);
         });
 
@@ -50,7 +55,9 @@ describe('dom helpers', () => {
             document.body.innerHTML = '<span class="s">1</span><span class="s">2</span>';
             const els = $$('.s');
             expect(Array.isArray(els)).toBe(true);
-            expect(Object.prototype.toString.call(els)).not.toBe('[object NodeList]');
+            // Verify array-typed behavior: .map() must exist and work, ruling out raw NodeList.
+            const texts = els.map(s => s.textContent);
+            expect(texts).toEqual(['1', '2']);
         });
     });
 

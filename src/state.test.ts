@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getState, update, addBook, removeBook, moveBook, clearBooks, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
+import { getState, update, addBook, removeBook, moveBook, clearBooks, setView, addCandidates, removeCandidateById, clearCandidates, toast, on, emit } from './state';
 
 describe('update (edge cases)', () => {
     it('does not emit change when updating to the same value', () => {
@@ -100,6 +100,20 @@ describe('state', () => {
         it('updates view field', () => {
             update({ view: 'scan' });
             expect(getState().view).toBe('scan');
+        });
+
+        it('sets view via setView helper', () => {
+            setView('scan');
+            expect(getState().view).toBe('scan');
+            setView('home');
+            expect(getState().view).toBe('home');
+        });
+
+        it('emits change event via setView', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            setView('scan');
+            expect(listener).toHaveBeenCalledTimes(1);
         });
 
         it('updates autoScan field', () => {

@@ -254,5 +254,13 @@ describe('ocr utilities', () => {
             const brightness = frameBrightness(canvas);
             expect(brightness).toBe(255);
         });
+
+        it('returns default 128 when context is null', () => {
+            // frameBrightness guards against missing rendering contexts by
+            // returning a neutral mid-gray value (128) instead of throwing.
+            vi.spyOn(canvas, 'getContext').mockReturnValue(null);
+            const brightness = frameBrightness(canvas);
+            expect(brightness).toBe(128);
+        });
     });
 });
