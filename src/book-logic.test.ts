@@ -227,6 +227,34 @@ describe('Book logic', () => {
             expect(computeConfidence(book, 5, 100, 'Author')).toBe(90);
         });
 
+        it('ignores negative averageRating (defensive guard against corrupted data)', () => {
+            const book = { ...baseBook } as Book;
+            // Line 111: if (averageRating != null && averageRating > 0) — negative ratings contribute 0
+            // Metadata: 50 + Query: none passed -> 0 + Rating -1 -> 0 + Count undefined -> 0 = 50
+            expect(computeConfidence(book, -1, undefined)).toBe(50);
+        });
+
+        it('ignores zero ratingsCount when averageRating is positive', () => {
+            const book = { ...baseBook } as Book;
+            // Line 114: if (ratingsCount != null && ratingsCount > 0) — zero count contributes nothing
+            // Metadata: 50 + Query: none -> 0 + Rating 5/5*12=12 + Count 0 -> 0 = 62
+            expect(computeConfidence(book, 5, 0)).toBe(62);
+        });
+
+        it('ignores NaN averageRating (corrupted data does not propagate)', () => {
+            const book = { ...baseBook } as Book;
+            // Line 111: if (averageRating != null && averageRating > 0) — NaN passes != null but fails > 0, contributes 0
+            // Metadata: 50 + Query: none -> 0 + Rating NaN -> 0 + Count undefined -> 0 = 50
+            expect(computeConfidence(book, NaN, undefined)).toBe(50);
+        });
+
+        it('ignores NaN ratingsCount when averageRating is positive', () => {
+            const book = { ...baseBook } as Book;
+            // Line 114: if (ratingsCount != null && ratingsCount > 0) — NaN passes != null but fails > 0, contributes 0
+            // Metadata: 50 + Query: none -> 0 + Rating 5/5*12=12 + Count NaN -> 0 = 62
+            expect(computeConfidence(book, 5, NaN)).toBe(62);
+        });
+
         it('returns correct confidence levels', () => {
             expect(getConfidenceLevel(100)).toBe('High');
             expect(getConfidenceLevel(80)).toBe('High');

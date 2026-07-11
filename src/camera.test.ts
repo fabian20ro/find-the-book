@@ -175,6 +175,27 @@ describe('CameraManager', () => {
         });
     });
 
+    describe('isActive', () => {
+        it('is false before start', () => {
+            const camera = new CameraManager(video, canvas);
+            expect(camera.isActive).toBe(false);
+        });
+
+        it('becomes true after successful start', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            expect(camera.isActive).toBe(true);
+        });
+
+        it('becomes false after stop', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            expect(camera.isActive).toBe(true);
+            camera.stop();
+            expect(camera.isActive).toBe(false);
+        });
+    });
+
     describe('stop', () => {
         it('stops all tracks', async () => {
             const camera = new CameraManager(video, canvas);

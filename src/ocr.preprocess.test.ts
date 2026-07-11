@@ -117,4 +117,30 @@ describe('preprocessCanvas', () => {
         const sortedActual = [...actual].sort((a, b) => a - b);
         expect(actual).toEqual(sortedActual);
     });
+
+    it('should leave edge pixels unchanged by sharpening at strength=1', () => {
+        // Edge pixels bypass the sharpening kernel (boundary guard on line 83-86 of ocr.ts).
+        // Sharpening must not further modify edge pixels beyond what contrast stretch already did.
+        const pixelValues: number[] = [50, 100, 150, 200, 30, 180, 70, 120, 240];
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                const idx = (y * 3 + x) * 4;
+                mockCtx.data[idx]     = pixelValues[y * 3 + x];
+                mockCtx.data[idx + 1] = pixelValues[y * 3 + x];
+                mockCtx.data[idx + 2] = pixelValues[y * 3 + x];
+                mockCtx.data[idx + 3] = 255;
+            }
+        }
+
+        const resultStrong = preprocessCanvas(canvas, 1);
+        const dataStrong = resultStrong.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+        const resultWeak = preprocessCanvas(canvas, 0);
+        const dataWeak = resultWeak.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        // Edge pixels: indices 0-7 (row 0), 6-8 (row 2), and col 0 / col 2 across all rows.
+        const edgeIndices = [0, 1, 2, 3, 5, 6, 7, 8];
+        for (const i of edgeIndices) {
+            expect(dataStrong[i * 4]).toBe(dataWeak[i * 4]); // sharpening doesn't touch edges
+        }
+    });
 });

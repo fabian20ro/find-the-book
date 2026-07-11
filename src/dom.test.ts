@@ -30,6 +30,19 @@ describe('dom helpers', () => {
             expect(el).toBeInstanceOf(HTMLVideoElement);
         });
 
+        it('returns canvas cast to HTMLCanvasElement', () => {
+            document.body.innerHTML = '<canvas id="cvs"></canvas>';
+            const el = $as('#cvs', HTMLCanvasElement);
+            expect(el).toBeInstanceOf(HTMLCanvasElement);
+        });
+
+        it('validates element instanceof constructor', () => {
+            document.body.innerHTML = '<div id="d"></div>';
+            expect(() => $as('#d', HTMLVideoElement)).toThrow(
+                'Element for "#d" is not an instance of HTMLVideoElement',
+            );
+        });
+
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
         });
@@ -58,6 +71,15 @@ describe('dom helpers', () => {
             // Verify array-typed behavior: .map() must exist and work, ruling out raw NodeList.
             const texts = els.map(s => s.textContent);
             expect(texts).toEqual(['1', '2']);
+        });
+
+        it('returns elements in document order', () => {
+            document.body.innerHTML = '<div class="d">third</div><div class="d">first</div><div class="d">second</div>';
+            const els = $$('.d');
+            expect(els).toHaveLength(3);
+            expect(els[0].textContent).toBe('third');
+            expect(els[1].textContent).toBe('first');
+            expect(els[2].textContent).toBe('second');
         });
     });
 
