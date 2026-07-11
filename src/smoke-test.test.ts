@@ -69,3 +69,25 @@ test('update() preserves unmodified fields (shallow merge)', () => {
   expect(state.ocrLanguage).toBe('eng');
   expect(state.autoScan).toBe(true);
 });
+
+test('update() emits once when multiple fields change simultaneously', () => {
+  let count = 0;
+  const off = on('change', () => { count++; });
+
+  update({ isScanning: true, view: 'scan', autoScan: false, scanCount: 5 });
+
+  expect(count).toBe(1);
+  expect(getState().isScanning).toBe(true);
+  expect(getState().autoScan).toBe(false);
+  expect(getState().scanCount).toBe(5);
+
+  off();
+});
+
+test('update() notifies all subscribed listeners', () => {
+  let firstFired = false;
+  const off1 = on('change', () => { firstFired = true; });
+
+  update({ isScanning: true, view: 'scan' });
+  expect(firstFired).toBe(true);
+});
