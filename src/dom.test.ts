@@ -30,6 +30,12 @@ describe('dom helpers', () => {
             expect(el).toBeInstanceOf(HTMLVideoElement);
         });
 
+        it('returns canvas cast to HTMLCanvasElement', () => {
+            document.body.innerHTML = '<canvas id="cvs"></canvas>';
+            const el = $as('#cvs', HTMLCanvasElement);
+            expect(el).toBeInstanceOf(HTMLCanvasElement);
+        });
+
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
         });
