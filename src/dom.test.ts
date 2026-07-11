@@ -36,6 +36,13 @@ describe('dom helpers', () => {
             expect(el).toBeInstanceOf(HTMLCanvasElement);
         });
 
+        it('validates element instanceof constructor', () => {
+            document.body.innerHTML = '<div id="d"></div>';
+            expect(() => $as('#d', HTMLVideoElement)).toThrow(
+                'Element for "#d" is not an instance of HTMLVideoElement',
+            );
+        });
+
         it('throws for missing element', () => {
             expect(() => $as('#missing', HTMLVideoElement)).toThrow('Required DOM element not found');
         });

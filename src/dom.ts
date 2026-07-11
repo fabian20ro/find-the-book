@@ -14,10 +14,15 @@ export function $(selector: string): HTMLElement {
  */
 export function $as<T extends HTMLElement>(
     selector: string,
-    _ctor: new (...args: any[]) => T,
+    ctor: new (...args: any[]) => T,
 ): T {
-    const el = $(selector);
-    return el as T;
+    const el = $(selector) as unknown as T;
+    if (!(el instanceof (ctor as any))) {
+        throw new Error(
+            `Element for "${selector}" is not an instance of ${ctor.name}`,
+        );
+    }
+    return el;
 }
 
 /**
