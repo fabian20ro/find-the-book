@@ -47,6 +47,7 @@ describe('dom helpers', () => {
         it('returns empty array for no matches', () => {
             document.body.innerHTML = '<div id="other">X</div>';
             const els = $$('.nonexistent');
+            expect(Array.isArray(els)).toBe(true);
             expect(els).toEqual([]);
         });
 
