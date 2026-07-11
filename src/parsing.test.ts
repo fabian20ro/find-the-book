@@ -122,4 +122,35 @@ describe('parsing stored books', () => {
         const result = parseStoredBooks('{invalid json [[[');
         expect(result).toEqual([]);
     });
+
+    it('clamps confidence to [0, 100] for out-of-range values', () => {
+        const json = JSON.stringify([
+            { id: 'high-conf', title: 'High Confidence', confidence: 250 },
+            { id: 'low-conf', title: 'Low Confidence', confidence: -30 },
+            { id: 'float-conf', title: 'Float Confidence', confidence: 7.8 },
+            { id: 'negative-zero', title: 'Negative Zero', confidence: -0.1 },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(4);
+        expect(result[0].confidence).toBe(100);
+        expect(result[1].confidence).toBe(0);
+        expect(result[2].confidence).toBe(8);
+        expect(result[3].confidence).toBe(0);
+    });
+
+    it('keeps books with empty author arrays but returns them still', () => {
+        const json = JSON.stringify([
+            { id: 'all-whitespace-authors', title: 'Trimmed Authors', authors: ['  ', '', null, undefined] },
+            { id: 'mixed-authors', title: 'Mixed Authors', authors: ['  ', 'Real Author'] },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(2);
+        // all-whitespace-authors still kept (has valid id+title), but authors array is empty after trim
+        expect(result[0].authors).toEqual([]);
+        expect(result[1].id).toBe('mixed-authors');
+    });
 });
