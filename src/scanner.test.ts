@@ -457,6 +457,24 @@ describe('scanner', () => {
             expect(books.search).toHaveBeenCalledTimes(1);
             expect(books.search).toHaveBeenCalledWith('hi');
         });
+
+        it('deduplicates identical individual queries from duplicate OCR lines', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            // Two identical long lines: Set-dedup ensures only 1 individual query, not 2 — combined + 1 unique individual = 2 queries total
+            await searchTextBlocks(toOcrLines(['abcdefghij', 'abcdefghij']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(2);
+        });
+
+        it('does not send duplicate individual query when OCR line appears multiple times in input', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            // Three lines where one repeats: 3 raw individuals → Set-dedup to 2 unique + 1 combined = 3 queries total (not 4)
+            await searchTextBlocks(toOcrLines(['abcdefghij', 'klmnopqrst', 'abcdefghij']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(3);
+        });
     });
 
     describe('dark-frame skip', () => {
