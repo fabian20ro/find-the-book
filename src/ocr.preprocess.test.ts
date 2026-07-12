@@ -143,4 +143,13 @@ describe('preprocessCanvas', () => {
             expect(dataStrong[i * 4]).toBe(dataWeak[i * 4]); // sharpening doesn't touch edges
         }
     });
+
+    it('should return the original canvas unchanged when getContext returns null', () => {
+        // preprocessCanvas's fallback: if no 2D context is available, pass through the input.
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
+
+        const result = preprocessCanvas(canvas);
+
+        expect(result).toBe(canvas);
+    });
 });
