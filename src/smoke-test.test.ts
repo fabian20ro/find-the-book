@@ -1,5 +1,5 @@
 import { expect, test, beforeEach } from 'vitest';
-import { getState, update, on, type Book } from './state';
+import { getState, update, on, toast, type Book } from './state';
 
 beforeEach(() => {
   // reset state fields to defaults — module-level state persists across tests
@@ -90,4 +90,16 @@ test('update() notifies all subscribed listeners', () => {
 
   update({ isScanning: true, view: 'scan' });
   expect(firstFired).toBe(true);
+});
+
+test('toast event delivers message payload to listener', () => {
+  let received: string | null = null;
+  const off = on('toast', (msg) => { received = msg; });
+
+  // toast() calls emit('toast', msg) synchronously — like update() for 'change'
+  toast('Test message');
+
+  expect(received).toBe('Test message');
+
+  off();
 });

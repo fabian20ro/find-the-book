@@ -153,4 +153,25 @@ describe('parsing stored books', () => {
         expect(result[0].authors).toEqual([]);
         expect(result[1].id).toBe('mixed-authors');
     });
+
+    it('trims whitespace from optional metadata fields', () => {
+        const json = JSON.stringify([
+            {
+                id: 'whitespace-meta',
+                title: 'Whitespace Book',
+                description: '  A story about spaces.  ',
+                publisher: '  Press Co  ',
+                thumbnailUrl: 'https://example.com/thumb.jpg  ',
+                infoLink: 'https://books.google.com/x  ',
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].description).toBe('A story about spaces.');
+        expect(result[0].publisher).toBe('Press Co');
+        expect(result[0].thumbnailUrl).toBe('https://example.com/thumb.jpg');
+        expect(result[0].infoLink).toBe('https://books.google.com/x');
+    });
 });

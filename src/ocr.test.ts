@@ -82,6 +82,19 @@ describe('TextRecognizer', () => {
             await expect(recognintizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
         });
 
+        it('preserves attempted language in getLanguage() after createWorker fails mid-init', async () => {
+            vi.mocked(Tesseract.createWorker).mockRejectedValue(new Error('worker creation failed'));
+
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.init('eng')).rejects.toThrow('worker creation failed');
+
+            // currentLang is set BEFORE createWorker — it reflects what was attempted.
+            expect(recognizer.getLanguage()).toBe('eng');
+
+            // Worker never got assigned, so recognize() reports "not initialized" rather than a misleading state.
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized');
+        });
+
         it('throws if recognize is called before init', async () => {
             const recognizer = new TextRecognizer();
             const canvas = document.createElement('canvas');
@@ -144,6 +157,61 @@ describe('TextRecognizer', () => {
             await recognizer.setLanguage('eng');
             expect(recognizer.getLanguage()).toBe('eng');
             expect(mockWorker.setParameters).toHaveBeenCalledWith({ whitelist: LANG_WHITELISTS['eng'] });
+        });
+
+        it('rolls back state when createWorker fails mid-switch', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            expect(recognizer.getLanguage()).toBe('ron');
+            const prevWorker = (recognizer as any).worker;
+
+            // Make createWorker throw to simulate network/Tesseract failure.
+            vi.mocked(Tesseract.createWorker).mockRejectedValue(new Error('network error'));
+
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('network error');
+
+            // State must roll back — no half-applied language switch.
+            expect(recognizer.getLanguage()).toBe('ron');
+            expect((recognizer as any).worker).toBe(prevWorker);
+        });
+
+        it('rolls back state when setParameters fails mid-switch', async () => {
+            const initWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+
+            // New worker for the switch attempt — different reference.
+            const failWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockRejectedValue(new Error('bad param')),
+            };
+            let callCount = 0;
+            vi.mocked(Tesseract.createWorker).mockImplementation(() => {
+                callCount++;
+                return Promise.resolve(callCount === 1 ? initWorker : failWorker);
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            expect(recognizer.getLanguage()).toBe('ron');
+            const prevWorker = (recognizer as any).worker;
+
+            // setParameters fails after createWorker succeeds — rollback restores the original worker.
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('bad param');
+
+            // currentLang and worker must revert to pre-switch values.
+            expect(recognizer.getLanguage()).toBe('ron');
+            expect((recognizer as any).worker).toBe(prevWorker);
         });
     });
 
@@ -262,6 +330,25 @@ describe('TextRecognizer', () => {
             expect(results).toEqual([]);
         });
 
+        it('returns empty array when Tesseract returns data without a lines key', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can return a response with no lines property at all — e.g. structural glitch.
+            mockWorker.recognize.mockResolvedValue({ data: {} });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([]);
+        });
+
         it('filters out lines with non-string text (defensive against malformed Tesseract)', async () => {
             const mockRecognize = vi.fn();
             const mockWorker = {
@@ -316,6 +403,23 @@ describe('TextRecognizer', () => {
 
             expect(results).toEqual([]);
         });
+
+        it('throws when Tesseract returns a result with no data object (malformed response)', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can return a response with missing or undefined data — e.g. network glitch, worker crash.
+            mockWorker.recognize.mockResolvedValue({ data: undefined });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('Tesseract recognition returned invalid result');
+        });
     });
 });
 
@@ -354,8 +458,9 @@ describe('preprocessCanvas', () => {
         expect(resultData[0]).toBe(0);
         // 9th pixel: index 32, grayscale 180. Stretched 255.
         expect(resultData[32]).toBe(255);
-        // 4th pixel: index 12, grayscale 130. Stretched (130-100)*3.1875 = 30*3.1875 = 95.625 -> 95.
-        expect(resultData[12]).toBe(96);
+        // 4th pixel: index 12, grayscale 130. Stretched value 96. With clamped-edge sharpening (strength=0.5 default),
+        // its blurred neighborhood averages higher (~107) so the pixel is pulled slightly darker than its stretched value.
+        expect(resultData[12]).toBe(91);
     });
 
     it('performs sharpening on a blocky edge', () => {
@@ -384,7 +489,34 @@ describe('preprocessCanvas', () => {
 
         expect(resultData[idx]).toBeGreaterThan(200);
     });
-    
+
+    it('sharpens edge pixels instead of passing them through unchanged', () => {
+        // 5x1 strip: black bar at top, white interior. The first pixel (0,0) is an edge
+        // (dark corner). If edge sharpening is applied, the dark pixel should get even
+        // darker (negative response to its light neighbors); if skipped, it stays at 0.
+        const w = 5;
+        const h = 1;
+        const stripCanvas = document.createElement('canvas');
+        stripCanvas.width = w;
+        stripCanvas.height = h;
+        const sCtx = stripCanvas.getContext('2d')!;
+        const stripData = new Uint8ClampedArray(w * 4);
+        for (let i = 0; i < stripData.length; i++) {
+            // First pixel black, rest white
+            stripData[i] = i === 0 ? 0 : 200;
+        }
+        sCtx.putImageData({ data: new Uint8ClampedArray(stripData), width: w, height: h, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+        const result = preprocessCanvas(stripCanvas, 1.0);
+        const resultData = sCtx.getImageData(0, 0, w, 1).data;
+
+        // Original first pixel is black (0). Sharpening should push it darker than its neighbors
+        // (which average to ~200), so the response is negative → stays at 0 but the second pixel
+        // (white) should get brighter. If edges were skipped, the white pixel would be unchanged;
+        // with edge sharpening, it increases.
+        expect(resultData[4]).toBeGreaterThan(200);
+    });
+
     it('handles a single-color canvas without error', () => {
         const data = new Uint8ClampedArray(36).fill(128);
         ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3, colorSpace: 'srgb' } as ImageData, 0, 0);

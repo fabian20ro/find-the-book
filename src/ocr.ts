@@ -80,15 +80,16 @@ export function preprocessCanvas(canvas: HTMLCanvasElement, strength: number = 0
 
         for (let x = 0; x < width; x++) {
             const idx = yw + x;
-            if (x === 0 || x === width - 1 || y === 0 || y === height - 1) {
-                sharpened[idx] = stretched[idx];
-                continue;
-            }
+            // Clamp neighbor coordinates so edge pixels contribute fewer samples without being skipped.
+            const yTop = Math.max(0, y - 1);
+            const yBot = Math.min(height - 1, y + 1);
+            const xLeft = Math.max(0, x - 1);
+            const xRight = Math.min(width - 1, x + 1);
             // 3x3 box blur (average of neighbors)
             const blurred = (
-                stretched[ym1w + (x - 1)] + stretched[ym1w + x] + stretched[ym1w + (x + 1)] +
-                stretched[yw + (x - 1)]   + stretched[yw + x]   + stretched[yw + (x + 1)] +
-                stretched[yp1w + (x - 1)] + stretched[yp1w + x] + stretched[yp1w + (x + 1)]
+                stretched[yTop * width + xLeft] + stretched[yTop * width + x] + stretched[yTop * width + xRight] +
+                stretched[yw     + xLeft]       + stretched[yw     + x]   + stretched[yw     + xRight] +
+                stretched[yBot   * width + xLeft] + stretched[yBot   * width + x]   + stretched[yBot   * width + xRight]
             ) / 9;
             const v = stretched[idx] + strength * (stretched[idx] - blurred);
             // ⚡ Bolt Optimization: Fast inline clamp
