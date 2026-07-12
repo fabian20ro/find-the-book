@@ -234,6 +234,13 @@ describe('Book logic', () => {
             expect(computeConfidence(book, -1, undefined)).toBe(50);
         });
 
+        it('treats explicit zero ratings as no contribution from either rating or count', () => {
+            const book = { ...baseBook } as Book;
+            // Line 111/114: both conditions require value > 0 — explicit zeros contribute nothing
+            // Metadata: 50 + Query 'The Great Gatsby' -> 30 + Rating 0 -> 0 + Count 0 -> 0 = 80
+            expect(computeConfidence(book, 0, 0, 'The Great Gatsby')).toBe(80);
+        });
+
         it('ignores zero ratingsCount when averageRating is positive', () => {
             const book = { ...baseBook } as Book;
             // Line 114: if (ratingsCount != null && ratingsCount > 0) — zero count contributes nothing
