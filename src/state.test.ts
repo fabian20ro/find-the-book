@@ -116,6 +116,12 @@ describe('state', () => {
             expect(listener).toHaveBeenCalledTimes(1);
         });
 
+        it('throws for unknown view mode', () => {
+            expect(() => setView('home' as any)).not.toThrow();
+            // @ts-expect-error — deliberately invalid input to verify runtime guard
+            expect(() => setView('dashboard')).toThrow(/Invalid view mode.*"dashboard"/);
+        });
+
         it('updates autoScan field', () => {
             update({ autoScan: false });
             expect(getState().autoScan).toBe(false);
