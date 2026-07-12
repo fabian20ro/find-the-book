@@ -119,6 +119,18 @@ describe('CameraManager', () => {
             expect(onDisconnect).toHaveBeenCalledTimes(1);
         });
 
+        it('does not register "ended" listener when no onDisconnect callback is provided', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            // The 'ended' event listener must NOT have been registered since
+            // the guard check (track && onDisconnect) evaluates to false.
+            expect(mockStream.track.addEventListener).not.toHaveBeenCalledWith(
+                'ended',
+                expect.any(Function),
+            );
+        });
+
         it('throws on permission denied', async () => {
             const err = new DOMException('Not allowed', 'NotAllowedError');
             (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(err);
