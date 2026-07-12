@@ -317,6 +317,25 @@ describe('TextRecognizer', () => {
             expect(results).toEqual([]);
         });
 
+        it('returns empty array when Tesseract returns data without a lines key', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can return a response with no lines property at all — e.g. structural glitch.
+            mockWorker.recognize.mockResolvedValue({ data: {} });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            const results = await recognizer.recognize(canvas);
+
+            expect(results).toEqual([]);
+        });
+
         it('filters out lines with non-string text (defensive against malformed Tesseract)', async () => {
             const mockRecognize = vi.fn();
             const mockWorker = {
