@@ -371,6 +371,23 @@ describe('TextRecognizer', () => {
 
             expect(results).toEqual([]);
         });
+
+        it('throws when Tesseract returns a result with no data object (malformed response)', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            // Tesseract can return a response with missing or undefined data — e.g. network glitch, worker crash.
+            mockWorker.recognize.mockResolvedValue({ data: undefined });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('Tesseract recognition returned invalid result');
+        });
     });
 });
 
