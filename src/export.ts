@@ -10,7 +10,8 @@ function escapeCsv(field: string | number | null): string {
 }
 
 export function formatBooksAsText(books: Book[]): string {
-    return books.map((book) => {
+    const header = '# My Book Collection';
+    const lines = books.map((book) => {
         const authors = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown';
         const parts: string[] = [`${authors} - ${book.title}`];
 
@@ -22,7 +23,9 @@ export function formatBooksAsText(books: Book[]): string {
         }
 
         return parts.join(' | ');
-    }).join('\n');
+    });
+
+    return lines.length > 0 ? header + '\n' + lines.join('\n') : header;
 }
 
 export async function shareBooks(books: Book[], notify: (msg: string) => void): Promise<void> {
