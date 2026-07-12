@@ -458,8 +458,9 @@ describe('preprocessCanvas', () => {
         expect(resultData[0]).toBe(0);
         // 9th pixel: index 32, grayscale 180. Stretched 255.
         expect(resultData[32]).toBe(255);
-        // 4th pixel: index 12, grayscale 130. Stretched (130-100)*3.1875 = 30*3.1875 = 95.625 -> 95.
-        expect(resultData[12]).toBe(96);
+        // 4th pixel: index 12, grayscale 130. Stretched value 96. With clamped-edge sharpening (strength=0.5 default),
+        // its blurred neighborhood averages higher (~107) so the pixel is pulled slightly darker than its stretched value.
+        expect(resultData[12]).toBe(91);
     });
 
     it('performs sharpening on a blocky edge', () => {
@@ -488,7 +489,34 @@ describe('preprocessCanvas', () => {
 
         expect(resultData[idx]).toBeGreaterThan(200);
     });
-    
+
+    it('sharpens edge pixels instead of passing them through unchanged', () => {
+        // 5x1 strip: black bar at top, white interior. The first pixel (0,0) is an edge
+        // (dark corner). If edge sharpening is applied, the dark pixel should get even
+        // darker (negative response to its light neighbors); if skipped, it stays at 0.
+        const w = 5;
+        const h = 1;
+        const stripCanvas = document.createElement('canvas');
+        stripCanvas.width = w;
+        stripCanvas.height = h;
+        const sCtx = stripCanvas.getContext('2d')!;
+        const stripData = new Uint8ClampedArray(w * 4);
+        for (let i = 0; i < stripData.length; i++) {
+            // First pixel black, rest white
+            stripData[i] = i === 0 ? 0 : 200;
+        }
+        sCtx.putImageData({ data: new Uint8ClampedArray(stripData), width: w, height: h, colorSpace: 'srgb' } as ImageData, 0, 0);
+
+        const result = preprocessCanvas(stripCanvas, 1.0);
+        const resultData = sCtx.getImageData(0, 0, w, 1).data;
+
+        // Original first pixel is black (0). Sharpening should push it darker than its neighbors
+        // (which average to ~200), so the response is negative → stays at 0 but the second pixel
+        // (white) should get brighter. If edges were skipped, the white pixel would be unchanged;
+        // with edge sharpening, it increases.
+        expect(resultData[4]).toBeGreaterThan(200);
+    });
+
     it('handles a single-color canvas without error', () => {
         const data = new Uint8ClampedArray(36).fill(128);
         ctx.putImageData({ data: new Uint8ClampedArray(data), width: 3, height: 3, colorSpace: 'srgb' } as ImageData, 0, 0);
