@@ -145,6 +145,61 @@ describe('TextRecognizer', () => {
             expect(recognizer.getLanguage()).toBe('eng');
             expect(mockWorker.setParameters).toHaveBeenCalledWith({ whitelist: LANG_WHITELISTS['eng'] });
         });
+
+        it('rolls back state when createWorker fails mid-switch', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            expect(recognizer.getLanguage()).toBe('ron');
+            const prevWorker = (recognizer as any).worker;
+
+            // Make createWorker throw to simulate network/Tesseract failure.
+            vi.mocked(Tesseract.createWorker).mockRejectedValue(new Error('network error'));
+
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('network error');
+
+            // State must roll back — no half-applied language switch.
+            expect(recognizer.getLanguage()).toBe('ron');
+            expect((recognizer as any).worker).toBe(prevWorker);
+        });
+
+        it('rolls back state when setParameters fails mid-switch', async () => {
+            const initWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+
+            // New worker for the switch attempt — different reference.
+            const failWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockRejectedValue(new Error('bad param')),
+            };
+            let callCount = 0;
+            vi.mocked(Tesseract.createWorker).mockImplementation(() => {
+                callCount++;
+                return Promise.resolve(callCount === 1 ? initWorker : failWorker);
+            });
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            expect(recognizer.getLanguage()).toBe('ron');
+            const prevWorker = (recognizer as any).worker;
+
+            // setParameters fails after createWorker succeeds — rollback restores the original worker.
+            await expect(recognizer.setLanguage('eng')).rejects.toThrow('bad param');
+
+            // currentLang and worker must revert to pre-switch values.
+            expect(recognizer.getLanguage()).toBe('ron');
+            expect((recognizer as any).worker).toBe(prevWorker);
+        });
     });
 
     describe('recognize', () => {
