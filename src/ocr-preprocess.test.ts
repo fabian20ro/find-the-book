@@ -262,5 +262,17 @@ describe('ocr utilities', () => {
             const brightness = frameBrightness(canvas);
             expect(brightness).toBe(128);
         });
+
+        it('returns +0 for empty canvas (zero pixels)', () => {
+            // When width or height is zero, getImageData returns an ImageData whose
+            // data buffer may still hold default values from the mock environment.
+            // frameBrightness samples whatever pixel data is available and returns
+            // the average — here it returns 0 for a zero-size canvas. This documents
+            // the actual behavior rather than assumptions derived from reading source.
+            canvas.width = 0;
+            canvas.height = 0;
+            const brightness = frameBrightness(canvas);
+            expect(brightness).toBe(0);
+        });
     });
 });
