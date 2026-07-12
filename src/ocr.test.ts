@@ -82,6 +82,19 @@ describe('TextRecognizer', () => {
             await expect(recognintizer.init()).rejects.toThrow('Tesseract.js failed to load from CDN');
         });
 
+        it('preserves attempted language in getLanguage() after createWorker fails mid-init', async () => {
+            vi.mocked(Tesseract.createWorker).mockRejectedValue(new Error('worker creation failed'));
+
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.init('eng')).rejects.toThrow('worker creation failed');
+
+            // currentLang is set BEFORE createWorker — it reflects what was attempted.
+            expect(recognizer.getLanguage()).toBe('eng');
+
+            // Worker never got assigned, so recognize() reports "not initialized" rather than a misleading state.
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized');
+        });
+
         it('throws if recognize is called before init', async () => {
             const recognizer = new TextRecognizer();
             const canvas = document.createElement('canvas');
