@@ -475,6 +475,38 @@ describe('scanner', () => {
 
             expect(books.search).toHaveBeenCalledTimes(3);
         });
+
+        it('filters out short individual lines (< 8 chars) but still uses them in combined query', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            // Combined query includes all non-empty trimmed text; only individuals >= 8 chars are sent separately
+            await searchTextBlocks(toOcrLines(['abcdefghij', 'hi', 'short']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(2);
+            expect(books.search).toHaveBeenCalledWith('abcdefghij hi short'); // combined
+            expect(books.search).toHaveBeenCalledWith('abcdefghij'); // individual >= 8 chars
+        });
+
+        it('sends only the combined query when all lines are shorter than 8 characters', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            await searchTextBlocks(toOcrLines(['ab', 'cd', 'ef']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(1);
+            expect(books.search).toHaveBeenCalledWith('ab cd ef');
+        });
+
+        it('uses boundary-length line (exactly 7 chars) as individual only when >= 8 chars threshold', async () => {
+            const book1 = makeBook('b1', 'Book One');
+            const books = createMockBookSearcher();
+            // 'abcdefg' is 7 chars (< 8), should NOT appear as individual; combined still includes it
+            await searchTextBlocks(toOcrLines(['abcdefghi', 'abcdefg']), books as any);
+
+            expect(books.search).toHaveBeenCalledTimes(2);
+            expect(books.search).toHaveBeenCalledWith('abcdefghi abcdefg'); // combined
+            expect(books.search).toHaveBeenCalledWith('abcdefghi'); // individual >= 8 chars (9)
+            expect(books.search).not.toHaveBeenCalledWith('abcdefg'); // excluded (< 8)
+        });
     });
 
     describe('dark-frame skip', () => {
