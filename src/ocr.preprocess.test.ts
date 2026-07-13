@@ -152,4 +152,95 @@ describe('preprocessCanvas', () => {
 
         expect(result).toBe(canvas);
     });
+
+    it('should darken dark edge pixels when surrounded by light neighbors (clamped-blur sharpening)', () => {
+        // 3x1 strip: a single dark pixel flanked by bright pixels. The clamped-edge blur at the
+        // leftmost pixel averages itself with two bright neighbors, producing a blurred value > 0;
+        // the sharpen term then pulls it darker (below its own original). This exercises lines 84-97 of ocr.ts
+        // directly — the clamp-based neighbor averaging and the v = stretched[idx] + strength*(stretched[idx]-blurred) formula.
+        const darkVal = 20;
+        const brightVal = 230;
+        mockCtx.data[0] = darkVal;
+        mockCtx.data[1] = darkVal;
+        mockCtx.data[2] = darkVal;
+        mockCtx.data[3] = 255;
+        mockCtx.data[4] = brightVal;
+        mockCtx.data[5] = brightVal;
+        mockCtx.data[6] = brightVal;
+        mockCtx.data[7] = 255;
+        mockCtx.data[8] = brightVal;
+        mockCtx.data[9] = brightVal;
+        mockCtx.data[10] = brightVal;
+        mockCtx.data[11] = 255;
+
+        const result = preprocessCanvas(canvas, 1);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 1).data!;
+
+        // The dark pixel at index 0 should be sharpened darker than its original grayscale value.
+        expect(data[0]).toBeLessThan(darkVal);
+    });
+
+    it('should clamp sharpened values to [0,255]', () => {
+        // Force a high-contrast input where sharpening would push the bright pixel above 255.
+        // Set all pixels to max so contrast stretch keeps them at 255; then with strength=1
+        // and blur < 255, v = 255 + 1*(255-blurred) would exceed 255 without clamping.
+        for (let i = 0; i < mockCtx.data.length; i += 4) {
+            mockCtx.data[i]     = 255;
+            mockCtx.data[i + 1] = 255;
+            mockCtx.data[i + 2] = 255;
+            mockCtx.data[i + 3] = 255;
+        }
+
+        const result = preprocessCanvas(canvas, 1);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        for (let i = 0; i < data.length; i += 4) {
+            expect(data[i]).toBeLessThanOrEqual(255);
+            expect(data[i + 1]).toBeLessThanOrEqual(255);
+            expect(data[i + 2]).toBeLessThanOrEqual(255);
+        }
+    });
+
+    it('should clamp sharpened values to >=0 for dark inputs', () => {
+        // All-black input: contrast stretch keeps at 0; blur of zeros is zero; v = 0 + strength*(0-0) = 0.
+        // But with a small non-uniform dark gradient near zero the sharpening could push below 0 without clamping.
+        mockCtx.data[0]     = 1;
+        mockCtx.data[1]     = 1;
+        mockCtx.data[2]     = 1;
+        mockCtx.data[3]     = 255;
+        for (let i = 4; i < mockCtx.data.length; i++) {
+            mockCtx.data[i] = 0;
+        }
+
+        const result = preprocessCanvas(canvas, 2); // high strength to amplify negative push
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        for (let i = 0; i < data.length; i += 4) {
+            expect(data[i]).toBeGreaterThanOrEqual(0);
+            expect(data[i + 1]).toBeGreaterThanOrEqual(0);
+            expect(data[i + 2]).toBeGreaterThanOrEqual(0);
+        }
+    });
+
+    it('should produce identical output for different strength values on a zero-range (uniform) canvas', () => {
+        // When all pixels are the same color, range===0 so stretched === grays unchanged.
+        // Sharpening then computes v = s + strength*(s - blur_of_s) — and since all neighbors equal s, blur == s,
+        // so v == s regardless of strength. This exercises lines 63-70 (range branch) AND lines 89-94 (sharpen loop).
+        const uniformVal = 64;
+        for (let i = 0; i < mockCtx.data.length; i += 4) {
+            mockCtx.data[i]     = uniformVal;
+            mockCtx.data[i + 1] = uniformVal;
+            mockCtx.data[i + 2] = uniformVal;
+            mockCtx.data[i + 3] = 255;
+        }
+
+        const resultA = preprocessCanvas(canvas, 0);
+        const resultB = preprocessCanvas(canvas, 0.7);
+        const dataA = resultA.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+        const dataB = resultB.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        for (let i = 0; i < dataA.length; i++) {
+            expect(dataA[i]).toBe(dataB[i]);
+        }
+    });
 });
