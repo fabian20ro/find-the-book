@@ -549,6 +549,62 @@ describe('scanner', () => {
         });
     });
 
+    describe('auto-scan error recovery', () => {
+        it('recovers the scan loop after camera.verifyReadiness rejects', async () => {
+            state.update({ autoScan: true });
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            // verifyReadiness throws on first call; second call succeeds
+            (camera.verifyReadiness as any)
+                .mockRejectedValueOnce(new Error('camera unavailable'))
+                .mockResolvedValue(undefined);
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+
+            // First scan: verifyReadiness rejected → no frame capture, no OCR, scanCount unchanged
+            expect(state.getState().scanCount).toBe(0);
+            expect(camera.captureFrame).not.toHaveBeenCalled();
+            expect(ocr.recognize).not.toHaveBeenCalled();
+            expect(consoleSpy).toHaveBeenCalledWith('Scan frame error:', expect.any(Error));
+
+            // scheduleNext runs unconditionally after errors (line 173), so advancing again should resume scanning
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(camera.captureFrame).toHaveBeenCalled();
+            expect(ocr.recognize).toHaveBeenCalled();
+        });
+
+        it('recovers the scan loop after ocr.verifyReadiness rejects', async () => {
+            state.update({ autoScan: true });
+            const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            // First call to OCR verifyReadiness throws; second succeeds
+            (ocr.verifyReadiness as any)
+                .mockRejectedValueOnce(new Error('tesseract busy'))
+                .mockResolvedValue(undefined);
+
+            startScanning(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(state.getState().scanCount).toBe(0);
+            expect(consoleSpy).toHaveBeenCalledWith('Scan frame error:', expect.any(Error));
+
+            // Second interval resumes normal scanning after scheduleNext runs from the catch block
+            await vi.advanceTimersByTimeAsync(2000);
+
+            expect(camera.captureFrame).toHaveBeenCalled();
+        });
+    });
+
     describe('candidate popup pausing', () => {
         it('skips scanning while candidateBooks are present', async () => {
             state.update({ autoScan: true });
