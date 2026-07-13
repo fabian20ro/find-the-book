@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { update, addBook, addCandidates, clearCandidates, getState } from './state';
-import { initUI, showError, hideError, getVisibleLanguages, type UIHandlers } from './ui';
+import { initUI, getAllLanguages, showError, hideError, getVisibleLanguages, type UIHandlers } from './ui';
 import type { Book } from './books';
 
 function makeBook(overrides: Partial<Book> = {}): Book {
@@ -642,6 +642,18 @@ describe('ui', () => {
             const moreBtn = document.querySelector('.lang-more') as HTMLElement;
             expect(moreBtn).not.toBeNull();
             expect(moreBtn.getAttribute('aria-label')).toBe('More languages');
+        });
+
+        it('returns all 16 languages with required fields', () => {
+            const all = getAllLanguages();
+            expect(all).toHaveLength(16);
+            for (const lang of all) {
+                expect(typeof lang.code).toBe('string');
+                expect(lang.code.length).toBeGreaterThan(0);
+                expect(typeof lang.name).toBe('string');
+                expect(lang.name.length).toBeGreaterThan(0);
+                expect(typeof lang.flag).toBe('string');
+            }
         });
     });
 });
