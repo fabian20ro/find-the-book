@@ -235,6 +235,20 @@ describe('scanner', () => {
             expect(books.search).toHaveBeenCalledTimes(1);
         });
 
+        it('toasts "No text detected" and adds no candidates when OCR returns empty', async () => {
+            const camera = createMockCamera();
+            const ocr = createMockOcr([]); // frame captured OK, but OCR found nothing
+            const books = createMockBookSearcher();
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.toast).toHaveBeenCalledWith('No text detected');
+            expect(state.getState().candidateBooks).toHaveLength(0);
+            // Frame was captured and passed brightness check (mockBrightness=128), so OCR ran.
+            // But no lines → no search queries fired, no candidates added.
+            expect(books.search).not.toHaveBeenCalled();
+        });
+
         it('increments scanCount', async () => {
             const camera = createMockCamera();
             const ocr = createMockOcr(['text']);
