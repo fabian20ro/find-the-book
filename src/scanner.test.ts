@@ -186,6 +186,7 @@ describe('scanner', () => {
         });
 
         it('handles OCR error', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             const canvas = document.createElement('canvas');
             const camera = createMockCamera(canvas);
             const ocr = createMockOcr(['Title']);
@@ -195,6 +196,7 @@ describe('scanner', () => {
             await scanOnce(camera as any, ocr as any, books as any);
 
             expect(state.getState().scanCount).toBe(0);
+            expect(consoleError).toHaveBeenCalledWith('Scan once error:', expect.any(Error));
         });
     });
     });
@@ -286,6 +288,7 @@ describe('scanner', () => {
         });
 
         it('handles OCR timeout by toasting and resetting processing', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             const camera = createMockCamera();
             const ocr = createMockOcr(['text']);
             const books = createMockBookSearcher();
@@ -295,6 +298,7 @@ describe('scanner', () => {
 
             expect(state.toast).toHaveBeenCalledWith('OCR timed out — retrying on next scan.');
             expect(ocr.resetProcessing).toHaveBeenCalled();
+            expect(consoleError).toHaveBeenCalledWith('Scan once error:', expect.any(Error));
         });
     });
 
@@ -438,6 +442,7 @@ describe('scanner', () => {
         });
 
         it('handles search failures gracefully', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             const book1 = makeBook('b1', 'Book One');
             const books = createMockBookSearcher();
             // 'longtext1' (9 chars) qualifies as individual → 2 queries
@@ -448,6 +453,7 @@ describe('scanner', () => {
             const result = await searchTextBlocks(toOcrLines(['longtext1', 'short']), books as any);
             expect(result).toHaveLength(1);
             expect(result[0].title).toBe('Book One');
+            expect(consoleError).toHaveBeenCalledWith('Search failed for query "longtext1":', expect.any(Error));
         });
 
         it('does not send duplicate query when single line equals combined query (>= 8 chars)', async () => {

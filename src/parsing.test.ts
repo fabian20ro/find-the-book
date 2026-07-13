@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 
 describe('parsing stored books', () => {
     let parseStoredBooks: (s: string | null) => any;
 
     beforeAll(async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
         document.body.innerHTML = `
             <div id="home-view" hidden>
                 <div id="ocr-status"></div>
@@ -46,6 +47,10 @@ describe('parsing stored books', () => {
         `;
         const module = await import('./app');
         parseStoredBooks = module.parseStoredBooks;
+        await vi.waitFor(() => {
+            expect(consoleError).toHaveBeenCalledWith('OCR preload failed:', expect.any(Error));
+        });
+        consoleError.mockRestore();
     });
 
     it('returns empty array for null or undefined input', () => {

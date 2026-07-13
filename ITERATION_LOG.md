@@ -342,3 +342,16 @@
 **Promoted to Lessons Learned:** No
 
 ---
+
+### [2026-07-13] Make expected failure-path tests own their diagnostics
+
+**Context:** The integration gate was green but emitted expected error stacks and a future-incompatible nested `vi.hoisted()` warning.
+**What happened:**
+- Removed the unused nested `vi.hoisted()` declaration.
+- Scoped console spies to intentional network, OCR, camera-disconnect, language-download, and CDN-preload failure tests; asserted each diagnostic instead of printing it.
+- Verified 478 tests, TypeScript lint, and production build.
+**Outcome:** Success — the full test run is quiet and the future Vitest incompatibility is gone.
+**Insight:** Expected failure-path logging belongs in a scoped assertion; global suppression would hide unexpected diagnostics.
+**Promoted to Lessons Learned:** No
+
+---
