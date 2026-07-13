@@ -130,6 +130,9 @@ export function clearBooks(): void {
 
 /** Switch the root view between 'home' and 'scan'. */
 export function setView(mode: ViewMode): void {
+    if (mode !== 'home' && mode !== 'scan') {
+        throw new Error(`Invalid view mode: "${String(mode)}". Allowed modes are "home" or "scan".`);
+    }
     update({ view: mode });
 }
 
