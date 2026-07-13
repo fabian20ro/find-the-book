@@ -147,6 +147,7 @@ describe('Book scoring logic', () => {
     // thrown error (network failure, JSON parse error, etc.) — never let exceptions
     // propagate to the caller. A spy confirms no crash, and the returned array is empty.
     const notify = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network down')) as any;
 
     try {
@@ -155,7 +156,9 @@ describe('Book scoring logic', () => {
       expect(results).toEqual([]);
       // The notify callback must NOT be called for thrown exceptions — only for HTTP 429 / non-ok responses.
       expect(notify).not.toHaveBeenCalled();
+      expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(Error));
     } finally {
+      consoleError.mockRestore();
       globalThis.fetch = vi.fn() as any;
     }
   });

@@ -166,6 +166,7 @@ describe('app', () => {
     });
 
     it('keeps the previous OCR language when a switch fails', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
         mockSetLanguage.mockRejectedValueOnce(new Error('language download failed'));
 
         await capturedHandlers.onLanguageChange('eng');
@@ -173,6 +174,7 @@ describe('app', () => {
         expect(getState().ocrLanguage).toBe('ron');
         expect(localStorage.getItem('ftb-language')).toBeNull();
         expect(mockSetLanguage).toHaveBeenCalledWith('eng');
+        expect(consoleError).toHaveBeenCalledWith('Language change failed:', expect.any(Error));
     });
 
     it('normalizes stored language usage before returning it', () => {
@@ -427,10 +429,6 @@ describe('app', () => {
     });
 
     it('persists language and increments usage on successful switch', async () => {
-        const { incrementLanguageUsage } = vi.hoisted(() => ({
-            incrementLanguageUsage: vi.fn(),
-        }));
-
         await capturedHandlers.onLanguageChange('eng');
 
         expect(localStorage.getItem('ftb-language')).toBe('eng');

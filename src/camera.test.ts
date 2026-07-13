@@ -103,6 +103,7 @@ describe('CameraManager', () => {
         });
 
         it('invokes onDisconnect when the video track fires "ended"', async () => {
+            const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
             const onDisconnect = vi.fn();
             const camera = new CameraManager(video, canvas);
             await camera.start(onDisconnect);
@@ -117,6 +118,7 @@ describe('CameraManager', () => {
             onEnded();
 
             expect(onDisconnect).toHaveBeenCalledTimes(1);
+            expect(consoleWarn).toHaveBeenCalledWith('Camera track ended (disconnected or revoked)');
         });
 
         it('does not register "ended" listener when no onDisconnect callback is provided', async () => {

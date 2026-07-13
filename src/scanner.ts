@@ -128,15 +128,14 @@ async function scanFrame(
     ocr: TextRecognizer,
     bookSearcher: BookSearcher,
 ): Promise<void> {
-    await camera.verifyReadiness();
-    await ocr.verifyReadiness();
-
     if (!getState().isScanning || isPaused || !getState().autoScan || getState().candidateBooks.length > 0) {
         scheduleNext(camera, ocr, bookSearcher);
         return;
     }
 
     try {
+        await camera.verifyReadiness();
+        await ocr.verifyReadiness();
         const canvas = camera.captureFrame();
         if (!canvas) {
             scheduleNext(camera, ocr, bookSearcher);

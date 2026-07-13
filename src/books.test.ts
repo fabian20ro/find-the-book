@@ -109,9 +109,11 @@ describe('BookSearcher', () => {
         });
 
         it('handles fetch error', async () => {
+            const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
             const results = await searcher.search('network fail');
             expect(results).toEqual([]);
+            expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(Error));
         });
 
         it('handles response with no items', async () => {
