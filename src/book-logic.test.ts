@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isISBN, computeConfidence, queryMatchRatio, getConfidenceLevel } from './books';
+import { isISBN, computeConfidence, queryMatchRatio, getConfidenceLevel, getConfidenceColor, isHighConfidence } from './books';
 import type { Book } from './books';
 
 describe('Book logic', () => {
@@ -299,6 +299,44 @@ describe('Book logic', () => {
         it('returns false for strings shorter than 10 or longer than 13 digits', () => {
             expect(isISBN('12345')).toBe(false);
             expect(isISBN('12345678901234')).toBe(false);
+        });
+    });
+
+    describe('getConfidenceColor', () => {
+        it('returns green for High confidence', () => {
+            expect(getConfidenceColor('High')).toBe('#22c55e');
+        });
+
+        it('returns amber for Medium confidence', () => {
+            expect(getConfidenceColor('Medium')).toBe('#f59e0b');
+        });
+
+        it('returns red for Low confidence', () => {
+            expect(getConfidenceColor('Low')).toBe('#ef4444');
+        });
+
+        it('returns gray for None confidence', () => {
+            expect(getConfidenceColor('None')).toBe('#6b7280');
+        });
+    });
+
+    describe('isHighConfidence', () => {
+        const book = { id: '1', title: 'The Great Gatsby', authors: ['F. Scott Fitzgerald'], publisher: 'Scribner', publishedDate: '1925', description: 'A classic', isbn: '9780743276540', pageCount: 180, thumbnailUrl: 'http://img.jpg', infoLink: 'http://link.com', confidence: 0 } as Book;
+
+        it('returns true when confidence is exactly 80', () => {
+            expect(isHighConfidence({ ...book, confidence: 80 })).toBe(true);
+        });
+
+        it('returns true when confidence exceeds 80', () => {
+            expect(isHighConfidence({ ...book, confidence: 95 })).toBe(true);
+        });
+
+        it('returns false when confidence is just below threshold', () => {
+            expect(isHighConfidence({ ...book, confidence: 79 })).toBe(false);
+        });
+
+        it('returns false when confidence is zero', () => {
+            expect(isHighConfidence({ ...book, confidence: 0 })).toBe(false);
         });
     });
 });
