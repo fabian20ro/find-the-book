@@ -151,6 +151,44 @@ describe('state', () => {
             update({ candidateFilter: 'search term' });
             expect(getState().candidateFilter).toBe('search term');
         });
+
+        it('updates lastDetectedText via OCR result parsing', () => {
+            update({ lastDetectedText: 'some detected text from OCR' });
+            expect(getState().lastDetectedText).toBe('some detected text from OCR');
+        });
+
+        it('preserves other fields when updating lastDetectedText', () => {
+            update({ scanCount: 3, view: 'scan' });
+            update({ lastDetectedText: 'new text' });
+            const s = getState();
+            expect(s.lastDetectedText).toBe('new text');
+            expect(s.scanCount).toBe(3);
+            expect(s.view).toBe('scan');
+        });
+
+        it('handles empty string for lastDetectedText', () => {
+            update({ lastDetectedText: 'some text' });
+            update({ lastDetectedText: '' });
+            expect(getState().lastDetectedText).toBe('');
+        });
+
+        it('emits change when updating lastDetectedText', () => {
+            const listener = vi.fn();
+            on('change', listener);
+            update({ lastDetectedText: 'detected' });
+            expect(listener).toHaveBeenCalledTimes(1);
+        });
+
+        it('updates error field via state patch', () => {
+            update({ error: 'some error message' });
+            expect(getState().error).toBe('some error message');
+        });
+
+        it('sets error to null on recovery', () => {
+            update({ error: 'a problem' });
+            update({ error: null });
+            expect(getState().error).toBeNull();
+        });
     });
 
     describe('addBook', () => {
