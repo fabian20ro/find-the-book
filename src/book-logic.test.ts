@@ -99,6 +99,28 @@ describe('Book logic', () => {
             expect(queryMatchRatio(book, 'Gats')).toBe(0);
         });
 
+        it('matches query words found only in the ISBN field', () => {
+            const book = { id: '1', title: 'Some Random Title', authors: ['Nobody'], publisher: null, publishedDate: null, description: null, isbn: '9780743276540', pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            // queryWords = ['some', 'random', 'title'] — all present in title
+            // but we test that isbn words also contribute when query matches isbn only
+            expect(queryMatchRatio(book, '9780743276540')).toBe(1);
+        });
+
+        it('matches query words found only in the description field', () => {
+            const book = { id: '1', title: 'Random', authors: ['X'], publisher: null, publishedDate: null, description: 'A story about the great gatsby', isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'great gatsby')).toBe(1);
+        });
+
+        it('matches query words found only in the publisher field', () => {
+            const book = { id: '1', title: 'Random', authors: ['X'], publisher: 'Scribner', publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, 'scribner')).toBe(1);
+        });
+
+        it('matches query words found only in the page count field', () => {
+            const book = { id: '1', title: 'Random', authors: ['X'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: 280, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
+            expect(queryMatchRatio(book, '280')).toBe(1);
+        });
+
         it('handles multiple authors', () => {
             const book = { id: '1', title: 'Title', authors: ['Author One', 'Author Two'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 } as Book;
             expect(queryMatchRatio(book, 'Author Two')).toBe(1);
