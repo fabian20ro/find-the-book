@@ -227,6 +227,33 @@ describe('BookSearcher', () => {
             const [url] = (fetch as any).mock.calls[0];
             expect(url).toContain('q=');
         });
+
+        it('URL-encodes special characters in query for Google Books API', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-accent', 'Café Book')])));
+
+            await searcher.search('Café!');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            // The query parameter should be URL-encoded, not sent raw with special chars.
+            // encodeURIComponent("Café!") produces "%C3%A9" for é and "!" is preserved (not encoded to %21 in strict mode — but RFC 3986 allows !).
+            expect(url).toContain('q=');
+            const queryMatch = url.match(/q=([^&]+)/);
+            expect(queryMatch).toBeTruthy();
+            const decodedQuery = decodeURIComponent(queryMatch![1]);
+            expect(decodedQuery).toBe('Café!');
+        });
+
+        it('URL-encodes spaces in query for Google Books API', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-space', 'Space Book')])));
+
+            await searcher.search('the space book');
+            expect(fetch).toHaveBeenCalledTimes(1);
+            const [url] = (fetch as any).mock.calls[0];
+            const queryMatch = url.match(/q=([^&]+)/);
+            expect(queryMatch).toBeTruthy();
+            const decodedQuery = decodeURIComponent(queryMatch![1]);
+            expect(decodedQuery).toBe('the space book');
+        });
     });
 
     describe('preloadBookId', () => {
