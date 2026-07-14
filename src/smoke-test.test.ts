@@ -154,3 +154,38 @@ test('addBook() rejects duplicate id, does not emit', () => {
 
   off();
 });
+
+test('addBook() normalizes whitespace-only fields to null', () => {
+  const book: Book = {
+    id: 'edge-1', title: 'Edge Case', authors: ['Author'],
+    publisher: '   ', publishedDate: '', description: '\t\n', isbn: '  ',
+    pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0.5,
+  };
+
+  const ok = addBook(book);
+
+  expect(ok).toBe(true);
+  const state = getState();
+  // whitespace-only strings must collapse to null per normalizeBook()
+  expect(state.books[0].publisher).toBeNull();
+  expect(state.books[0].publishedDate).toBeNull();
+  expect(state.books[0].description).toBeNull();
+  expect(state.books[0].isbn).toBeNull();
+});
+
+test('removeBook(index) deletes book, emits change, returns removed book', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'del-a', title: 'A', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'del-b', title: 'B', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const removed = removeBook(1);
+  expect(removed).not.toBeNull();
+  expect(removed!.id).toBe('del-b');
+
+  const state = getState();
+  expect(state.books).toHaveLength(1);
+  expect(state.books[0].id).toBe('del-a');
+
+  off();
+});
