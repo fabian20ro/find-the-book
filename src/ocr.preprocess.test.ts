@@ -222,6 +222,29 @@ describe('preprocessCanvas', () => {
         }
     });
 
+    it('should apply documented grayscale coefficients to non-uniform RGB input', () => {
+        // Verifies that the integer-weighted grayscale formula:
+        //   gray = round((77*R + 150*G + 29*B) / 256)
+        // is applied correctly. R≠G≠B so all three weights contribute independently,
+        // catching a regression where someone swaps or modifies the constants silently.
+        const r = 200; const g = 100; const b = 50;
+        const expectedGray = Math.round((77 * r + 150 * g + 29 * b) / 256); // = 134
+
+        for (let i = 0; i < mockCtx.data.length; i += 4) {
+            mockCtx.data[i]     = r;
+            mockCtx.data[i + 1] = g;
+            mockCtx.data[i + 2] = b;
+            mockCtx.data[i + 3] = 255;
+        }
+
+        const result = preprocessCanvas(canvas, 0); // strength=0 skips sharpening, isolates stretch+grayscale
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        expect(data[0]).toBe(expectedGray);   // R channel matches weighted formula
+        expect(data[1]).toBe(expectedGray);   // G channel matches (grayscale output)
+        expect(data[2]).toBe(expectedGray);   // B channel matches
+    });
+
     it('should produce identical output for different strength values on a zero-range (uniform) canvas', () => {
         // When all pixels are the same color, range===0 so stretched === grays unchanged.
         // Sharpening then computes v = s + strength*(s - blur_of_s) — and since all neighbors equal s, blur == s,
