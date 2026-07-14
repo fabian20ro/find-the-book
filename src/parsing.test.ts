@@ -179,4 +179,76 @@ describe('parsing stored books', () => {
         expect(result[0].thumbnailUrl).toBe('https://example.com/thumb.jpg');
         expect(result[0].infoLink).toBe('https://books.google.com/x');
     });
+
+    it('rejects non-string id/title values and filters null entries', () => {
+        const json = JSON.stringify([
+            // Boolean id — not a string, should be rejected
+            { id: true, title: 'Bool ID' },
+            // Number id — not a string, should be rejected
+            { id: 42, title: 'Number Id' },
+            // null entry in array — silently skipped
+            null,
+            undefined,
+            // Valid entry survives alongside noise
+            { id: 'real-id', title: 'Real Book' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('real-id');
+    });
+
+    it('converts non-string optional fields to null', () => {
+        const json = JSON.stringify([
+            {
+                id: 'bool-fields',
+                title: 'Bool Fields Book',
+                publisher: true,
+                isbn: 12345,
+                description: false,
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        // getTrimmedString returns null for non-string inputs
+        expect(result[0].publisher).toBe(null);
+        expect(result[0].isbn).toBe(null);
+        expect(result[0].description).toBe(null);
+    });
+
+    it('handles NaN and out-of-range confidence values', () => {
+        const json = JSON.stringify([
+            { id: 'nan-conf', title: 'NaN Confidence', confidence: NaN },
+            { id: 'infinity-conf', title: 'Infinity Confidence', confidence: Infinity },
+            { id: 'negative-pages', title: 'Negative Pages', pageCount: -5 },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        // NaN is not finite, so getStoredConfidence returns null → defaults to 0
+        expect(result[0].confidence).toBe(0);
+        // Infinity is not finite either
+        expect(result[1].confidence).toBe(0);
+        // pageCount must be a positive integer; -5 fails
+        expect(result[2].pageCount).toBe(null);
+    });
+
+    it('filters mixed primitive and invalid-item arrays', () => {
+        const json = JSON.stringify([
+            42,           // number primitive — not an object, rejected
+            'hello',      // string primitive — not an object, rejected
+            null,         // null — rejected by !value check
+            true,         // boolean primitive — rejected by typeof !== 'object'
+            { id: 'valid-one', title: 'Valid' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('valid-one');
+    });
 });
