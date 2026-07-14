@@ -330,17 +330,17 @@ describe('ui', () => {
 
         it('shows scanning status when auto-scanning', () => {
             update({ isScanning: true, autoScan: true });
-            expect(document.getElementById('scan-status')!.textContent).toBe('Auto-scanning');
+            expect(document.getElementById('scan-status')!.textContent).toBe('Romanian · Auto-scanning');
         });
 
         it('shows manual status when scanning without auto', () => {
             update({ isScanning: true, autoScan: false });
-            expect(document.getElementById('scan-status')!.textContent).toBe('Manual');
+            expect(document.getElementById('scan-status')!.textContent).toBe('Romanian · Manual');
         });
 
         it('shows paused status when not scanning', () => {
             update({ isScanning: false });
-            expect(document.getElementById('scan-status')!.textContent).toBe('Paused');
+            expect(document.getElementById('scan-status')!.textContent).toBe('Romanian · Paused');
         });
 
         it('shows truncated text at exact boundary', () => {
