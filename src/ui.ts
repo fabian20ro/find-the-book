@@ -366,10 +366,9 @@ function renderUI(): void {
     renderLanguageSelector();
 
     // Scan view status
+    const langName = ALL_LANGUAGES.find((l) => l.code === state.ocrLanguage)?.name ?? '';
     scanCountEl.textContent = `Scans: ${state.scanCount}`;
-    scanStatusEl.textContent = state.isScanning
-        ? (state.autoScan ? 'Auto-scanning' : 'Manual')
-        : 'Paused';
+    scanStatusEl.innerHTML = `${langName} · ${state.isScanning ? (state.autoScan ? 'Auto-scanning' : 'Manual') : 'Paused'}`;
     scanStatusEl.className = state.isScanning ? 'scan-active' : 'scan-paused';
 
     // Last detected text
