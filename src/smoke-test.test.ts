@@ -1,8 +1,10 @@
 import { expect, test, beforeEach } from 'vitest';
-import { getState, update, on, toast, type Book } from './state';
+import { getState, update, on, toast, addBook, removeBook, clearBooks, setView, addCandidates, removeCandidateById, clearCandidates, moveBook, type Book } from './state';
 
 beforeEach(() => {
   // reset state fields to defaults — module-level state persists across tests
+  clearBooks();
+  clearCandidates();
   update({
     isScanning: false,
     view: 'home',
@@ -100,6 +102,55 @@ test('toast event delivers message payload to listener', () => {
   toast('Test message');
 
   expect(received).toBe('Test message');
+
+  off();
+});
+
+test('addBook() normalizes, inserts, emits change, returns true', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  const book: Book = {
+    id: 'abc-123', title: '  hello world  ', authors: ['   author x  '],
+    publisher: null, publishedDate: null, description: null, isbn: null,
+    pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0,
+  };
+
+  const ok = addBook(book);
+
+  expect(ok).toBe(true);
+  expect(emitted).toBe(true);
+
+  const state = getState();
+  expect(state.books).toHaveLength(1);
+  // normalization must have trimmed the values
+  expect(state.books[0].id).toBe('abc-123');
+  expect(state.books[0].title).toBe('hello world');
+  expect(state.books[0].authors[0]).toBe('author x');
+
+  off();
+});
+
+test('addBook() rejects duplicate id, does not emit', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  const book: Book = {
+    id: 'dup-x', title: 'first', authors: [], publisher: null,
+    publishedDate: null, description: null, isbn: null, pageCount: null,
+    thumbnailUrl: null, infoLink: null, confidence: 0,
+  };
+
+  expect(addBook(book)).toBe(true);
+  expect(getState().books).toHaveLength(1);
+
+  emitted = false;
+  const sameBook: Book = { ...book, title: 'second' };
+  expect(addBook(sameBook)).toBe(false);
+  // state must be unchanged — no second entry
+  expect(getState().books).toHaveLength(1);
+  // no event should fire for the rejected insertion
+  expect(emitted).toBe(false);
 
   off();
 });
