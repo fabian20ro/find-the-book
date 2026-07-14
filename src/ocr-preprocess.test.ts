@@ -1,6 +1,6 @@
 import 'vitest-canvas-mock';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { preprocessCanvas, frameBrightness } from './ocr';
+import { preprocessCanvas, frameBrightness, TextRecognizer } from './ocr';
 
 // Minimal mock for Canvas/Context to avoid library overhead
 class MockCanvasContext {
@@ -344,6 +344,48 @@ describe('ocr utilities', () => {
             // With this canvas size: data.length = 32. step = max(1, floor(8/400))*4 = 4 → samples every pixel.
             // Average of (255+255+255)/3 per white + (0+0+0)/3 per black = (255*4 + 0*4) / 8 = 127.5
             expect(brightness).toBeCloseTo(127.5, 0);
+        });
+    });
+
+    describe('TextRecognizer.recognize', () => {
+        let recognizer: TextRecognizer;
+
+        beforeEach(() => {
+            recognizer = new TextRecognizer();
+        });
+
+        it('throws when not initialized (no worker)', async () => {
+            // Before init() is called, the worker is null. The recognize() guard checks
+            // !this.worker BEFORE checking canvas validity or processing state, so calling
+            // recognize() on an uninitialized instance throws rather than silently returning [].
+            // This test documents that usage error: callers must call init() before recognize().
+            await expect(recognizer.recognize(canvas)).rejects.toThrow('TextRecognizer not initialized');
+        });
+
+        it('returns empty array when called with undefined canvas after initialization', async () => {
+            // The defensive guard `if (this.isProcessing || !canvas) return []` is reachable only
+            // after init() because the worker-null check precedes it. This test verifies that once
+            // initialized, passing an invalid canvas returns [] safely without throwing — documenting
+            // the safe-fallback behavior for downstream callers who pass null/undefined frames.
+            const mockWorker = { recognize: vi.fn().mockResolvedValue({ data: { lines: [] } }) };
+            (recognizer as any).worker = mockWorker;
+
+            const result = await recognizer.recognize(undefined as any);
+            expect(result).toEqual([]);
+        });
+
+        it('returns empty array when already processing a new request', async () => {
+            // When isProcessing is true (previous recognition in progress), recognize() should
+            // return [] immediately without attempting to process the new canvas. This prevents
+            // queueing concurrent OCR operations on a single recognizer instance, documented here
+            // once init guard is satisfied via direct worker assignment.
+            const mockWorker = { recognize: vi.fn().mockResolvedValue({ data: { lines: [] } }) };
+            (recognizer as any).worker = mockWorker;
+            recognizer.resetProcessing();
+            (recognizer as any).isProcessing = true;
+
+            const result = await recognizer.recognize(canvas);
+            expect(result).toEqual([]);
         });
     });
 });
