@@ -210,6 +210,28 @@ describe('CameraManager', () => {
         });
     });
 
+    describe('getResolution', () => {
+        it('returns null before start', () => {
+            const camera = new CameraManager(video, canvas);
+            expect(camera.getResolution()).toBeNull();
+        });
+
+        it('returns current video dimensions after start', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            const res = camera.getResolution();
+            expect(res).toEqual({ width: 1920, height: 1080 });
+        });
+
+        it('returns null after stop', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+            camera.stop();
+            expect(camera.getResolution()).toBeNull();
+        });
+    });
+
     describe('stop', () => {
         it('stops all tracks', async () => {
             const camera = new CameraManager(video, canvas);

@@ -89,6 +89,12 @@ export class CameraManager {
     get isActive(): boolean {
         return !!this.stream && this.video.readyState >= 2;
     }
+
+    /** Current video resolution, or null if the camera is not active. */
+    getResolution(): { width: number; height: number } | null {
+        if (!this.isActive) return null;
+        return { width: this.video.videoWidth, height: this.video.videoHeight };
+    }
 }
 
 /**
