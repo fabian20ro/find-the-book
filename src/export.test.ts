@@ -173,6 +173,11 @@ describe('formatBooksAsText', () => {
     it('returns only the header for empty array', () => {
         expect(formatBooksAsText([])).toBe('# My Book Collection');
     });
+
+    it('outputs only author-title when ISBN and page count are absent', () => {
+        const result = formatBooksAsText([makeBook({ isbn: null, pageCount: 0 })]);
+        expect(result).toBe('# My Book Collection\nAuthor A - Test Book');
+    });
 });
 
 describe('shareBooks', () => {

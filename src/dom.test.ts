@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { $, $$, $as, getContext2D } from './dom';
+import { $, $$, $as, getContext2D, trySelector } from './dom';
 
 describe('dom helpers', () => {
     beforeEach(() => {
@@ -98,6 +98,39 @@ describe('dom helpers', () => {
             vi.spyOn(canvas, 'getContext').mockReturnValue(null);
 
             expect(() => getContext2D(canvas)).toThrow('Could not get 2D rendering context');
+        });
+    });
+
+    describe('trySelector', () => {
+        it('returns the first matching selector', () => {
+            document.body.innerHTML = '<div class="a">A</div><span id="b">B</span>';
+            const el = trySelector(['.nonexistent', '#b']);
+            expect(el).not.toBeNull();
+            expect(el!.id).toBe('b');
+        });
+
+        it('returns the first match when multiple selectors exist', () => {
+            document.body.innerHTML = '<div id="first">F</div><span class="second">S</span>';
+            const el = trySelector(['#first', '.second']);
+            expect(el).not.toBeNull();
+            expect(el!.id).toBe('first');
+        });
+
+        it('returns null when no selector matches', () => {
+            document.body.innerHTML = '<div id="only">O</div>';
+            const el = trySelector(['.missing1', '.missing2']);
+            expect(el).toBeNull();
+        });
+
+        it('works with empty selector array', () => {
+            const el = trySelector([]);
+            expect(el).toBeNull();
+        });
+
+        it('returns HTMLElement type', () => {
+            document.body.innerHTML = '<p class="target">P</p>';
+            const el = trySelector(['.target']);
+            expect(el).toBeInstanceOf(HTMLElement);
         });
     });
 });

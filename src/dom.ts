@@ -10,6 +10,18 @@ export function $(selector: string): HTMLElement {
 }
 
 /**
+ * Try multiple selectors in order, returning the first match or null.
+ * Unlike `$`, never throws — useful for optional/conditional elements.
+ */
+export function trySelector(selectors: string[]): HTMLElement | null {
+    for (const sel of selectors) {
+        const el = document.querySelector(sel);
+        if (el) return el as HTMLElement;
+    }
+    return null;
+}
+
+/**
  * Typed DOM query helper for specific element types (video, canvas, etc.).
  */
 export function $as<T extends HTMLElement>(

@@ -103,7 +103,7 @@ describe('TextRecognizer', () => {
 
         it('throws if verifyReadiness is called when busy', async () => {
             const mockWorker = {
-                recognize: vi.fn().mockReturnValue(new Promise((_, reject) => setTimeout(() => reject(new Error('mocked')), 10))),
+                recognize: vi.fn(),
                 terminate: vi.fn(),
                 setParameters: vi.fn().mockResolvedValue(undefined),
             };
@@ -111,12 +111,12 @@ describe('TextRecognizer', () => {
 
             const recognizer = new TextRecognizer();
             await recognizer.init();
-            
-            const recognizePromise = recognizer.recognize(document.createElement('canvas'));
-            
+
+            // Simulate a scan in progress by flipping the private busy flag directly.
+            (recognizer as any).isProcessing = true;
+
             await expect(recognizer.verifyReadiness()).rejects.toThrow('TextRecognizer is busy.');
-            
-            try { await recognizePromise; } catch {}
+
             await recognizer.destroy();
         });
 
