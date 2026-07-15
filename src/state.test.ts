@@ -243,6 +243,14 @@ describe('state', () => {
             expect(getState().books[0].title).toBe('Second');
         });
 
+        it('allows re-adding a book after removal', () => {
+            addBook(makeBook({ id: 'readd', title: 'Original' }));
+            removeBook(0);
+            const result = addBook(makeBook({ id: 'readd', title: 'Replaced' }));
+            expect(result).toBe(true);
+            expect(getState().books[0].title).toBe('Replaced');
+        });
+
         it('returns null for invalid index', () => {
             expect(removeBook(-1)).toBeNull();
             expect(removeBook(0)).toBeNull();
