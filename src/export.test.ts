@@ -119,6 +119,16 @@ describe('exportToCsv', () => {
         expect(lines[1]).toBe('The Great Book,Author A,0-123456-78-9,Publisher Co,2024-01-01,300');
     });
 
+    it('produces empty cells for null optional fields and "0" for zero page count', async () => {
+        const book = makeBook({ isbn: null, publisher: null, publishedDate: null, pageCount: 0 });
+        exportToCsv([book]);
+
+        expect(capturedBlob).not.toBeNull();
+        const text = await capturedBlob!.text();
+        // title, authors, empty isbn, empty publisher, empty date, "0" for zero page count — 5 commas
+        expect(text).toBe('Title,Authors,ISBN,Publisher,Published Date,Page Count\nTest Book,Author A,,,,0');
+    });
+
     it('produces one row per book for multiple books', async () => {
         const books = [makeBook({ title: 'Alpha' }), makeBook({ id: 'b2', title: 'Beta' })];
         exportToCsv(books);
