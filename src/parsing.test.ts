@@ -251,4 +251,69 @@ describe('parsing stored books', () => {
         expect(result).toHaveLength(1);
         expect(result[0].id).toBe('valid-one');
     });
+
+    it('trims whitespace and rejects non-string publishedDate values', () => {
+        const json = JSON.stringify([
+            { id: 'date-trimmed', title: 'Trimmed Date', publishedDate: '  2023-01-15  ' },
+            { id: 'date-null', title: 'Null Date', publishedDate: null },
+            { id: 'date-number', title: 'Number Date', publishedDate: 2023 },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(3);
+        expect(result[0].publishedDate).toBe('2023-01-15');
+        expect(result[1].publishedDate).toBe(null);
+        expect(result[2].publishedDate).toBe(null);
+    });
+
+    it('handles pageCount edge cases beyond negative values', () => {
+        const json = JSON.stringify([
+            { id: 'zero-pages', title: 'Zero Pages', pageCount: 0 },
+            { id: 'float-pages', title: 'Float Pages', pageCount: 3.7 },
+            { id: 'null-pages', title: 'Null Pages', pageCount: null },
+            { id: 'string-pages', title: 'String Pages', pageCount: '100' },
+            { id: 'valid-pages', title: 'Valid Pages', pageCount: 350 },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(5);
+        // zero fails the > 0 check → null
+        expect(result[0].pageCount).toBe(null);
+        // float fails Number.isInteger → null
+        expect(result[1].pageCount).toBe(null);
+        // null fails typeof === 'number' → null
+        expect(result[2].pageCount).toBe(null);
+        // string fails typeof === 'number' → null
+        expect(result[3].pageCount).toBe(null);
+        // valid positive integer passes
+        expect(result[4].pageCount).toBe(350);
+    });
+
+    it('converts empty-string and whitespace-only optional metadata to null', () => {
+        const json = JSON.stringify([
+            {
+                id: 'empty-fields',
+                title: 'Empty Fields Book',
+                description: '',
+                publisher: '   ',
+                isbn: '\t\n',
+                thumbnailUrl: '',
+                infoLink: '  ',
+                publishedDate: '',
+            },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(1);
+        // All empty/whitespace-only strings → null via getTrimmedString
+        expect(result[0].description).toBe(null);
+        expect(result[0].publisher).toBe(null);
+        expect(result[0].isbn).toBe(null);
+        expect(result[0].thumbnailUrl).toBe(null);
+        expect(result[0].infoLink).toBe(null);
+        expect(result[0].publishedDate).toBe(null);
+    });
 });
