@@ -228,6 +228,18 @@ describe('BookSearcher', () => {
             expect(url).toContain('q=');
         });
 
+        it('deduplicates volume IDs within a single search response', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
+                volume('v1', 'First Book'),
+                volume('v1', 'Duplicate Of First'),  // same id, different title
+                volume('v2', 'Second Book'),
+            ])));
+
+            const results = await searcher.search('find books');
+            expect(results).toHaveLength(2);
+            expect(results.map((r) => r.id)).toEqual(['v1', 'v2']);
+        });
+
         it('URL-encodes special characters in query for Google Books API', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-accent', 'Café Book')])));
 

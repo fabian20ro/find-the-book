@@ -266,4 +266,60 @@ describe('preprocessCanvas', () => {
             expect(dataA[i]).toBe(dataB[i]);
         }
     });
+
+    it('should keep output within [0,255] at strength=2 on high-contrast input', () => {
+        // Strength > 1 is a legitimate user setting. At elevated sharpening the formula
+        // v = stretched[idx] + strength * (stretched[idx] - blurred) can push values far
+        // beyond the byte range — the inline clamp on line 96 must still hold. This test
+        // uses max/min contrast to maximize the sharpening delta and verifies all four
+        // channels stay within [0,255].
+        mockCtx.data[0]     = 255;  // top-left: white
+        mockCtx.data[1]     = 255;
+        mockCtx.data[2]     = 255;
+        mockCtx.data[3]     = 255;
+        mockCtx.data[4]     = 0;    // center: black — large delta with white neighbors
+        mockCtx.data[5]     = 0;
+        mockCtx.data[6]     = 0;
+        mockCtx.data[7]     = 255;
+        mockCtx.data[8]     = 255;
+        mockCtx.data[9]     = 230;  // top-right: bright gray
+        mockCtx.data[10]    = 230;
+        mockCtx.data[11]    = 230;
+        mockCtx.data[12]    = 255;
+        mockCtx.data[13]    = 10;   // middle-left: near black
+        mockCtx.data[14]    = 10;
+        mockCtx.data[15]    = 10;
+        mockCtx.data[16]    = 255;
+        mockCtx.data[17]    = 150;  // middle-center: mid gray
+        mockCtx.data[18]    = 150;
+        mockCtx.data[19]    = 150;
+        mockCtx.data[20]    = 255;
+        mockCtx.data[21]    = 30;   // middle-right: dark
+        mockCtx.data[22]    = 30;
+        mockCtx.data[23]    = 30;
+        mockCtx.data[24]    = 255;
+        mockCtx.data[25]    = 200;  // bottom-left: near white
+        mockCtx.data[26]    = 200;
+        mockCtx.data[27]    = 200;
+        mockCtx.data[28]    = 120;  // bottom-center: medium gray
+        mockCtx.data[29]    = 120;
+        mockCtx.data[30]    = 120;
+        mockCtx.data[31]    = 255;
+        mockCtx.data[32]    = 60;   // bottom-right: dark
+        mockCtx.data[33]    = 60;
+        mockCtx.data[34]    = 60;
+        mockCtx.data[35]    = 255;
+
+        const result = preprocessCanvas(canvas, 2);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        for (let i = 0; i < data.length; i += 4) {
+            expect(data[i]).toBeGreaterThanOrEqual(0);
+            expect(data[i]).toBeLessThanOrEqual(255);
+            expect(data[i + 1]).toBeGreaterThanOrEqual(0);
+            expect(data[i + 1]).toBeLessThanOrEqual(255);
+            expect(data[i + 2]).toBeGreaterThanOrEqual(0);
+            expect(data[i + 2]).toBeLessThanOrEqual(255);
+        }
+    });
 });

@@ -210,6 +210,52 @@ describe('ocr utilities', () => {
             expect(result).toBeInstanceOf(HTMLCanvasElement);
             // The output should still be a valid canvas without errors.
         });
+
+        it('handles negative strength: applies inverse sharpening as blur (strength=-0.5)', () => {
+            // Negative strength reverses the sharpening formula into blurring: v = original - |strength| * (original - blurred).
+            // With a 3×3 canvas where the center pixel is bright and neighbors are dark, blurring should pull the center darker.
+            const data = new Uint8ClampedArray([
+                50, 50, 50, 255,  50, 50, 50, 255,  50, 50, 50, 255,
+                50, 50, 50, 255,                        230, 230, 230, 255,  50, 50, 50, 255,
+                50, 50, 50, 255,  50, 50, 50, 255,  50, 50, 50, 255
+            ]);
+            canvas.width = 3;
+            canvas.height = 3;
+            mockCtx.putImageData(new ImageData(data, 3, 3));
+
+            const result = preprocessCanvas(canvas, -0.5);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+
+            // Center pixel (idx 4) should be pulled toward the dark neighbor average (~50),
+            // which is strictly darker than its original grayscale value of 230.
+            const centerGray = resultData[16];
+            expect(centerGray).toBeLessThan(230);
+
+            // The center should also be lighter than the neighbors (blurred but not fully equalized at -0.5),
+            // so it remains between the neighbor value (50) and original (230).
+            const cornerNeighbor = resultData[0];
+            expect(centerGray).toBeGreaterThan(cornerNeighbor);
+        });
+
+        it('applies strength=0 as identity: grayscale unchanged when range=0', () => {
+            // With strength=0, contrast stretch applies but sharpening is no-op. When all pixels are identical gray (range=0),
+            // the stretch fallback returns grays as-is, and sharpening with strength 0 also passes through. The output should match input exactly.
+            const uniform = new Uint8ClampedArray(16 * 16 * 4).fill(75);
+            for (let i = 0; i < uniform.length; i += 4) {
+                uniform[i + 3] = 255;
+            }
+            canvas.width = 16;
+            canvas.height = 16;
+            mockCtx.putImageData(new ImageData(uniform, 16, 16));
+
+            const result = preprocessCanvas(canvas, 0);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 16, 16).data;
+            for (let i = 0; i < 16 * 16; i++) {
+                expect(resultData[i * 4]).toBe(75);
+                expect(resultData[i * 4 + 1]).toBe(75);
+                expect(resultData[i * 4 + 2]).toBe(75);
+            }
+        });
     });
 
     describe('frameBrightness', () => {
