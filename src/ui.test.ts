@@ -405,6 +405,87 @@ describe('ui', () => {
         });
     });
 
+    describe('drag-and-drop reorder', () => {
+        function makeDragEvent(type: string, target: EventTarget) {
+            const event = new CustomEvent(type, { bubbles: true });
+            Object.defineProperty(event, 'target', { value: target });
+            return event;
+        }
+
+        it('calls moveBook with correct indices on drop', () => {
+            addBook(makeBook({ id: 'b1' }));
+            addBook(makeBook({ id: 'b2' }));
+            addBook(makeBook({ id: 'b3' }));
+
+            const list = document.getElementById('home-book-list')!;
+            const cards = list.querySelectorAll<HTMLElement>('.book-card');
+
+            // Simulate dragstart on first card (index 0)
+            const startEvent = makeDragEvent('dragstart', cards[0]);
+            list.dispatchEvent(startEvent);
+            expect(cards[0].classList.contains('dragging')).toBe(true);
+
+            // Simulate drop on third card (index 2) — verify via state
+            const beforeIds = getState().books.map(b => b.id);
+            const dropEvent = makeDragEvent('drop', cards[2]);
+            list.dispatchEvent(dropEvent);
+            const afterIds = getState().books.map(b => b.id);
+
+            expect(beforeIds).toEqual(['b1', 'b2', 'b3']);
+            // moveBook(0, 2) removes index 0 and inserts at 2: b2, b3, b1
+            expect(afterIds).toEqual(['b2', 'b3', 'b1']);
+        });
+
+        it('does not move when dropping on same card', () => {
+            addBook(makeBook({ id: 'b1' }));
+            const list = document.getElementById('home-book-list')!;
+            const cards = list.querySelectorAll<HTMLElement>('.book-card');
+
+            const startEvent = makeDragEvent('dragstart', cards[0]);
+            list.dispatchEvent(startEvent);
+
+            const beforeIds = getState().books.map(b => b.id);
+            const dropEvent = makeDragEvent('drop', cards[0]);
+            list.dispatchEvent(dropEvent);
+            const afterIds = getState().books.map(b => b.id);
+
+            expect(beforeIds).toEqual(afterIds);
+        });
+
+        it('removes dragging class on dragend', () => {
+            addBook(makeBook({ id: 'b1' }));
+            const list = document.getElementById('home-book-list')!;
+            const cards = list.querySelectorAll<HTMLElement>('.book-card');
+
+            list.dispatchEvent(makeDragEvent('dragstart', cards[0]));
+            expect(cards[0].classList.contains('dragging')).toBe(true);
+            list.dispatchEvent(makeDragEvent('dragend', cards[0]));
+            expect(cards[0].classList.contains('dragging')).toBe(false);
+        });
+
+        it('adds drag-over class when dragging over a card', () => {
+            addBook(makeBook({ id: 'b1' }));
+            addBook(makeBook({ id: 'b2' }));
+            const list = document.getElementById('home-book-list')!;
+            const cards = Array.from(list.querySelectorAll<HTMLElement>('.book-card'));
+
+            // Start dragging first card
+            list.dispatchEvent(new CustomEvent('dragstart', { bubbles: true }));
+
+            // Drag over second card
+            const dragover = new Event('dragover', { bubbles: true });
+            Object.defineProperty(dragover, 'target', { value: cards[1] });
+            list.dispatchEvent(dragover);
+            expect(cards[1].classList.contains('drag-over')).toBe(true);
+
+            // Drag leaves
+            const dragleave = new Event('dragleave', { bubbles: true });
+            Object.defineProperty(dragleave, 'target', { value: cards[1] });
+            list.dispatchEvent(dragleave);
+            expect(cards[1].classList.contains('drag-over')).toBe(false);
+        });
+    });
+
     describe('error overlay', () => {
         it('shows error message', () => {
             showError('Something went wrong');
