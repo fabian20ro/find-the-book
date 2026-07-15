@@ -189,3 +189,35 @@ test('removeBook(index) deletes book, emits change, returns removed book', () =>
 
   off();
 });
+
+test('removeBook(0) removes the first book, shifts second into index 0', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'first', title: 'First', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addBook({ id: 'second', title: 'Second', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  const removed = removeBook(0);
+  expect(removed).not.toBeNull();
+  expect(removed!.id).toBe('first');
+
+  const state = getState();
+  expect(state.books).toHaveLength(1);
+  expect(state.books[0].id).toBe('second');
+
+  off();
+});
+
+test('clearBooks() empties the list and emits change', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  addBook({ id: 'keep-me', title: 'Should vanish', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+
+  clearBooks();
+
+  const state = getState();
+  expect(state.books).toHaveLength(0);
+  expect(emitted).toBe(true);
+
+  off();
+});
