@@ -435,6 +435,18 @@ describe('preprocessCanvas', () => {
         mockCtx.data.fill(0);
     });
 
+    it('returns the original canvas when getContext returns null', () => {
+        const noCtxCanvas = document.createElement('canvas');
+        // Use Object.defineProperty to bypass vi's mock registry — avoids leaking into vitest-canvas-mock state.
+        const origDesc = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')!;
+        (noCtxCanvas as any).getContext = (() => null) as any;
+
+        const result = preprocessCanvas(noCtxCanvas);
+
+        expect(result).toBe(noCtxCanvas);
+        delete (noCtxCanvas as any).getContext;
+    });
+
     it('correctly performs contrast stretch', () => {
         // Setup: Low contrast grayscale image
         // Grayscale values (0-255): 100, 110, 120, 130, 140, 150, 160, 170, 180
