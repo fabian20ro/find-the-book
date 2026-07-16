@@ -451,4 +451,12 @@ describe('app', () => {
 
         expect(shareBooks).not.toHaveBeenCalled();
     });
+
+    it('does not call exportToCsv when there are no books to export', async () => {
+        const { exportToCsv } = await import('./export');
+
+        capturedHandlers.onExport();
+
+        expect(exportToCsv).not.toHaveBeenCalled();
+    });
 });
