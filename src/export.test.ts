@@ -169,6 +169,15 @@ describe('formatBooksAsText', () => {
         expect(result).not.toContain('pages');
     });
 
+    it('joins multiple books with newline separators and exact format', () => {
+        const book1 = makeBook({ id: 'b1a', title: 'Alpha' });
+        const book2 = makeBook({ id: 'b1b', title: 'Beta', authors: ['Writer X'] });
+        const result = formatBooksAsText([book1, book2]);
+        expect(result).toBe(
+            '# My Book Collection\nAuthor A - Alpha | ISBN: 9781234567890 | 300 pages\nWriter X - Beta | ISBN: 9781234567890 | 300 pages'
+        );
+    });
+
     it('includes each book on its own line', () => {
         const books = [
             makeBook({ title: 'Book One' }),

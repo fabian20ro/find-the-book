@@ -17,6 +17,12 @@ interface TesseractWorker {
     setParameters(params: Record<string, string>): Promise<void>;
     saveLanguageModel?(): Promise<void>;
     terminate(): Promise<void>;
+
+    /** Listen for status/progress events during recognition (optional in older workers). */
+    on?(event: 'status' | 'progress', handler: (data: unknown) => void): void;
+
+    /** Set the active language without recreating the worker (optional in older builds). */
+    setLanguage?(lang: string, onProgress?: (progress: number, status: string) => void): Promise<void>;
 }
 
 export interface CreateWorkerOptions {
