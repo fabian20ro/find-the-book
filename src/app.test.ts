@@ -459,4 +459,16 @@ describe('app', () => {
 
         expect(exportToCsv).not.toHaveBeenCalled();
     });
+
+    it('does nothing onClear when there are no books', () => {
+        capturedHandlers.onClear();
+
+        expect(getState().books).toHaveLength(0);
+    });
+
+    it('does nothing onClear when there are no books', () => {
+        capturedHandlers.onClear();
+
+        expect(getState().books).toHaveLength(0);
+    });
 });
