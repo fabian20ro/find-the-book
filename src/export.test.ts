@@ -169,6 +169,14 @@ describe('formatBooksAsText', () => {
         expect(result).not.toContain('pages');
     });
 
+    it('omits page count when null', () => {
+        const result = formatBooksAsText([makeBook({ pageCount: null })]);
+        expect(result).not.toContain('pages');
+        const lines = result.split('\n');
+        expect(lines.length).toBe(2);
+        expect(lines[1]).toContain('Author A - Test Book | ISBN: 9781234567890');
+    });
+
     it('joins multiple books with newline separators and exact format', () => {
         const book1 = makeBook({ id: 'b1a', title: 'Alpha' });
         const book2 = makeBook({ id: 'b1b', title: 'Beta', authors: ['Writer X'] });
