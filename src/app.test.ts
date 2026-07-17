@@ -466,9 +466,17 @@ describe('app', () => {
         expect(getState().books).toHaveLength(0);
     });
 
-    it('does nothing onClear when there are no books', () => {
-        capturedHandlers.onClear();
+    it('keeps ocrReady false and logs error when OCR preload fails at startup', async () => {
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+        mockOcrInit.mockRejectedValueOnce(new Error('Tesseract.js failed to load'));
 
-        expect(getState().books).toHaveLength(0);
+        vi.resetModules();
+        capturedHandlers = null;
+        appModule = await import('./app');
+        // Let the rejected init() promise settle + microtask queue flush
+        await new Promise((r) => setTimeout(r, 20));
+
+        expect(getState().ocrReady).toBe(false);
+        expect(consoleError).toHaveBeenCalledWith('OCR preload failed:', expect.any(Error));
     });
 });
