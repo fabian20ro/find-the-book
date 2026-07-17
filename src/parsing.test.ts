@@ -316,4 +316,36 @@ describe('parsing stored books', () => {
         expect(result[0].infoLink).toBe(null);
         expect(result[0].publishedDate).toBe(null);
     });
+
+    it('preserves duplicate-ID books as separate entries', () => {
+        const json = JSON.stringify([
+            { id: 'dup-id', title: 'First Book' },
+            { id: 'dup-id', title: 'Second Book' },
+            // Duplicate ID — both should survive since normalizeStoredBook doesn't dedup by id
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(2);
+        expect(result[0].id).toBe('dup-id');
+        expect(result[0].title).toBe('First Book');
+        expect(result[1].id).toBe('dup-id');
+        expect(result[1].title).toBe('Second Book');
+    });
+
+    it('handles books with mixed valid and duplicate IDs', () => {
+        const json = JSON.stringify([
+            { id: 'unique-1', title: 'Unique First' },
+            { id: 'dup-id', title: 'Duplicate A' },
+            { id: 'unique-2', title: 'Unique Second' },
+            { id: 'dup-id', title: 'Duplicate B' },
+        ]);
+
+        const result = parseStoredBooks(json);
+
+        expect(result).toHaveLength(4);
+        // All entries preserved in order — no deduplication by ID occurs
+        const titles = (result as any[]).map((b) => b.title);
+        expect(titles).toEqual(['Unique First', 'Duplicate A', 'Unique Second', 'Duplicate B']);
+    });
 });

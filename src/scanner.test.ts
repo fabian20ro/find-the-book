@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { startScanning, stopScanning, scanOnce, resumeAutoScan, pauseAutoScan, searchTextBlocks } from './scanner';
 import type { OcrLine } from './ocr';
+import { TextRecognizer } from './ocr';
 import * as state from './state';
 import * as ocrModule from './ocr';
 
@@ -670,6 +671,119 @@ describe('scanner', () => {
 
             expect(camera.captureFrame).toHaveBeenCalledTimes(1);
             expect(ocr.recognize).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('TextRecognizer contract (recognized output shape)', () => {
+        let fakeWorker: any;
+        let recognizer: TextRecognizer;
+
+        beforeEach(async () => {
+            const worker = { setParameters: vi.fn(), recognize: vi.fn() };
+            (globalThis as any).Tesseract = { createWorker: vi.fn().mockResolvedValueOnce(worker) };
+
+            // preprocessCanvas is called before recognize — replace with passthrough
+            // so we never hit canvas rendering in tests.
+            const preprocessSpy = vi.spyOn(ocrModule, 'preprocessCanvas');
+            preprocessSpy.mockImplementation((c: HTMLCanvasElement) => c);
+
+            fakeWorker = worker;
+            recognizer = new TextRecognizer();
+            await recognizer.init('eng');
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('returns [] when Tesseract returns no data object', async () => {
+            fakeWorker.recognize.mockResolvedValueOnce({}); // missing `data` → guard throws before filtering
+
+            await expect(recognizer.recognize(document.createElement('canvas')))
+                .rejects.toThrow('Tesseract recognition returned invalid result');
+        });
+
+        it('returns [] when data.lines is undefined', async () => {
+            fakeWorker.recognize.mockResolvedValueOnce({ data: {} } as any);
+
+            const result = await recognizer.recognize(document.createElement('canvas'));
+
+            expect(result).toEqual([]);
+        });
+
+        it('returns [] when data.lines is empty', async () => {
+            fakeWorker.recognize.mockResolvedValueOnce({ data: { lines: [] } } as any);
+
+            const result = await recognizer.recognize(document.createElement('canvas'));
+
+            expect(result).toEqual([]);
+        });
+
+        it('filters out lines without a text property', async () => {
+            fakeWorker.recognize.mockResolvedValueOnce({
+                data: {
+                    lines: [
+                        { text: 'valid', confidence: 90 },
+                        { confidence: 90 } as any, // no `text` → filtered by typeof guard
+                    ],
+                },
+            } as any);
+
+            const result = await recognizer.recognize(document.createElement('canvas'));
+
+            expect(result).toHaveLength(1);
+            expect(result[0].text).toBe('valid');
+        });
+
+        it('trims whitespace and drops pure-whitespace lines', async () => {
+            fakeWorker.recognize.mockResolvedValueOnce({
+                data: {
+                    lines: [
+                        { text: '   \t  ', confidence: 95 },
+                        { text: 'real', confidence: 80 },
+                    ],
+                },
+            } as any);
+
+            const result = await recognizer.recognize(document.createElement('canvas'));
+
+            expect(result).toHaveLength(1);
+            expect(result[0].text).toBe('real');
+        });
+
+        it('drops lines below minLineConfidence when configured', async () => {
+            const worker2 = { setParameters: vi.fn(), recognize: vi.fn() };
+            (globalThis as any).Tesseract = { createWorker: vi.fn().mockResolvedValueOnce(worker2) };
+            const recognizer2 = new TextRecognizer();
+            await recognizer2.init('eng', { minLineConfidence: 80 });
+
+            worker2.recognize.mockResolvedValueOnce({
+                data: {
+                    lines: [
+                        { text: 'low', confidence: 50 },
+                        { text: 'high', confidence: 90 },
+                    ],
+                },
+            } as any);
+
+            const result = await recognizer2.recognize(document.createElement('canvas'));
+
+            expect(result).toHaveLength(1);
+            expect(result[0].text).toBe('high');
+        });
+
+        it('treats confidence=0 (undefined) as below default threshold', async () => {
+            fakeWorker.recognize.mockResolvedValueOnce({
+                data: {
+                    lines: [
+                        { text: 'real' }, // undefined → 0 via ?? fallback
+                    ],
+                },
+            } as any);
+
+            const result = await recognizer.recognize(document.createElement('canvas'));
+
+            expect(result).toEqual([]);
         });
     });
 });

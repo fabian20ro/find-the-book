@@ -248,10 +248,12 @@ function handleAutoScanToggle(): void {
         // Turning auto-scan ON — resume the loop
         resumeAutoScan(cameraManager, textRecognizer, bookSearcher);
         toast('Auto-scan enabled');
+        navigator.vibrate?.(40);
     } else {
         // Turning auto-scan OFF — stop the loop but keep camera active
         pauseAutoScan();
         toast('Auto-scan paused');
+        navigator.vibrate?.(20);
     }
 }
 
@@ -398,6 +400,7 @@ initUI({
         const book = candidates.find((b) => b.id === bookId);
         if (book) {
             addBookAndSave(book);
+            navigator.vibrate?.(50);
             removeCandidateById(bookId);
         }
     },
