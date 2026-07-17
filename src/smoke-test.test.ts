@@ -221,3 +221,68 @@ test('clearBooks() empties the list and emits change', () => {
 
   off();
 });
+
+test('removeCandidateById() removes the matching candidate, emits change', () => {
+  const off = on('change', () => {});
+
+  addBook({ id: 'keep-me', title: 'In library', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addCandidates([{ id: 'candidate-1', title: 'Candidate A', authors: ['Author'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+
+  const stateBefore = getState();
+  expect(stateBefore.candidateBooks).toHaveLength(1);
+  expect(stateBefore.books).toHaveLength(1); // candidate must NOT move to books list
+
+  removeCandidateById('candidate-1');
+
+  const stateAfter = getState();
+  expect(stateAfter.candidateBooks).toHaveLength(0);
+  expect(stateAfter.books).toHaveLength(1); // library untouched
+  off();
+});
+
+test('removeCandidateById() is a no-op when id not found, does not emit', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  addCandidates([{ id: 'cand-x', title: 'X', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+  emitted = false; // reset after addCandidates — it emits change on insert
+
+  removeCandidateById('nonexistent-id');
+  expect(emitted).toBe(false);
+  const state = getState();
+  expect(state.candidateBooks).toHaveLength(1); // untouched
+  off();
+});
+
+test('removeCandidateById() trims whitespace from the id argument', () => {
+  const off = on('change', () => {});
+
+  addCandidates([{ id: ' spaced-id ', title: 'Y', authors: ['B'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 }]);
+
+  removeCandidateById('spaced-id');
+  const state = getState();
+  expect(state.candidateBooks).toHaveLength(0); // trimmed match succeeded
+  off();
+});
+
+test('clearCandidates() empties candidates, resets filter, emits change', () => {
+  let emitted = false;
+  const off = on('change', () => { emitted = true; });
+
+  addBook({ id: 'library-book', title: 'Stays', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 });
+  addCandidates([
+    { id: 'cand-1', title: 'Cand A', authors: ['A'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 },
+    { id: 'cand-2', title: 'Cand B', authors: ['B'], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, confidence: 0 },
+  ]);
+  update({ candidateFilter: 'some filter text' });
+
+  clearCandidates();
+
+  const state = getState();
+  expect(state.candidateBooks).toHaveLength(0);
+  expect(state.candidateFilter).toBe('');
+  expect(emitted).toBe(true);
+  // library books must be untouched by clearCandidates()
+  expect(state.books).toHaveLength(1);
+  off();
+});
