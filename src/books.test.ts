@@ -92,14 +92,33 @@ describe('BookSearcher', () => {
 
         it('handles 429 rate limit response', async () => {
             vi.useFakeTimers();
+            const notify = vi.fn();
+            const searcherWithNotify = new BookSearcher(notify);
             vi.stubGlobal('fetch', mockFetchResponse({}, 429));
 
-            const promise = searcher.search('rate limited');
+            const promise = searcherWithNotify.search('rate limited');
             await vi.advanceTimersByTimeAsync(5000);
             const results = await promise;
 
             expect(results).toEqual([]);
+            expect(notify).toHaveBeenCalledWith("Google Books API rate limit reached. Pausing briefly...");
             vi.useRealTimers();
+        });
+
+        it('removes query from cache after 429 so next search retries', async () => {
+            vi.useFakeTimers();
+            const notify = vi.fn();
+            const searcherWithNotify = new BookSearcher(notify);
+
+            // Call search with 'rate limited' — this adds it to cache, then fetch returns 429 which triggers the rate-limit handler.
+            vi.stubGlobal('fetch', mockFetchResponse({}, 429));
+
+            const promise = searcherWithNotify.search('rate limited');
+            await vi.advanceTimersByTimeAsync(5001); // slightly more than the 5000ms wait
+            await promise;
+
+            // After 429 + wait, the cache should be empty (entry removed)
+            expect((searcherWithNotify as any).queryCache.has('rate limited')).toBe(false);
         });
 
         it('handles non-ok response', async () => {
