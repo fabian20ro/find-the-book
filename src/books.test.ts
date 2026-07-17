@@ -238,6 +238,47 @@ describe('BookSearcher', () => {
             expect(url).not.toContain('q=');
         });
 
+        it('prefers ISBN_13 over ISBN_10 when both identifiers exist', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
+                {
+                    id: 'v-dual-isbn',
+                    volumeInfo: {
+                        title: 'Dual ISBN Book',
+                        authors: ['Author'],
+                        industryIdentifiers: [
+                            { type: 'ISBN_10', identifier: '1234567890' },
+                            { type: 'ISBN_13', identifier: '9781234567890' },
+                        ],
+                    },
+                },
+            ])));
+
+            const results = await searcher.search('dual isbn');
+            expect(results).toHaveLength(1);
+            expect(results[0].isbn).toBe('9781234567890');
+        });
+
+        it('falls back to first identifier when neither ISBN_10 nor ISBN_13 is set', async () => {
+            vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([
+                {
+                    id: 'v-fallback-isbn',
+                    volumeInfo: {
+                        title: 'Fallback ISBN Book',
+                        authors: ['Author'],
+                        industryIdentifiers: [
+                            { type: 'other_type', identifier: 'OTHER-123' },
+                            { type: 'another_unknown', identifier: 'XYZ-999' },
+                        ],
+                    },
+                },
+            ])));
+
+            const results = await searcher.search('fallback isbn');
+            expect(results).toHaveLength(1);
+            // First identifier wins when no recognized ISBN type is present.
+            expect(results[0].isbn).toBe('OTHER-123');
+        });
+
         it('uses search URL for non-ISBN queries', async () => {
             vi.stubGlobal('fetch', mockFetchResponse(googleBooksResponse([volume('v-search', 'Search Book')])));
 
