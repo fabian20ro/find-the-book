@@ -245,6 +245,30 @@ describe('preprocessCanvas', () => {
         expect(data[2]).toBe(expectedGray);   // B channel matches
     });
 
+    it('should skip sharpening entirely at strength=0 on non-uniform RGB input', () => {
+        // Strength=0 must disable sharpening: v = s + 0*(s - blur) == s for every pixel.
+        // This test uses R≠G≠B input so the grayscale conversion is independent from sharpening,
+        // confirming that strength=0 exercises only the grayscale+stretch path (lines 46-70 of ocr.ts).
+        const r = 120; const g = 200; const b = 40;
+        for (let i = 0; i < mockCtx.data.length; i += 4) {
+            mockCtx.data[i]     = r;
+            mockCtx.data[i + 1] = g;
+            mockCtx.data[i + 2] = b;
+            mockCtx.data[i + 3] = 255;
+        }
+
+        const result = preprocessCanvas(canvas, 0);
+        const data = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        // At strength=0 the sharpen term is zero: every pixel must equal its grayscale value.
+        const expectedGray = Math.round((77 * r + 150 * g + 29 * b) / 256);
+        for (let i = 0; i < data.length; i += 4) {
+            expect(data[i]).toBe(expectedGray);
+            expect(data[i + 1]).toBe(expectedGray);
+            expect(data[i + 2]).toBe(expectedGray);
+        }
+    });
+
     it('should produce identical output for different strength values on a zero-range (uniform) canvas', () => {
         // When all pixels are the same color, range===0 so stretched === grays unchanged.
         // Sharpening then computes v = s + strength*(s - blur_of_s) — and since all neighbors equal s, blur == s,
