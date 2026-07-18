@@ -152,6 +152,7 @@ describe('app', () => {
         await new Promise((r) => setTimeout(r, 10));
 
         expect(capturedHandlers).not.toBeNull();
+        expect(getState().autoScan).toBe(false);
     });
 
     it('ignores unsupported saved OCR languages', async () => {
