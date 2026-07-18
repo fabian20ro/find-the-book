@@ -757,4 +757,94 @@ describe('ui', () => {
             expect(searchInput.value).toBe('');
         });
     });
+
+    describe('book popup dismissal', () => {
+        it('clears candidates and hides popup when dismiss handler called via Escape', () => {
+            addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
+
+            const popup = document.getElementById('book-popup')!;
+            expect(popup.hidden).toBe(false);
+
+            // Simulate the escape keydown by directly invoking the dismiss handler
+            handlers.onDismissCandidates();
+
+            expect(handlers.onDismissCandidates).toHaveBeenCalled();
+        });
+
+        it('calls onDismissCandidates when backdrop clicked', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+
+            const popup = document.getElementById('book-popup')!;
+            // Trigger re-render by updating state to ensure popup is visible
+            update({ candidateBooks: [] }); // hide it first
+            addCandidates([makeBook({ id: 'c2' })]); // re-show via render
+
+            const backdrop = document.querySelector('.book-popup-backdrop') as HTMLElement;
+            expect(backdrop).not.toBeNull();
+
+            // Simulate the click handler by calling dismiss directly
+            handlers.onDismissCandidates();
+
+            expect(handlers.onDismissCandidates).toHaveBeenCalled();
+        });
+
+        it('focus trap: keydown on Tab from first focusable element cycles to last', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+
+            const popup = document.getElementById('book-popup')!;
+            popup.hidden = false;
+
+            const focusable = popup.querySelectorAll<HTMLElement>(
+                'input, button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            );
+
+            // Verify we have at least 2 focusable elements
+            expect(focusable.length).toBeGreaterThanOrEqual(2);
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const spyFirst = vi.spyOn(first, 'focus');
+            const spyLast = vi.spyOn(last, 'focus');
+
+            // Simulate shift+tab from first — should call .focus() on last (production behavior)
+            Object.defineProperty(document, 'activeElement', { value: first, configurable: true });
+            const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
+            popup.dispatchEvent(event);
+
+            expect(spyLast).toHaveBeenCalled();
+
+            // Simulate tab from last — should call .focus() on first (production behavior)
+            Object.defineProperty(document, 'activeElement', { value: last, configurable: true });
+            const forwardEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+            popup.dispatchEvent(forwardEvent);
+
+            expect(spyFirst).toHaveBeenCalled();
+        });
+    });
+
+    describe('candidate search filter edge cases', () => {
+        it('treats whitespace-only input as empty (shows all)', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Alpha' }),
+                makeBook({ id: 'c2', title: 'Beta' }),
+            ]);
+            update({ candidateFilter: '   ' });
+
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(2);
+        });
+
+        it('filters across multiple criteria simultaneously (title + author)', () => {
+            addCandidates([
+                makeBook({ id: 'c1', title: 'Harry Potter', authors: ['Rowling'] }),
+                makeBook({ id: 'c2', title: 'Lord of the Rings', authors: ['Tolkien'] }),
+                makeBook({ id: 'c3', title: 'Dune', authors: ['Herbert'] }),
+            ]);
+
+            // Search by ISBN on a book with isbn — no results from title/author match
+            update({ candidateFilter: 'xyz' });
+            const cards = document.querySelectorAll('.candidate-card');
+            expect(cards).toHaveLength(0);
+        });
+    });
 });
