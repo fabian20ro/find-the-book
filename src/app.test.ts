@@ -342,6 +342,42 @@ describe('app', () => {
         expect(restored).toEqual([]);
     });
 
+    it('drops entries with missing required fields (id or title absent)', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { title: 'No ID Book' },
+            { id: 'no-title-book' },
+            { id: 'good', title: 'Kept Book' },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].id).toBe('good');
+    });
+
+    it('ignores extra unknown fields without erroring', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'extra-fields-book',
+                title: 'Extra Fields Book',
+                _unknown_field: 42,
+                another_extra: true,
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].id).toBe('extra-fields-book');
+    });
+
+    it('handles undefined optional fields as null/empty', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { id: 'partial-book', title: 'Partial Book' },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].authors).toEqual([]);
+        expect(restored[0].isbn).toBeNull();
+        expect(restored[0].publisher).toBeNull();
+    });
+
     it('adds book from candidates when onAddCandidate is triggered', async () => {
         const { getState: getTestState, addCandidates } = await import('./state');
         const candidateBook = {
