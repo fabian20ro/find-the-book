@@ -736,5 +736,25 @@ describe('ui', () => {
                 expect(typeof lang.flag).toBe('string');
             }
         });
+
+        it('renders candidate search pre-filled with filter state when popup opens', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            update({ candidateFilter: 'searchterm' });
+
+            // Trigger re-render by updating state that affects the popup
+            const searchInput = document.getElementById('candidate-search') as HTMLInputElement;
+            expect(searchInput.value).toBe('searchterm');
+        });
+
+        it('clears filter input when no candidates remain', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            update({ candidateFilter: 'something' });
+
+            const searchInput = document.getElementById('candidate-search') as HTMLInputElement;
+            expect(searchInput.value).toBe('something');
+
+            clearCandidates();
+            expect(searchInput.value).toBe('');
+        });
     });
 });
