@@ -483,5 +483,43 @@ describe('state', () => {
             moveBook(0, 1);
             expect(listener).toHaveBeenCalled();
         });
+
+        it('moves an item past another (index shift during splice)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            // move A (index 0) to index 2: splice(0,1)->[B,C], then splice(2,0,A)->[B,C,A]
+            moveBook(0, 2);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['B', 'C', 'A']);
+        });
+
+        it('removes a book from the middle of the list by moving to end then removing last', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            // Move B (index 1) to end (last index = books.length - 1 = 2)
+            moveBook(1, 2);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['A', 'C', 'B']);
+
+            // Remove B from last position — leaves [A, C]
+            const removed = removeBook(2);
+            expect(removed!.title).toBe('B');
+            expect(getState().books).toHaveLength(2);
+        });
+
+        it('does nothing when toIndex is out of bounds', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+
+            const listener = vi.fn();
+            on('change', listener);
+            moveBook(0, 5);
+            expect(getState().books).toHaveLength(2);
+            expect(listener).not.toHaveBeenCalled();
+        });
     });
 });
