@@ -342,6 +342,20 @@ describe('scanner', () => {
             await vi.advanceTimersByTimeAsync(2000);
             expect(camera.captureFrame).not.toHaveBeenCalled();
         });
+
+        it('resumeAutoScan resets isPaused and restarts the scan loop', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+            pauseAutoScan();
+            resumeAutoScan(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalled();
+        });
     });
 
     describe('visibility change', () => {

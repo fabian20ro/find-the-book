@@ -98,6 +98,7 @@ export function resumeAutoScan(
     bookSearcher: BookSearcher,
 ): void {
     if (getState().isScanning && getState().autoScan && !scanTimer) {
+        isPaused = false;
         scheduleNext(camera, ocr, bookSearcher);
     }
 }
