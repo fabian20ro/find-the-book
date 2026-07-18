@@ -504,6 +504,12 @@ describe('queryMatchRatio', () => {
     it('ignores punctuation in queries', () => {
         expect(queryMatchRatio(makeBookData({ title: 'The Great Gatsby!' }), 'Great, Gatsby?')).toBe(1);
     });
+
+    it('returns 0 when all query words are shorter than 2 characters', () => {
+        // Words like "I" or "a" get filtered out by the length >= 2 guard;
+        // when nothing remains, ratio should be 0 (not throw or NaN).
+        expect(queryMatchRatio(makeBookData(), 'I a an')).toBe(0);
+    });
 });
 
 describe('getConfidenceLevel', () => {
