@@ -54,7 +54,20 @@ export function queryMatchRatio(
   if (!query || query.trim().length === 0) return 0;
 
   const clean = (text: string) => text.normalize("NFKD").toLowerCase().replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]/gu, " ");
-  const queryWords = [...new Set(clean(query).split(/\s+/).filter((w) => w.length >= 2))];
+  const splitAndMergeShort = (raw: string[]): string[] => {
+    // Merge consecutive single-letter tokens produced by punctuation splitting
+    // so that "J.K." → ["jk"] and "W. Shakespeare" → ["shakespeare"].
+    const merged: string[] = [];
+    for (const w of raw) {
+      if (w.length === 1 && merged.length > 0 && merged[merged.length - 1].length === 1) {
+        merged[merged.length - 1] += w;
+      } else {
+        merged.push(w);
+      }
+    }
+    return merged.filter((x) => x.length >= 2);
+  };
+  const queryWords = [...new Set(splitAndMergeShort(clean(query).split(/\s+/).filter((w) => w.length > 0)))];
   if (queryWords.length === 0) return 0;
 
   const bookText = clean([
@@ -66,7 +79,7 @@ export function queryMatchRatio(
     book.pageCount?.toString(),
   ].filter(Boolean).join(" "));
 
-  const bookWords = new Set(bookText.split(/\s+/).filter(w => w.length > 0));
+  const bookWords = new Set(splitAndMergeShort(bookText.split(/\s+/).filter(w => w.length > 0)));
   let matched = 0;
   for (const word of queryWords) {
     if (bookWords.has(word)) matched++;
