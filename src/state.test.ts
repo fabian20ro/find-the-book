@@ -466,6 +466,16 @@ describe('state', () => {
             expect(listener).not.toHaveBeenCalled();
         });
 
+        it('preserves list order when from equals to (no-op invariant)', () => {
+            addBook(makeBook({ id: 'a', title: 'A' }));
+            addBook(makeBook({ id: 'b', title: 'B' }));
+            addBook(makeBook({ id: 'c', title: 'C' }));
+
+            moveBook(1, 1);
+            const titles = getState().books.map((b) => b.title);
+            expect(titles).toEqual(['A', 'B', 'C']);
+        });
+
         it('does nothing for out-of-bounds indices', () => {
             addBook(makeBook({ id: 'a', title: 'A' }));
 
