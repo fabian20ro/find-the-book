@@ -528,6 +528,24 @@ describe('queryMatchRatio', () => {
         // when nothing remains, ratio should be 0 (not throw or NaN).
         expect(queryMatchRatio(makeBookData(), 'I a an')).toBe(0);
     });
+
+    it('merges three consecutive single-letter tokens into one word', () => {
+        // Author "A. B. C Smith" cleans to [a, b, c, smith] → merged: [abc, smith].
+        // Query "ABC Smith" splits to ["abc", "smith"]. Both should match.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['A. B. C. Smith'] }),
+            'A B C Smith'
+        )).toBe(1);
+    });
+
+    it('does not merge single letters separated by longer words', () => {
+        // Author "X long Y word Z" — X, Y, Z are isolated single letters.
+        // They should NOT be merged across the longer intervening tokens.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['X long Y word Z'] }),
+            'X long Y word Z'
+        )).toBeGreaterThan(0);
+    });
 });
 
 describe('getConfidenceLevel', () => {
