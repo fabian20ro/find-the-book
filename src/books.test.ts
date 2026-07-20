@@ -505,10 +505,46 @@ describe('queryMatchRatio', () => {
         expect(queryMatchRatio(makeBookData({ title: 'The Great Gatsby!' }), 'Great, Gatsby?')).toBe(1);
     });
 
+    it('merges consecutive single-letter tokens from author initials (e.g. "F." → matches "F Scott")', () => {
+        // Author "F. Scott Fitzgerald" cleans to ["f", "scott", "fitzgerald"].
+        // Query "F Scott Fitzgerald" would have query words ["f", "scott", "fitzgerald"] —
+        // but now the single letters get merged only when consecutive in *each* side separately;
+        // here they're not consecutive so each remains a token. The point is that punctuation
+        // inside "F." no longer fragments it into non-matching noise.
+        expect(queryMatchRatio(makeBookData({ authors: ['F. Scott Fitzgerald'] }), 'F Scott Fitzgerald')).toBe(1);
+    });
+
+    it('merges consecutive single-letter tokens in query and book to improve match', () => {
+        // Author "J.K. Rowling" cleans to ["j", "k", "rowling"]. With merging, "J.K." → ["jk"]
+        // and the same happens on the query side when user types "JK Rowling".
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['J. K. Rowling'] }),
+            'J K Rowling'
+        )).toBeGreaterThan(0);
+    });
+
     it('returns 0 when all query words are shorter than 2 characters', () => {
         // Words like "I" or "a" get filtered out by the length >= 2 guard;
         // when nothing remains, ratio should be 0 (not throw or NaN).
         expect(queryMatchRatio(makeBookData(), 'I a an')).toBe(0);
+    });
+
+    it('merges three consecutive single-letter tokens into one word', () => {
+        // Author "A. B. C Smith" cleans to [a, b, c, smith] → merged: [abc, smith].
+        // Query "ABC Smith" splits to ["abc", "smith"]. Both should match.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['A. B. C. Smith'] }),
+            'A B C Smith'
+        )).toBe(1);
+    });
+
+    it('does not merge single letters separated by longer words', () => {
+        // Author "X long Y word Z" — X, Y, Z are isolated single letters.
+        // They should NOT be merged across the longer intervening tokens.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['X long Y word Z'] }),
+            'X long Y word Z'
+        )).toBeGreaterThan(0);
     });
 });
 

@@ -322,7 +322,13 @@ describe('state', () => {
             const [book] = getState().books;
             expect(book.isbn).toBeNull();
         });
-        
+
+        it('converts whitespace-only thumbnailUrl to null during addBook', () => {
+            addBook(makeBook({ thumbnailUrl: '   ' }));
+            const [book] = getState().books;
+            expect(book.thumbnailUrl).toBeNull();
+        });
+
         it('deduplicates against existing candidates', () => {
             addCandidates([makeBook({ id: 'c1' })]);
             addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
@@ -384,6 +390,16 @@ describe('state', () => {
             on('change', listener);
             removeCandidateById('c1');
             expect(listener).toHaveBeenCalled();
+        });
+
+        it('does nothing when bookId does not match any candidate', () => {
+            addCandidates([makeBook({ id: 'c1' })]);
+            const listener = vi.fn();
+            on('change', listener);
+            removeCandidateById('nonexistent-id');
+            expect(getState().candidateBooks).toHaveLength(1);
+            expect(getState().candidateBooks[0].id).toBe('c1');
+            expect(listener).not.toHaveBeenCalled();
         });
     });
 

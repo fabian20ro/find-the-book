@@ -163,6 +163,29 @@ describe('Book scoring logic', () => {
     }
   });
 
+  it('BookSearcher.search returns empty array when response.json() throws (malformed body)', async () => {
+    // Line 209 of books.ts: after a successful HTTP response, response.json() can still throw
+    // if the body is not valid JSON. The surrounding try/catch must swallow it — same behavior as
+    // fetch-thrown errors — and log via console.error without notifying the user.
+    const notify = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => { throw new Error('Unexpected token in JSON'); },
+    }) as any;
+
+    try {
+      const searcher = new BookSearcher(notify);
+      const results = await searcher.search('anything');
+      expect(results).toEqual([]);
+      // notify must NOT be called — this is a parse error, not an HTTP status error.
+      expect(notify).not.toHaveBeenCalled();
+      expect(consoleError).toHaveBeenCalledWith('Book search error:', expect.any(Error));
+    } finally {
+      consoleError.mockRestore();
+      globalThis.fetch = vi.fn() as any;
+    }
+  });
+
   it('BookSearcher deduplicates duplicate ids within a single search call', async () => {
     const mockResponse = {
       items: [
