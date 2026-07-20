@@ -189,6 +189,13 @@ export class TextRecognizer {
         }
     }
 
+    async setWhitelist(customChars: string): Promise<void> {
+        if (!this.worker) {
+            throw new Error('TextRecognizer not initialized. Call init() first.');
+        }
+        await this.worker.setParameters({ whitelist: customChars });
+    }
+
     getLanguage(): string {
         return this.currentLang;
     }
