@@ -395,6 +395,15 @@ describe('app', () => {
         expect(getTestState().candidateBooks.length).toBe(0);
     });
 
+    it('silently does nothing when onAddCandidate receives an unknown bookId', async () => {
+        const { getState: getTestState, addCandidates } = await import('./state');
+
+        capturedHandlers.onAddCandidate('nonexistent-id-xyz');
+
+        expect(getTestState().books).toHaveLength(0);
+        expect(getTestState().candidateBooks).toHaveLength(0);
+    });
+
     it('calls resumeAutoScan when auto-scan is toggled on with camera active', async () => {
         const { resumeAutoScan } = await import('./scanner');
         await capturedHandlers.onStartCamera();
