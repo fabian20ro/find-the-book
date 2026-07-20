@@ -215,6 +215,32 @@ describe('TextRecognizer', () => {
         });
     });
 
+    describe('setWhitelist', () => {
+        it('applies a custom whitelist to the Tesseract worker', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('eng');
+
+            const customChars = '0123456789';
+            await recognizer.setWhitelist(customChars);
+
+            expect(mockWorker.setParameters).toHaveBeenCalledWith({ whitelist: customChars });
+        });
+
+        it('throws if setWhitelist is called before init', async () => {
+            const recognizer = new TextRecognizer();
+            await expect(recognizer.setWhitelist('ABC')).rejects.toThrow(
+                'TextRecognizer not initialized. Call init() first.',
+            );
+        });
+    });
+
     describe('recognize', () => {
         it('returns text lines from OCR result', async () => {
             const mockRecognize = vi.fn();
