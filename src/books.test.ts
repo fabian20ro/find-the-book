@@ -546,6 +546,25 @@ describe('queryMatchRatio', () => {
             'X long Y word Z'
         )).toBeGreaterThan(0);
     });
+
+    it('merges initials in book title and matches against query with merged form', () => {
+        // Title "J.K. Society" cleans to tokens ["j", "k", "society"] → merged: ["jk", "society"].
+        // Query "JK society" splits to ["jk", "society"]. Both should match (1/1 = 1).
+        expect(queryMatchRatio(
+            makeBookData({ title: 'J.K. Society' }),
+            'JK society'
+        )).toBe(1);
+    });
+
+    it('does not match query with single letters against merged book tokens', () => {
+        // Book title "A.B.C Tales" → merged to ["abc", "tales"].
+        // Query "a b c tales" — the single-letter words get filtered out (length < 2),
+        // leaving only "tales". One word matched out of one query word = 1.
+        expect(queryMatchRatio(
+            makeBookData({ title: 'A.B.C Tales' }),
+            'a b c tales'
+        )).toBe(1);
+    });
 });
 
 describe('getConfidenceLevel', () => {
