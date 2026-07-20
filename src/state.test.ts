@@ -322,7 +322,13 @@ describe('state', () => {
             const [book] = getState().books;
             expect(book.isbn).toBeNull();
         });
-        
+
+        it('converts whitespace-only thumbnailUrl to null during addBook', () => {
+            addBook(makeBook({ thumbnailUrl: '   ' }));
+            const [book] = getState().books;
+            expect(book.thumbnailUrl).toBeNull();
+        });
+
         it('deduplicates against existing candidates', () => {
             addCandidates([makeBook({ id: 'c1' })]);
             addCandidates([makeBook({ id: 'c1' }), makeBook({ id: 'c2' })]);
