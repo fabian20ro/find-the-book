@@ -78,20 +78,25 @@ export function update(patch: Partial<AppState>): void {
     }
 }
 
+/** Collapse internal whitespace runs to a single space (e.g. OCR artifacts). */
+function collapseWhitespace(s: string): string {
+    return s.replace(/\s+/g, ' ').trim();
+}
+
 /**
- * Trim all string fields on a book to prevent whitespace-only or padded values
- * from leaking into the UI. Consistent with LESSONS_LEARNED normalization rules.
+ * Normalize all string fields on a book: trim padding and collapse
+ * internal whitespace runs caused by OCR artifacts or malformed input.
  */
 function normalizeBook(book: Book): Book {
     return {
         ...book,
         id: book.id.trim(),
-        title: book.title.trim(),
-        authors: book.authors.map((a) => a.trim()).filter((a) => a.length > 0),
-        isbn: book.isbn?.trim() || null,
-        publisher: book.publisher?.trim() || null,
-        publishedDate: book.publishedDate?.trim() || null,
-        description: book.description?.trim() || null,
+        title: collapseWhitespace(book.title),
+        authors: book.authors.map((a) => collapseWhitespace(a)).filter((a) => a.length > 0),
+        isbn: collapseWhitespace(book.isbn || '') || null,
+        publisher: collapseWhitespace(book.publisher || '') || null,
+        publishedDate: collapseWhitespace(book.publishedDate || '') || null,
+        description: collapseWhitespace(book.description || '') || null,
         thumbnailUrl: book.thumbnailUrl?.trim() || null,
         infoLink: book.infoLink?.trim() || null,
     };

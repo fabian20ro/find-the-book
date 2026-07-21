@@ -317,6 +317,32 @@ describe('state', () => {
             expect(book.authors).toEqual(['Author A', 'Author B']);
         });
 
+        it('collapses internal OCR-style whitespace runs in title, authors, description, publisher (addBook)', () => {
+            addBook(makeBook({
+                id: 'ocr-spaces',
+                title: 'John    Smith: A   Book  of  Chapters',
+                authors: ['John    Smith'],
+                publisher: 'Oxford    University  Press',
+                description: 'A  book  about  many  things',
+            }));
+            const [book] = getState().books;
+            expect(book.title).toBe('John Smith: A Book of Chapters');
+            expect(book.authors).toEqual(['John Smith']);
+            expect(book.publisher).toBe('Oxford University Press');
+            expect(book.description).toBe('A book about many things');
+        });
+
+        it('collapses internal OCR-style whitespace runs in title, authors (addCandidates)', () => {
+            addCandidates([makeBook({
+                id: 'ocr-cand',
+                title: 'Multiple   Spaces   Here',
+                authors: ['Author    One', 'Another   Two'],
+            })]);
+            const [book] = getState().candidateBooks;
+            expect(book.title).toBe('Multiple Spaces Here');
+            expect(book.authors).toEqual(['Author One', 'Another Two']);
+        });
+
         it('converts whitespace-only isbn to null during addBook', () => {
             addBook(makeBook({ isbn: '   ' }));
             const [book] = getState().books;
