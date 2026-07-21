@@ -529,6 +529,23 @@ describe('queryMatchRatio', () => {
         expect(queryMatchRatio(makeBookData(), 'I a an')).toBe(0);
     });
 
+    it('returns 0 for book with entirely-empty metadata', () => {
+        // When title is "Unknown Title" and all fields are null/empty,
+        // the joined search text is empty; ratio must be 0 without throwing.
+        const score = queryMatchRatio(makeBookData({
+            title: 'Unknown Title',
+            authors: [],
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+            infoLink: null,
+        }), 'something');
+        expect(score).toBe(0);
+    });
+
     it('merges three consecutive single-letter tokens into one word', () => {
         // Author "A. B. C Smith" cleans to [a, b, c, smith] → merged: [abc, smith].
         // Query "ABC Smith" splits to ["abc", "smith"]. Both should match.
@@ -545,6 +562,16 @@ describe('queryMatchRatio', () => {
             makeBookData({ authors: ['X long Y word Z'] }),
             'X long Y word Z'
         )).toBeGreaterThan(0);
+    });
+
+    it('matches when query splits merged initials differently from book metadata', () => {
+        // Book "A. B. C Smith" → tokens ["a","b","c","smith"] → merge consecutive singles: ["ab", "c", "smith"] → filter >=2: ["ab", "smith"].
+        // Query "A Smith B C" → tokens ["a","smith","b","c"] → merge only adjacent singles (not across "smith"): ["a", "smith", "bc"] → filter >=2: ["smith", "bc"].
+        // Overlap = {smith} ∩ {ab, smith} = 1 match out of 2 query words. Ratio = 0.5.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['A. B. C Smith'] }),
+            'A Smith B C'
+        )).toBeCloseTo(0.5);
     });
 
     it('merges initials in book title and matches against query with merged form', () => {
@@ -565,6 +592,28 @@ describe('queryMatchRatio', () => {
             'a b c tales'
         )).toBe(1);
     });
+
+    it('matches pure-digit query terms against digit tokens in metadata', () => {
+        // Query "9781234567890" produces a single token ["9781234567890"]. ISBN '9781234567890'
+        // is part of the book text searched by queryMatchRatio. Both sides match.
+        expect(queryMatchRatio(
+            makeBookData({ isbn: '9781234567890' }),
+            '9781234567890'
+        )).toBe(1);
+    });
+
+    it('returns 0 when digit query terms do not appear in any metadata field', () => {
+        // Query "2099" — book has no such number anywhere in its joined text.
+        expect(queryMatchRatio(
+            makeBookData({ isbn: '1111111111' }),
+            '2099'
+        )).toBe(0);
+    });
+
+    it('returns 0 for empty query', () => {
+        expect(queryMatchRatio(makeBookData(), '')).toBe(0);
+    });
+
 });
 
 describe('getConfidenceLevel', () => {

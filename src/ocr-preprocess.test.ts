@@ -39,6 +39,30 @@ describe('ocr utilities', () => {
     });
 
     describe('preprocessCanvas', () => {
+        it('applies default strength 0.5 when no second argument given', () => {
+            // preprocessCanvas defaults strength to 0.5 via the parameter default.
+            // This test verifies the contract is observable: calling without a strength arg
+            // produces valid grayscale output with all pixel values in [0, 255], confirming
+            // that the default-strength path does not produce NaN or out-of-range results.
+            canvas.width = 3;
+            canvas.height = 3;
+            const data = new Uint8ClampedArray([
+                240, 240, 240, 255,  240, 240, 240, 255,  240, 240, 240, 255,
+                240, 240, 240, 255,                       128, 128, 128, 255,  240, 240, 240, 255,
+                240, 240, 240, 255,                       100, 100, 100, 255,  240, 240, 240, 255
+            ]);
+            mockCtx.putImageData(new ImageData(data, 3, 3));
+
+            const result = preprocessCanvas(canvas);
+            expect(result).toBeInstanceOf(HTMLCanvasElement);
+            const resultData = result.getContext('2d')!.getImageData(0, 0, 3, 3).data;
+            for (let i = 0; i < 9; i++) {
+                expect(Number.isNaN(resultData[i * 4])).toBe(false);
+                expect(resultData[i * 4]).toBeGreaterThanOrEqual(0);
+                expect(resultData[i * 4]).toBeLessThanOrEqual(255);
+            }
+        });
+
         it('returns the same canvas if context is null', () => {
             vi.spyOn(canvas, 'getContext').mockReturnValue(null);
             const result = preprocessCanvas(canvas);

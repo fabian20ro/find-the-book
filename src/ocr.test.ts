@@ -142,6 +142,26 @@ describe('TextRecognizer', () => {
             await expect(recognizer.setLanguage('invalid-lang')).rejects.toThrow('Unsupported language: invalid-lang');
         });
 
+        it('returns immediately without creating a new worker when called with the same language', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init('ron');
+            expect(recognizer.getLanguage()).toBe('ron');
+            const workerRef = (recognizer as any).worker;
+
+            // Calling setLanguage with the same language must be a no-op: no new worker created.
+            await recognizer.setLanguage('ron');
+
+            expect(Tesseract.createWorker).toHaveBeenCalledTimes(1);
+            expect((recognizer as any).worker).toBe(workerRef);
+        });
+
         it('successfully sets language to an existing one', async () => {
             const mockWorker = {
                 recognize: vi.fn(),
