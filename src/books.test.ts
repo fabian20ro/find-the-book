@@ -547,6 +547,16 @@ describe('queryMatchRatio', () => {
         )).toBeGreaterThan(0);
     });
 
+    it('matches when query splits merged initials differently from book metadata', () => {
+        // Book "A. B. C Smith" → tokens ["a","b","c","smith"] → merge consecutive singles: ["ab", "c", "smith"] → filter >=2: ["ab", "smith"].
+        // Query "A Smith B C" → tokens ["a","smith","b","c"] → merge only adjacent singles (not across "smith"): ["a", "smith", "bc"] → filter >=2: ["smith", "bc"].
+        // Overlap = {smith} ∩ {ab, smith} = 1 match out of 2 query words. Ratio = 0.5.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['A. B. C Smith'] }),
+            'A Smith B C'
+        )).toBeCloseTo(0.5);
+    });
+
     it('merges initials in book title and matches against query with merged form', () => {
         // Title "J.K. Society" cleans to tokens ["j", "k", "society"] → merged: ["jk", "society"].
         // Query "JK society" splits to ["jk", "society"]. Both should match (1/1 = 1).
