@@ -529,6 +529,23 @@ describe('queryMatchRatio', () => {
         expect(queryMatchRatio(makeBookData(), 'I a an')).toBe(0);
     });
 
+    it('returns 0 for book with entirely-empty metadata', () => {
+        // When title is "Unknown Title" and all fields are null/empty,
+        // the joined search text is empty; ratio must be 0 without throwing.
+        const score = queryMatchRatio(makeBookData({
+            title: 'Unknown Title',
+            authors: [],
+            publisher: null,
+            publishedDate: null,
+            description: null,
+            isbn: null,
+            pageCount: null,
+            thumbnailUrl: null,
+            infoLink: null,
+        }), 'something');
+        expect(score).toBe(0);
+    });
+
     it('merges three consecutive single-letter tokens into one word', () => {
         // Author "A. B. C Smith" cleans to [a, b, c, smith] → merged: [abc, smith].
         // Query "ABC Smith" splits to ["abc", "smith"]. Both should match.
