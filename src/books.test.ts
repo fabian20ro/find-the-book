@@ -565,6 +565,28 @@ describe('queryMatchRatio', () => {
             'a b c tales'
         )).toBe(1);
     });
+
+    it('matches pure-digit query terms against digit tokens in metadata', () => {
+        // Query "9781234567890" produces a single token ["9781234567890"]. ISBN '9781234567890'
+        // is part of the book text searched by queryMatchRatio. Both sides match.
+        expect(queryMatchRatio(
+            makeBookData({ isbn: '9781234567890' }),
+            '9781234567890'
+        )).toBe(1);
+    });
+
+    it('returns 0 when digit query terms do not appear in any metadata field', () => {
+        // Query "2099" — book has no such number anywhere in its joined text.
+        expect(queryMatchRatio(
+            makeBookData({ isbn: '1111111111' }),
+            '2099'
+        )).toBe(0);
+    });
+
+    it('returns 0 for empty query', () => {
+        expect(queryMatchRatio(makeBookData(), '')).toBe(0);
+    });
+
 });
 
 describe('getConfidenceLevel', () => {
