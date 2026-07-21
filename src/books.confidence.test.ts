@@ -690,8 +690,8 @@ describe('Book scoring logic', () => {
 
     try {
       // Trigger search — the cache-add path in books.ts runs synchronously up to the first await,
-      // so eviction and insertion happen before fetch() is actually awaited.
-      searcher.search('overflow-trigger');
+      // so eviction and insertion happen before fetch() is actually awaited. Await to avoid race.
+      const _ = await searcher.search('overflow-trigger');
 
       // Cache size must stay at MAX_CACHE_SIZE, not grow.
       expect(searcher.queryCache.size).toBe(200);
@@ -705,6 +705,56 @@ describe('Book scoring logic', () => {
     } finally {
       globalThis.fetch = originalFetch;
     }
+  });
+
+  describe('computeConfidence partial metadata', () => {
+    function mkBook(partial: Partial<Omit<Book, 'confidence'>>): Omit<Book, 'confidence'> {
+      return { id: 'partial-id', title: '', authors: [], publisher: null, publishedDate: null, description: null, isbn: null, pageCount: null, thumbnailUrl: null, infoLink: null, ...partial };
+    }
+
+    it('scores title + authors only as 20 of 50 metadata points', () => {
+      const book = mkBook({ id: 'partial-1', title: 'Some Book', authors: ['Author One'] });
+      expect(computeConfidence(book, undefined, undefined, '')).toBe(20);
+    });
+
+    it('scores title + authors + ISBN as 30 of 50 metadata points', () => {
+      const book = mkBook({ id: 'partial-2', title: 'Some Book', authors: ['A'], isbn: '9780743276540' });
+      expect(computeConfidence(book, undefined, undefined, '')).toBe(30);
+    });
+
+    it('scores title + authors + ISBN + all thumbnails/desc/publisher/date as full 50 metadata points', () => {
+      const book = mkBook({ id: 'partial-3', title: 'Some Book', authors: ['A'], isbn: '9780743276540', thumbnailUrl: 'https://example.com/thumb.jpg', description: 'A desc', publisher: 'Pub', publishedDate: '2020' });
+      expect(computeConfidence(book, undefined, undefined, '')).toBe(50);
+    });
+
+    it('treats "Unknown Title" as zero title contribution in metadata scoring', () => {
+      const book = mkBook({ id: 'partial-4', title: 'Unknown Title', authors: ['A'] });
+      // Only author contribution: 10 of 50.
+      expect(computeConfidence(book, undefined, undefined, '')).toBe(10);
+    });
+
+    it('adds rating and count to metadata subtotal', () => {
+      const book = mkBook({ id: 'partial-5', title: 'Some Book', authors: ['A'] });
+      // 20 (title+authors) + ~12 (rating=5) + 8 (count=100) = 40.
+      expect(computeConfidence(book, 5, 100, '')).toBe(40);
+    });
+
+    it('caps the total score at 100', () => {
+      const book = mkBook({ id: 'partial-6', title: 'Some Book', authors: ['A'], isbn: '9780743276540', thumbnailUrl: 'https://example.com/thumb.jpg', description: 'Desc', publisher: 'Pub', publishedDate: '2020' });
+      // 50 (full metadata) + ~12 (rating=5) + 8 (count=100) = 70; even with query match it cannot exceed 100.
+      expect(computeConfidence(book, 5, 100, 'Some Book A')).toBe(100);
+    });
+
+    it('returns 0 when no metadata, ratings, or query', () => {
+      const book = mkBook({ id: 'partial-7' });
+      expect(computeConfidence(book)).toBe(0);
+    });
+
+    it('treats zero ratingsCount as no contribution', () => {
+      const book = mkBook({ id: 'partial-8', title: 'Some Book', authors: ['A'] });
+      // 20 (title+authors) + ~7 (rating=3 → round(3/5*12)=7) + 0 (count=0 excluded) = 27.
+      expect(computeConfidence(book, 3, 0, '')).toBe(27);
+    });
   });
 
   describe('isISBN', () => {
