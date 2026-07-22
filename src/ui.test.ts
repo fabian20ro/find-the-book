@@ -737,6 +737,45 @@ describe('ui', () => {
             }
         });
 
+        it('returns default visible set when usage is empty', () => {
+            const visible = getVisibleLanguages({});
+            expect(visible.map((l) => l.code)).toEqual(['ron', 'eng', 'fra', 'deu', 'ita', 'spa']);
+        });
+
+        it('places default-visible codes before non-default ones when usage is tied', () => {
+            // All six have equal usage. The three defaults (ron, eng, fra) must come first,
+            // then the next-highest-usage non-defaults (spa at 7, deu at 6, ita at 5).
+            const visible = getVisibleLanguages({
+                ron: 10,
+                eng: 10,
+                fra: 10,
+                spa: 7,
+                deu: 6,
+                ita: 5,
+                zho: 3,
+                jpn: 2,
+            });
+            // Default codes must appear before non-default codes when tied on usage.
+            const defaultIndices = ['ron', 'eng', 'fra'].map((c) => visible.findIndex((l) => l.code === c));
+            const nonDefaultIndices = ['spa', 'deu', 'ita'].map((c) => visible.findIndex((l) => l.code === c));
+            expect(defaultIndices.every((i) => i >= 0)).toBe(true);
+            expect(nonDefaultIndices.every((i) => i >= 0)).toBe(true);
+            // All defaults come before all non-defaults.
+            const maxDefaultIdx = Math.max(...defaultIndices);
+            const minNonDefaultIdx = Math.min(...nonDefaultIndices);
+            expect(maxDefaultIdx).toBeLessThan(minNonDefaultIdx);
+        });
+
+        it('uses alphabetical name tiebreak for same-usage non-default codes', () => {
+            // Both non-default, both usage=1. Should sort by name alphabetically:
+            // Chinese (zho) before Japanese (jpn) is wrong — 'C' < 'J', so zho first.
+            const visible = getVisibleLanguages({ zho: 1, jpn: 1 });
+
+            const zhIdx = visible.findIndex((l) => l.code === 'zho');
+            const jpIdx = visible.findIndex((l) => l.code === 'jpn');
+            expect(zhIdx).toBeLessThan(jpIdx);
+        });
+
         it('renders candidate search pre-filled with filter state when popup opens', () => {
             addCandidates([makeBook({ id: 'c1' })]);
             update({ candidateFilter: 'searchterm' });
