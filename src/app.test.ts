@@ -378,6 +378,41 @@ describe('app', () => {
         expect(restored[0].publisher).toBeNull();
     });
 
+    it('coerces non-string optional metadata fields to null when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'nonstring-meta-book',
+                title: 'Non-String Meta Book',
+                publisher: 12345,
+                publishedDate: true,
+                description: null as any,
+                thumbnailUrl: false as any,
+                infoLink: 0 as any,
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].publisher).toBeNull();
+        expect(restored[0].publishedDate).toBeNull();
+        expect(restored[0].description).toBeNull();
+        expect(restored[0].thumbnailUrl).toBeNull();
+        expect(restored[0].infoLink).toBeNull();
+    });
+
+    it('rejects NaN and Infinity confidence values when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { id: 'nan-conf-book', title: 'NaN Book', confidence: NaN },
+            { id: 'inf-conf-book', title: 'Inf Book', confidence: Infinity },
+            { id: '-inf-conf-book', title: '-Inf Book', confidence: -Infinity },
+        ]));
+
+        expect(restored).toHaveLength(3);
+        // Number.isFinite is false for NaN/±Infinity, so getStoredConfidence returns null → defaults to 0.
+        expect(restored[0].confidence).toBe(0);
+        expect(restored[1].confidence).toBe(0);
+        expect(restored[2].confidence).toBe(0);
+    });
+
     it('adds book from candidates when onAddCandidate is triggered', async () => {
         const { getState: getTestState, addCandidates } = await import('./state');
         const candidateBook = {
