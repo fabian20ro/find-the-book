@@ -352,6 +352,24 @@ describe('scanner', () => {
             resumeAutoScan(camera as any, createMockOcr() as any, createMockBookSearcher() as any);
             // Should not throw or start scanning
         });
+
+        it('does not reschedule when a scan timer already exists', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+            // Advance just a tiny bit so the timer is set but scanFrame has not started yet.
+            await vi.advanceTimersByTimeAsync(10);
+
+            // Calling resumeAutoScan while scanTimer is still running should be a no-op —
+            // the guard !scanTimer in production code prevents double-scheduling.
+            resumeAutoScan(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('pauseAutoScan', () => {
