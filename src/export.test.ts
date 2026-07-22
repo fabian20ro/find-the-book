@@ -290,4 +290,29 @@ describe('shareBooks', () => {
         await expect(shareBooks([makeBook()], notify)).resolves.toBeUndefined();
         expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
     });
+
+    it('falls back to a browser window when clipboard throws an error', async () => {
+        const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
+        const mockWin: any = { document: { open: vi.fn(), close: vi.fn(), write: vi.fn() } };
+        const origOpen = window.open.bind(window);
+        vi.spyOn(window, 'open').mockReturnValue(mockWin);
+
+        await shareBooks([makeBook()], notify);
+
+        expect(vi.mocked(window.open)).toHaveBeenCalledWith('', '_blank', expect.any(String));
+        expect(mockWin.document.write).toHaveBeenCalled();
+        const html = mockWin.document.write.mock.calls[0][0];
+        expect(html).toContain('My Book Collection');
+        expect(html).toContain('Author A - Test Book');
+        expect(notify).not.toHaveBeenCalled();
+    });
+
+    it('falls back to notification when window.open is blocked', async () => {
+        const writeText = vi.fn().mockRejectedValue(new Error('Clipboard failed'));
+        vi.spyOn(window, 'open').mockReturnValue(null);
+
+        await shareBooks([makeBook()], notify);
+
+        expect(notify).toHaveBeenCalledWith('Could not share or copy book list');
+    });
 });

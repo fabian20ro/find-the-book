@@ -47,9 +47,32 @@ export async function shareBooks(books: Book[], notify: (msg: string) => void): 
     try {
         await navigator.clipboard.writeText(text);
         notify('Book list copied to clipboard');
+        return;
     } catch {
-        notify('Could not share or copy book list');
+        // Clipboard unavailable — offer a browser-window fallback so the user can still copy manually
+        const win = window.open('', '_blank', 'width=500,height=400,scrollbars=yes');
+        if (win) {
+            try {
+                win.document.open();
+                win.document.write(
+                    '<!DOCTYPE html><html><head><meta charset="utf-8"><title>My Book Collection</title>' +
+                    '<style>body{font-family:system-ui,sans-serif;max-width:500px;margin:20px;padding:16px;background:#fafafa;color:#1a1a1a}' +
+                    'h2{margin-top:0;font-size:1.1rem}</style></head><body>' +
+                    '<h2>My Book Collection</h2><pre id="content">' + escapeHtml(text) + '</pre>' +
+                    '<p style="font-size:.85rem;color:#666">Select the text above and copy it.</p></body></html>'
+                );
+                win.document.close();
+            } catch {
+                notify('Could not share or copy book list');
+            }
+        } else {
+            notify('Could not share or copy book list');
+        }
     }
+}
+
+function escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export function exportToCsv(books: Book[]): void {
