@@ -161,6 +161,31 @@ describe('scanner', () => {
             expect(state.getState().candidateBooks[0].title).toBe('Found Book');
         });
 
+    describe('scanOnce (dark frame)', () => {
+        beforeEach(() => {
+            // Override frameBrightness to simulate dark conditions.
+            const fbMock = ocrModule.frameBrightness as any;
+            fbMock.mockReturnValue(0);
+        });
+
+        afterEach(() => {
+            // Restore default bright return value.
+            (ocrModule.frameBrightness as any).mockReturnValue(128);
+        });
+
+        it('toasts "Scene too dark" and returns when brightness is below threshold', async () => {
+            const camera = createMockCamera(document.createElement('canvas'));
+            const ocr = createMockOcr();
+            const books = createMockBookSearcher();
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.toast).toHaveBeenCalledWith('Scene too dark — try better lighting');
+            expect(ocr.recognize).not.toHaveBeenCalled();
+            expect(books.search).not.toHaveBeenCalled();
+        });
+    });
+
     describe('scanOnce', () => {
         it('successfully scans and finds books', async () => {
             state.update({ autoScan: false });
