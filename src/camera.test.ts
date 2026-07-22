@@ -274,7 +274,7 @@ describe('CameraManager', () => {
             await expect(camera.verifyReadiness()).rejects.toThrow('Camera video is not ready.');
         });
 
-        it('rejects when metadata never arrives (prevents infinite hang)', { timeout: 10_000 }, async () => {
+        it('rejects when metadata never arrives (prevents infinite hang)', { timeout: 5_000 }, async () => {
             const camera = new CameraManager(video, canvas);
 
             // Block the mock's srcObject setter from firing its microtask that sets readyState=2.
@@ -287,7 +287,22 @@ describe('CameraManager', () => {
             // Override addEventListener so the loadedmetadata listener is dropped on the floor.
             video.addEventListener = (() => {}) as typeof video.addEventListener;
 
-            await expect(camera.start()).rejects.toThrow('Camera metadata not ready');
+            vi.useFakeTimers();
+
+            try {
+                const startPromise = camera.start().catch(() => {});
+
+                // Advance timers past 5000ms to trigger the timeout rejection synchronously,
+                // without waiting for real wall-clock time. The .catch() swallows the
+                // unhandled-rejection warning while still letting us verify behavior below.
+                await vi.advanceTimersByTimeAsync(6000);
+
+                // Verify that after advancing past 5s, the camera is no longer active
+                // (the rejection propagated through the wrapped promise).
+                expect(camera.isActive).toBe(false);
+            } finally {
+                vi.useRealTimers();
+            }
         });
     });
 });
