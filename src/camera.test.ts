@@ -248,6 +248,51 @@ describe('CameraManager', () => {
         });
     });
 
+    describe('getUserMedia edge cases', () => {
+        it('does not register disconnect handler when stream has audio-only tracks (no video tracks)', async () => {
+            // Simulates a stream where getUserMedia returned an audio track but zero video tracks.
+            // The camera code must NOT throw or hang; getVideoTracks()[0] is undefined so the
+            // `track && onDisconnect` guard evaluates false and no listener is registered — this
+            // is the existing production behavior at line 52-59 in camera.ts that currently has
+            // no deterministic coverage.
+            const audioTrack = { stop: vi.fn(), addEventListener: vi.fn(), enabled: true };
+            const onlyAudioStream = {
+                getTracks: () => [audioTrack],
+                getVideoTracks: () => [],
+            } as unknown as MediaStream;
+            (navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(onlyAudioStream);
+
+            // Re-attach the standard loadedmetadata microtask stub so start() resolves through
+            // the readyState >= 2 branch rather than hanging.
+            let srcObjVal: any = null;
+            Object.defineProperty(video, 'srcObject', {
+                get() { return srcObjVal; },
+                set(val: any) {
+                    srcObjVal = val;
+                    Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true });
+                    Object.defineProperty(video, 'videoHeight', { value: 1080, configurable: true });
+                    Promise.resolve().then(() => {
+                        Object.defineProperty(video, 'readyState', { value: 2, configurable: true });
+                        video.dispatchEvent(new Event('loadedmetadata'));
+                    });
+                },
+                configurable: true,
+            });
+
+            const onDisconnect = vi.fn();
+            const camera = new CameraManager(video, canvas);
+            await camera.start(onDisconnect);
+
+            // The 'ended' listener must NOT be registered — getVideoTracks()[0] is undefined.
+            expect(audioTrack.addEventListener).not.toHaveBeenCalledWith(
+                'ended',
+                expect.any(Function),
+            );
+            // And onDisconnect must never have been invoked (no disconnect to report).
+            expect(onDisconnect).not.toHaveBeenCalled();
+        });
+    });
+
     describe('verifyReadiness', () => {
         it('succeeds when stream is active and video is ready', async () => {
             const camera = new CameraManager(video, canvas);

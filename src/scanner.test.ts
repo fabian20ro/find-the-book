@@ -161,6 +161,31 @@ describe('scanner', () => {
             expect(state.getState().candidateBooks[0].title).toBe('Found Book');
         });
 
+    describe('scanOnce (dark frame)', () => {
+        beforeEach(() => {
+            // Override frameBrightness to simulate dark conditions.
+            const fbMock = ocrModule.frameBrightness as any;
+            fbMock.mockReturnValue(0);
+        });
+
+        afterEach(() => {
+            // Restore default bright return value.
+            (ocrModule.frameBrightness as any).mockReturnValue(128);
+        });
+
+        it('toasts "Scene too dark" and returns when brightness is below threshold', async () => {
+            const camera = createMockCamera(document.createElement('canvas'));
+            const ocr = createMockOcr();
+            const books = createMockBookSearcher();
+
+            await scanOnce(camera as any, ocr as any, books as any);
+
+            expect(state.toast).toHaveBeenCalledWith('Scene too dark — try better lighting');
+            expect(ocr.recognize).not.toHaveBeenCalled();
+            expect(books.search).not.toHaveBeenCalled();
+        });
+    });
+
     describe('scanOnce', () => {
         it('successfully scans and finds books', async () => {
             state.update({ autoScan: false });
@@ -326,6 +351,24 @@ describe('scanner', () => {
             state.update({ autoScan: true, isScanning: false });
             resumeAutoScan(camera as any, createMockOcr() as any, createMockBookSearcher() as any);
             // Should not throw or start scanning
+        });
+
+        it('does not reschedule when a scan timer already exists', async () => {
+            state.update({ autoScan: true });
+            const camera = createMockCamera();
+            const ocr = createMockOcr(['text']);
+            const books = createMockBookSearcher();
+
+            startScanning(camera as any, ocr as any, books as any);
+            // Advance just a tiny bit so the timer is set but scanFrame has not started yet.
+            await vi.advanceTimersByTimeAsync(10);
+
+            // Calling resumeAutoScan while scanTimer is still running should be a no-op —
+            // the guard !scanTimer in production code prevents double-scheduling.
+            resumeAutoScan(camera as any, ocr as any, books as any);
+
+            await vi.advanceTimersByTimeAsync(2000);
+            expect(camera.captureFrame).toHaveBeenCalledTimes(1);
         });
     });
 
