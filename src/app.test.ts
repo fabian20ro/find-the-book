@@ -591,14 +591,20 @@ describe('app', () => {
         expect(mockRecognize).not.toHaveBeenCalled();
     });
 
-    it('onImageUpload handles missing OCR readiness gracefully on startup', async () => {
-        // Force ocrReady to false without resetModules by using update directly.
+    it('onImageUpload waits for OCR readiness before processing', async () => {
         update({ ocrReady: false });
 
-        const file = new File([], 'test.jpg', { type: 'image/jpeg' });
+        const file = new File(['x'.repeat(1024)], 'test.jpg', { type: 'image/jpeg' });
         Object.defineProperty(file, 'size', { value: 1024 });
 
-        // This should call waitForOcrReady which will hang since we set it to false.
-        // We need a different approach — test the handler is callable with proper mocks.
+        // Start upload — it will block on waitForOrcyReady since ocrReady is false.
+        capturedHandlers.onImageUpload(file);
+
+        expect(mockRecognize).not.toHaveBeenCalled();
+
+        // Wait a bit to ensure no processing happens without OCR readiness.
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(mockRecognize).not.toHaveBeenCalled();
     });
 });
