@@ -312,6 +312,24 @@ describe('CameraManager', () => {
             await expect(camera.verifyReadiness()).rejects.toThrow('Camera track is disabled.');
         });
 
+        it('throws when stream has no video tracks (simulates revocation)', async () => {
+            const camera = new CameraManager(video, canvas);
+            await camera.start();
+
+            // Replace the mock stream so getVideoTracks returns empty — simulating a
+            // revoked or disconnected track where the MediaStream object still exists
+            // but no video tracks remain. This exercises the `!track` guard in
+            // verifyReadiness() at line 72-74 of camera.ts, which is unreachable with
+            // the default mock that always returns a track from getVideoTracks().
+            const emptyStream = {
+                getTracks: () => [],
+                getVideoTracks: () => [],
+            } as unknown as MediaStream;
+            (camera as any).stream = emptyStream;
+
+            await expect(camera.verifyReadiness()).rejects.toThrow('Camera track is disabled.');
+        });
+
         it('throws when video is not ready', async () => {
             const camera = new CameraManager(video, canvas);
             await camera.start();
@@ -348,6 +366,37 @@ describe('CameraManager', () => {
             } finally {
                 vi.useRealTimers();
             }
+        });
+
+        it('rejects start() with timeout error when metadata never arrives', async () => {
+            const camera = new CameraManager(video, canvas);
+
+            // Block the mock's srcObject setter from firing its microtask.
+            Object.defineProperty(video, 'srcObject', {
+                get() { return null; },
+                set(_val: any) {},
+                configurable: true,
+            });
+            // Override addEventListener so the loadedmetadata listener is dropped on the floor.
+            video.addEventListener = (() => {}) as typeof video.addEventListener;
+
+            vi.useFakeTimers();
+
+            const startPromise = camera.start().catch((err: unknown) => err);
+
+            try {
+                // Advance timers past 5000ms to trigger the timeout rejection synchronously.
+                await vi.advanceTimersByTimeAsync(6000);
+            } finally {
+                vi.useRealTimers();
+            }
+
+            const result = await startPromise;
+
+            // The start() promise must reject with the metadata timeout error message,
+            // proving that the 5-second hang-prevention contract is enforced.
+            expect(result).toBeInstanceOf(Error);
+            expect((result as Error).message).toContain('Camera metadata not ready within');
         });
     });
 });

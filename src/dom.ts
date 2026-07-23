@@ -46,6 +46,15 @@ export function $$(selector: string): HTMLElement[] {
 }
 
 /**
+ * Returns the first element matching `selector`, or null when no match is found.
+ * Unlike `$`, never throws — useful for optional/conditional elements.
+ */
+export function $first(selector: string): HTMLElement | null {
+    const els = document.querySelectorAll(selector);
+    return (els as unknown as HTMLElement[])[0] ?? null;
+}
+
+/**
  * Safe getContext('2d') that throws instead of returning null.
  */
 export function getContext2D(canvas: HTMLCanvasElement): CanvasRenderingContext2D {

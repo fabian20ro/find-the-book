@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { $, $$, $as, getContext2D, trySelector } from './dom';
+import { $, $$, $as, $first, getContext2D, trySelector } from './dom';
 
 describe('dom helpers', () => {
     beforeEach(() => {
