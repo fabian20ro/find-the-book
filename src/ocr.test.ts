@@ -582,7 +582,26 @@ describe('preprocessCanvas', () => {
         expect(result.getContext('2d')?.getImageData(0, 0, 3, 3).data[0]).toBe(128);
     });
 
+    describe('preprocessCanvas', () => {
+        it('returns a new canvas element (not the input)', () => {
+            const result = preprocessCanvas(canvas);
+
+            expect(result).not.toBe(canvas);
+            expect(result.width).toBe(canvas.width);
+            expect(result.height).toBe(canvas.height);
+        });
+    });
+
     describe('frameBrightness', () => {
+        it('returns 128 when getContext returns null (no context fallback)', () => {
+            const noCtxCanvas = document.createElement('canvas');
+            (noCtxCanvas as any).getContext = (() => null) as any;
+
+            const brightness = frameBrightness(noCtxCanvas);
+
+            expect(brightness).toBe(128);
+        });
+
         it('returns the brightness value for a constant grayscale canvas', () => {
             const w = 10;
             const h = 10;
