@@ -574,6 +574,28 @@ describe('queryMatchRatio', () => {
         )).toBeCloseTo(0.5);
     });
 
+    it('matches a single merged-initial query token against the same merged form in book metadata', () => {
+        // Both sides produce ["jk"] after clean/split/merge/filter. Identical tokens → full ratio = 1.
+        expect(queryMatchRatio(
+            makeBookData({ authors: ['J.K. Rowling'] }),
+            'JK'
+        )).toBe(1);
+
+        // Title "A.B.C Tales" produces ["ab", "tales"] because the consecutive singles "a"+"b" merge,
+        // but "c" is isolated (previous token length 2) so it stays separate and gets filtered out.
+        // Query "ab tales" matches both tokens exactly → ratio = 1.
+        expect(queryMatchRatio(
+            makeBookData({ title: 'A.B.C Tales' }),
+            'ab tales'
+        )).toBe(1);
+
+        // Query "ABC" does NOT match — bookWords has {"ab", "tales"}, not {"abc"} (c is filtered out).
+        expect(queryMatchRatio(
+            makeBookData({ title: 'A.B.C Tales' }),
+            'ABC'
+        )).toBe(0);
+    });
+
     it('merges initials in book title and matches against query with merged form', () => {
         // Title "J.K. Society" cleans to tokens ["j", "k", "society"] → merged: ["jk", "society"].
         // Query "JK society" splits to ["jk", "society"]. Both should match (1/1 = 1).
