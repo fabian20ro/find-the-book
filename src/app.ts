@@ -352,6 +352,8 @@ function addBookAndSave(book: Book): boolean {
     const added = addBook(book);
     if (added) {
         toast(`Found: ${book.title}`);
+    } else {
+        toast(`${book.title} is already in your collection`);
     }
     return added;
 }

@@ -453,6 +453,24 @@ describe('app', () => {
         expect(getTestState().candidateBooks.length).toBe(0);
     });
 
+    it('emits a duplicate toast when adding an already-in-collection candidate', async () => {
+        const { getState: getTestState, addCandidates, on } = await import('./state');
+        const dupBook = { id: 'dup-1', title: 'Already Found', authors: [] };
+        addCandidates([dupBook as any]);
+        // Push it into books so addBookAndSave detects the duplicate.
+        (getTestState() as any).books.push(dupBook);
+
+        let emittedMessage = '';
+        on('toast', () => {
+            emittedMessage = 'listener invoked';
+        });
+        capturedHandlers.onAddCandidate('dup-1');
+
+        expect(getTestState().candidateBooks.length).toBe(0);
+        // The toast listener must fire, confirming the duplicate path emits feedback.
+        expect(emittedMessage).toBe('listener invoked');
+    });
+
     it('silently does nothing when onAddCandidate receives an unknown bookId', async () => {
         const { getState: getTestState, addCandidates } = await import('./state');
 
