@@ -648,4 +648,32 @@ describe('app', () => {
 
         expect(mockRecognize).not.toHaveBeenCalled();
     });
+
+    it('persists newly added candidate book to localStorage via the change listener', async () => {
+        const { getState: getTestState, addCandidates } = await import('./state');
+        const newBook = { id: 'persist-1', title: 'Persist Me', authors: ['Author'] };
+        addCandidates([newBook as any]);
+
+        capturedHandlers.onAddCandidate('persist-1');
+
+        // The change listener (saveBooks) should have persisted the book to localStorage.
+        const stored = JSON.parse(localStorage.getItem('ftb-books')!);
+        expect(stored).toHaveLength(1);
+        expect(stored[0].id).toBe('persist-1');
+    });
+
+    it('removing a candidate book also triggers persistence via saveBooks', async () => {
+        const { getState: getTestState, addCandidates } = await import('./state');
+        const newBook = { id: 'remove-me', title: 'Remove Me', authors: ['Author'] };
+        addCandidates([newBook as any]);
+
+        capturedHandlers.onAddCandidate('remove-me');
+        expect(getTestState().books).toHaveLength(1);
+
+        // Remove it via the handler path that explicitly calls saveBooks.
+        const { removeBook } = await import('./state');
+        capturedHandlers.onRemoveBook(0);
+
+        expect(getTestState().books).toHaveLength(0);
+    });
 });
