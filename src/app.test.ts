@@ -20,6 +20,11 @@ const { mockOcrInit, mockSetLanguage, mockRecognize } = vi.hoisted(() => ({
     mockRecognize: vi.fn().mockResolvedValue(['Test text']),
 }));
 
+const { mockPreloadBookId, mockRemoveBookId } = vi.hoisted(() => ({
+    mockPreloadBookId: vi.fn(),
+    mockRemoveBookId: vi.fn(),
+}));
+
 vi.mock('./ocr', () => ({
     TextRecognizer: class {
         init = mockOcrInit;
@@ -33,8 +38,8 @@ vi.mock('./ocr', () => ({
 vi.mock('./books', () => ({
     BookSearcher: class {
         search = vi.fn().mockResolvedValue([]);
-        preloadBookId = vi.fn();
-        removeBookId = vi.fn();
+        preloadBookId = mockPreloadBookId;
+        removeBookId = mockRemoveBookId;
         clear = vi.fn();
     },
 }));
@@ -87,6 +92,8 @@ describe('app', () => {
         capturedHandlers = null;
         mockOcrInit.mockClear();
         mockSetLanguage.mockClear();
+        mockPreloadBookId.mockClear();
+        mockRemoveBookId.mockClear();
 
         // Stub service worker
         Object.defineProperty(navigator, 'serviceWorker', {
@@ -164,6 +171,22 @@ describe('app', () => {
         await new Promise((r) => setTimeout(r, 10));
 
         expect(getState().ocrLanguage).toBe('ron');
+    });
+
+    it('preloads each restored book id into the BookSearcher cache', async () => {
+        localStorage.setItem('ftb-books', JSON.stringify([
+            { id: 'loaded-book-1', title: 'Loaded Book 1' },
+            { id: 'loaded-book-2', title: 'Loaded Book 2' },
+        ]));
+
+        vi.resetModules();
+        capturedHandlers = null;
+        appModule = await import('./app');
+        await new Promise((r) => setTimeout(r, 10));
+
+        expect(mockPreloadBookId).toHaveBeenCalledTimes(2);
+        expect(mockPreloadBookId).toHaveBeenCalledWith('loaded-book-1');
+        expect(mockPreloadBookId).toHaveBeenCalledWith('loaded-book-2');
     });
 
     it('keeps the previous OCR language when a switch fails', async () => {
