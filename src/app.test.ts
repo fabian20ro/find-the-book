@@ -20,6 +20,11 @@ const { mockOcrInit, mockSetLanguage, mockRecognize } = vi.hoisted(() => ({
     mockRecognize: vi.fn().mockResolvedValue(['Test text']),
 }));
 
+const { mockPreloadBookId, mockRemoveBookId } = vi.hoisted(() => ({
+    mockPreloadBookId: vi.fn(),
+    mockRemoveBookId: vi.fn(),
+}));
+
 vi.mock('./ocr', () => ({
     TextRecognizer: class {
         init = mockOcrInit;
@@ -33,8 +38,8 @@ vi.mock('./ocr', () => ({
 vi.mock('./books', () => ({
     BookSearcher: class {
         search = vi.fn().mockResolvedValue([]);
-        preloadBookId = vi.fn();
-        removeBookId = vi.fn();
+        preloadBookId = mockPreloadBookId;
+        removeBookId = mockRemoveBookId;
         clear = vi.fn();
     },
 }));
@@ -87,6 +92,8 @@ describe('app', () => {
         capturedHandlers = null;
         mockOcrInit.mockClear();
         mockSetLanguage.mockClear();
+        mockPreloadBookId.mockClear();
+        mockRemoveBookId.mockClear();
 
         // Stub service worker
         Object.defineProperty(navigator, 'serviceWorker', {
@@ -164,6 +171,22 @@ describe('app', () => {
         await new Promise((r) => setTimeout(r, 10));
 
         expect(getState().ocrLanguage).toBe('ron');
+    });
+
+    it('preloads each restored book id into the BookSearcher cache', async () => {
+        localStorage.setItem('ftb-books', JSON.stringify([
+            { id: 'loaded-book-1', title: 'Loaded Book 1' },
+            { id: 'loaded-book-2', title: 'Loaded Book 2' },
+        ]));
+
+        vi.resetModules();
+        capturedHandlers = null;
+        appModule = await import('./app');
+        await new Promise((r) => setTimeout(r, 10));
+
+        expect(mockPreloadBookId).toHaveBeenCalledTimes(2);
+        expect(mockPreloadBookId).toHaveBeenCalledWith('loaded-book-1');
+        expect(mockPreloadBookId).toHaveBeenCalledWith('loaded-book-2');
     });
 
     it('keeps the previous OCR language when a switch fails', async () => {
@@ -378,6 +401,41 @@ describe('app', () => {
         expect(restored[0].publisher).toBeNull();
     });
 
+    it('coerces non-string optional metadata fields to null when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            {
+                id: 'nonstring-meta-book',
+                title: 'Non-String Meta Book',
+                publisher: 12345,
+                publishedDate: true,
+                description: null as any,
+                thumbnailUrl: false as any,
+                infoLink: 0 as any,
+            },
+        ]));
+
+        expect(restored).toHaveLength(1);
+        expect(restored[0].publisher).toBeNull();
+        expect(restored[0].publishedDate).toBeNull();
+        expect(restored[0].description).toBeNull();
+        expect(restored[0].thumbnailUrl).toBeNull();
+        expect(restored[0].infoLink).toBeNull();
+    });
+
+    it('rejects NaN and Infinity confidence values when restoring books', () => {
+        const restored = appModule.parseStoredBooks(JSON.stringify([
+            { id: 'nan-conf-book', title: 'NaN Book', confidence: NaN },
+            { id: 'inf-conf-book', title: 'Inf Book', confidence: Infinity },
+            { id: '-inf-conf-book', title: '-Inf Book', confidence: -Infinity },
+        ]));
+
+        expect(restored).toHaveLength(3);
+        // Number.isFinite is false for NaN/±Infinity, so getStoredConfidence returns null → defaults to 0.
+        expect(restored[0].confidence).toBe(0);
+        expect(restored[1].confidence).toBe(0);
+        expect(restored[2].confidence).toBe(0);
+    });
+
     it('adds book from candidates when onAddCandidate is triggered', async () => {
         const { getState: getTestState, addCandidates } = await import('./state');
         const candidateBook = {
@@ -556,14 +614,20 @@ describe('app', () => {
         expect(mockRecognize).not.toHaveBeenCalled();
     });
 
-    it('onImageUpload handles missing OCR readiness gracefully on startup', async () => {
-        // Force ocrReady to false without resetModules by using update directly.
+    it('onImageUpload waits for OCR readiness before processing', async () => {
         update({ ocrReady: false });
 
-        const file = new File([], 'test.jpg', { type: 'image/jpeg' });
+        const file = new File(['x'.repeat(1024)], 'test.jpg', { type: 'image/jpeg' });
         Object.defineProperty(file, 'size', { value: 1024 });
 
-        // This should call waitForOcrReady which will hang since we set it to false.
-        // We need a different approach — test the handler is callable with proper mocks.
+        // Start upload — it will block on waitForOrcyReady since ocrReady is false.
+        capturedHandlers.onImageUpload(file);
+
+        expect(mockRecognize).not.toHaveBeenCalled();
+
+        // Wait a bit to ensure no processing happens without OCR readiness.
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        expect(mockRecognize).not.toHaveBeenCalled();
     });
 });

@@ -291,6 +291,52 @@ describe('preprocessCanvas', () => {
         }
     });
 
+    it('should produce no sharpening contribution at strength=0 on non-uniform grayscale input', () => {
+        // Strength=0 must fully disable the sharpening term: v = s + 0*(s - blur) == s.
+        // This test uses distinct per-pixel luminance values so every pixel has a unique
+        // sharpened-vs-blurred delta — proving each output pixel equals its exact grayscale+stretch value,
+        // independently computed (not just approximately equal or monotonic).
+        const expected: number[] = [10, 50, 90, 40, 80, 20, 70, 30, 60];
+        for (let y = 0; y < 3; y++) {
+            for (let x = 0; x < 3; x++) {
+                const v = expected[y * 3 + x];
+                const idx = (y * 3 + x) * 4;
+                mockCtx.data[idx]     = v; // R
+                mockCtx.data[idx + 1] = v; // G
+                mockCtx.data[idx + 2] = v; // B
+                mockCtx.data[idx + 3] = 255; // Alpha
+            }
+        }
+
+        const result = preprocessCanvas(canvas, 0);
+        const outData = result.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+
+        // Independently compute grayscale+stretch for each pixel.
+        // Grayscale: (77*R + 150*G + 29*B) / 256 — since R==G==B==v, this equals v exactly.
+        // Contrast stretch: range = max - min = 90-10 = 80; scale=255/80; stretched[i] = round((grays[i]-10) * 255/80).
+        const graysMin = 10, graysMax = 90;
+        const range = graysMax - graysMin; // 80
+        const stretchScale = 255 / range;
+        const expectedStretched: number[] = [];
+        for (const v of expected) {
+            expectedStretched.push(Math.round((v - graysMin) * stretchScale));
+        }
+
+        // At strength=0 the sharpening term is exactly zero, so output must equal stretched.
+        for (let i = 0; i < 3 * 3; i++) {
+            const actualR = outData[i * 4];
+            expect(actualR).toBe(expectedStretched[i]); // R channel == stretched value
+        }
+
+        // Verify the sharpening term would have contributed if strength were nonzero.
+        // At strength=1, center pixel (val=80) surrounded by different neighbors should change.
+        const resultStrong = preprocessCanvas(canvas, 1);
+        const strongData = resultStrong.getContext('2d')?.getImageData(0, 0, 3, 3).data!;
+        const centerIdx = 4 * 3 + 5; // pixel (1,1) in row-major
+        // The sharpened value at the center must differ from the no-sharpening baseline.
+        expect(strongData[centerIdx]).not.toBe(outData[centerIdx]);
+    });
+
     it('should keep output within [0,255] at strength=2 on high-contrast input', () => {
         // Strength > 1 is a legitimate user setting. At elevated sharpening the formula
         // v = stretched[idx] + strength * (stretched[idx] - blurred) can push values far

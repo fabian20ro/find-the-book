@@ -498,6 +498,17 @@ describe('ui', () => {
             hideError();
             expect(document.getElementById('error-overlay')!.hidden).toBe(true);
         });
+
+        it('locks body overflow when shown', () => {
+            showError('Locked');
+            expect(document.body.style.overflow).toBe('hidden');
+        });
+
+        it('unlocks body overflow when hidden', () => {
+            showError('Locked');
+            hideError();
+            expect(document.body.style.overflow).toBe('');
+        });
     });
 
     describe('book selection popup', () => {
