@@ -133,6 +133,54 @@ describe('TextRecognizer', () => {
             await recognizer.destroy();
             expect(mockWorker.terminate).toHaveBeenCalled();
         });
+
+        it('resets isProcessing when resetProcessing() is called', async () => {
+            const mockWorker = {
+                recognize: vi.fn(),
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+            (recognizer as any).isProcessing = true;
+
+            expect((recognizer as any).isProcessing).toBe(true);
+
+            recognizer.resetProcessing();
+
+            expect((recognizer as any).isProcessing).toBe(false);
+        });
+
+        it('restores isProcessing=false after a successful recognize so subsequent calls are not silently dropped', async () => {
+            const mockRecognize = vi.fn().mockResolvedValue({ data: { lines: [] } });
+            const mockWorker = {
+                recognize: mockRecognize,
+                terminate: vi.fn(),
+                setParameters: vi.fn().mockResolvedValue(undefined),
+            };
+            vi.mocked(Tesseract.createWorker).mockResolvedValue(mockWorker as any);
+
+            const recognizer = new TextRecognizer();
+            await recognizer.init();
+
+            // Flip busy flag to simulate a scan in progress.
+            (recognizer as any).isProcessing = true;
+
+            // First call should be silently dropped by the busy-guard (not wait for real Tesseract call).
+            const firstResult = await recognizer.recognize(canvas);
+            expect(firstResult).toEqual([]);
+
+            // Simulate the scan completing — resetProcessing is called externally.
+            recognizer.resetProcessing();
+
+            // Second call should invoke Tesseract and return its result, not be dropped again.
+            mockRecognize.mockClear();
+            const secondResult = await recognizer.recognize(canvas);
+            expect(mockRecognize).toHaveBeenCalledTimes(1);
+            expect(secondResult).toEqual([]);
+        });
     });
 
     describe('setLanguage', () => {
